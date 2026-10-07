@@ -1,0 +1,9 @@
+{
+  "name": "pssm-accommodation-system",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Modular monolith for PSSM spiritual event accommodation: registration, allotment, check-in/check-out, and notifications.",
+  "engines": {
+    "node": ">=20"
+  }
+}
