@@ -1,8 +1,8 @@
 {
-  "name": "pssm-accommodation-system",
+  "name": "pssm-buddha-sangha",
   "version": "0.1.0",
   "private": true,
-  "description": "Modular monolith for PSSM spiritual event accommodation: registration, allotment, check-in/check-out, and notifications.",
+  "description": "PSSM Buddha Sangha: join the sangha, support events, and book event accommodation.",
   "engines": {
     "node": ">=20"
   }

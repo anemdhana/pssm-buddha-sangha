@@ -1,5 +1,5 @@
 # Register Summary  
-## PSSM Buddha Sangha
+## PSSM Buddha Sangha (`pssm-buddha-sangha`)
 
 **Version:** 1.9 (Living Document)  
 **Last Updated:** 06 October 2026  

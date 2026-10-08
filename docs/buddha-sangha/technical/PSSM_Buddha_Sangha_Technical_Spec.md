@@ -1,8 +1,8 @@
 # Technical Specification  
-## PSSM Buddha Sangha
+## PSSM Buddha Sangha (`pssm-buddha-sangha`)
 
 **Version:** 1.9 (Living Document)  
-**Last Updated:** 06 October 2026  
+**Last Updated:** 08 October 2026  
 **Related Documents:**  
 - PSSM_Buddha_Sangha_Requirements.md  
 - PSSM_Buddha_Sangha_User_Stories.md  
@@ -29,7 +29,7 @@ The register records who is part of the PSSM sangha and practices meditation as 
 
 **Architecture style:** a small modular monolith with a places module, a members module (add, edit, view, search), the people dashboard, this week’s five-event graph, and sign-in.
 
-The accommodation system also uses Socket.io and WhatsApp. This register does not. There is no live hotel desk and no notification channel to build.
+The event accommodation module in this same project also uses Socket.io and WhatsApp. The sangha register does not. There is no live hotel desk and no notification channel to build for the register alone.
 
 ---
 

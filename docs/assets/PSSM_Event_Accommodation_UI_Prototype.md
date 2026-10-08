@@ -1,14 +1,16 @@
 # UI Prototype  
-## PSSM Spiritual Event – Accommodation Management System
+## PSSM Buddha Sangha — Event Accommodation & Shared Screens
 
-**Version:** 1.6 (Living Document)  
-**Last Updated:** 07 October 2026  
+**Project:** `pssm-buddha-sangha`  
+**Version:** 1.7 (Living Document)  
+**Last Updated:** 08 October 2026  
 **Related Documents:**  
 - PSSM_Event_Accommodation_Requirements.md  
 - PSSM_Event_Accommodation_User_Stories.md  
 - PSSM_Event_Accommodation_Technical_Spec.md  
 - PSSM_Event_Accommodation_API.md  
 - PSSM_Event_Accommodation_UIKit_Guide.md  
+- `docs/buddha-sangha/assets/PSSM_Buddha_Sangha_UI_Prototype.md`
 
 **UI kit:** [UIkit 3](https://getuikit.com/docs/introduction)
 
@@ -39,9 +41,10 @@ Screenshots go in `docs/assets/screenshots/`. Each sketch is embedded below, the
 
 | # | File | Screen | Roles | UIkit pieces | Status |
 |---|------|--------|-------|--------------|--------|
-| 1 | `docs/prototype/index.html` | Landing | Visitor | buttons | Draft |
-| 2 | `docs/prototype/login.html` | Login to My space | Visitor | form, grid | Draft |
-| 3 | `docs/prototype/visitor.html` | Register wizard | Visitor | switcher, progress, form, grid, subnav, modal, description list | Draft |
+| 1 | `docs/prototype/index.html` | PSSM Buddha Sangha landing | Visitor | cards, grid | Draft |
+| 2 | `docs/prototype/join.html` | Join PSSM Buddha Sangha | Visitor | switcher, progress, form, grid, subnav, modal | Draft |
+| 3 | `docs/prototype/login.html` | Login to My Space | Visitor | form, grid | Draft |
+| 4 | `docs/prototype/visitor.html` | Accommodation wizard | Visitor | switcher, progress, form, grid, subnav, modal, description list | Draft |
 
 ---
 
@@ -49,11 +52,11 @@ Screenshots go in `docs/assets/screenshots/`. Each sketch is embedded below, the
 
 A static look-and-feel page is at `docs/prototype/index.html`. Open that file in a browser. It is not the working app, and it does not live in `src/frontend/`.
 
-The header is one compact bar: the PSSM logo on the left, the title **Dhyana Maha Yagam - 5**, and Patriji, the pyramid, and the wall painting on the far right. Under it are two actions: **Register for Accommodation** and **Login to My space**.
+The landing is **PSSM Buddha Sangha**: Join, Login to My Space, and Free / Paid Accommodation. The header keeps Patriji and the PSSM logo, with an event picker and Stay / Sangha / Account menus.
 
 Login is `docs/prototype/login.html`. The password is the event code, the first 5 letters of the name, then the date and month of birth. Example: `DMY5`, Ramakrishna, 15 August gives `DMY5Ramak1508`.
 
-The visitor wizard is `docs/prototype/visitor.html`. It opens from Register. There is no sign-in step. The steps are Free or Paid accommodation, who is coming, place, family, days, the couple question when the party is one male and one female, ID, and the summary. UIkit pieces in use: form, switcher, progress, grid, subnav pills, modal, and a description list.
+Join is `docs/prototype/join.html` (who, place, family). Accommodation is `docs/prototype/visitor.html`, opened from Stay as Free or Paid. When a sangha join exists, visitor and family fields are prefilled from a copy of that profile. UIkit pieces in use: form, switcher, progress, grid, subnav pills, modal, and a description list.
 
 Paper screenshots will be added here when they are shared.
 

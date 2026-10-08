@@ -1,11 +1,13 @@
 # UIKit guide
-## PSSM Spiritual Event – Accommodation Management System
+## PSSM Buddha Sangha — Prototype & Frontend
 
+**Project:** `pssm-buddha-sangha`  
 **Version:** 1.0  
-**Last Updated:** 07 October 2026  
+**Last Updated:** 08 October 2026  
 **Related documents:**  
 - PSSM_Event_Accommodation_UI_Prototype.md  
 - PSSM_Event_Accommodation_Technical_Spec.md  
+- `docs/buddha-sangha/assets/PSSM_Buddha_Sangha_UI_Prototype.md`  
 
 **Source:** [UIkit 3 documentation](https://getuikit.com/docs/introduction), version in use **3.21.13**
 

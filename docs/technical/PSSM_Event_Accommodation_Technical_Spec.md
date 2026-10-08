@@ -1,19 +1,21 @@
 # Technical Specification  
-## PSSM Spiritual Event – Accommodation Management System
+## PSSM Buddha Sangha — Event Accommodation Module
 
+**Project:** `pssm-buddha-sangha`  
 **Version:** 2.5 (Living Document)  
-**Last Updated:** 07 October 2026  
+**Last Updated:** 08 October 2026  
 **Related Documents:**  
 - PSSM_Event_Accommodation_Requirements.md  
 - PSSM_Event_Accommodation_User_Stories.md  
 - PSSM_Event_Accommodation_Allocation_Summary.md  
-- PSSM_Event_Accommodation_API.md
+- PSSM_Event_Accommodation_API.md  
+- `docs/buddha-sangha/` (sangha register)
 
 ---
 
 ### 1. Purpose of this Document
 
-This Technical Specification describes the system design, data structures, sample master data, technical stack, and technical considerations for the Accommodation Management System used during PSSM spiritual events (e.g., Dhyana Maha Yagam).
+This Technical Specification describes the system design, data structures, sample master data, technical stack, and technical considerations for the **event accommodation module** of **PSSM Buddha Sangha**, used during PSSM spiritual events (e.g., Dhyana Maha Yagam).
 
 It complements the Functional Requirements Specification.
 
@@ -230,14 +232,12 @@ Visitors must never take room keys with them. Keys must always be deposited with
 The following folder structure will be followed when the real project is created:
 
 ```text
-pssm-accommodation-system/
+pssm-buddha-sangha/
 │
 ├── docs/                          ← All documentation
-│   ├── requirements/
-│   │   ├── PSSM_Event_Accommodation_Requirements.md
-│   │   └── PSSM_Event_Accommodation_User_Stories.md
-│   ├── technical/
-│   │   └── PSSM_Event_Accommodation_Technical_Spec.md
+│   ├── buddha-sangha/             ← Sangha register specs
+│   ├── requirements/              ← Event accommodation requirements
+│   ├── technical/                 ← Event accommodation technical docs
 │   ├── decisions/                 ← (optional) Architecture Decision Records
 │   ├── assets/                    ← Screenshots, sample ID cards, diagrams, etc.
 │   └── prototype/                 ← Static look-and-feel pages, not application code

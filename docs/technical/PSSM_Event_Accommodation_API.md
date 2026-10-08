@@ -1,8 +1,9 @@
 # REST API  
-## PSSM Spiritual Event – Accommodation Management System
+## PSSM Buddha Sangha — Event Accommodation Module
 
+**Project:** `pssm-buddha-sangha`  
 **Version:** 1.2 (Living Document)  
-**Last Updated:** 07 October 2026  
+**Last Updated:** 08 October 2026  
 **Related Documents:**  
 - PSSM_Event_Accommodation_Requirements.md  
 - PSSM_Event_Accommodation_User_Stories.md  

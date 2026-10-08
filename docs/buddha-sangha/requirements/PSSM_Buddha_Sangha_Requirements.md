@@ -1,5 +1,5 @@
 # Requirements Specification  
-## PSSM Buddha Sangha
+## PSSM Buddha Sangha (`pssm-buddha-sangha`)
 
 **Version:** 1.9 (Living Document)  
 **Last Updated:** 06 October 2026  
@@ -217,8 +217,8 @@ Each box shall show the remaining contributions needed for that event, then who 
 **NFR-01: Minimal Interface**  
 The interface shall stay limited to sign-in, this week’s five-event graph, support, the place list, the people dashboard, add or edit, and person detail.
 
-**NFR-02: Same Stack as the Accommodation System**  
-The application shall use HTML5, UIKit 3, and Alpine.js on the frontend, Node.js and Express.js on the backend, MySQL for data, and JWT for sign-in. Roles are Admin and Sangha member.
+**NFR-02: Shared Stack with Event Accommodation**  
+The application shall use the same stack as the rest of **pssm-buddha-sangha**: HTML5, UIKit 3, and Alpine.js on the frontend, Node.js and Express.js on the backend, MySQL for data, and JWT for sign-in. Roles for the register are Admin and Sangha member.
 
 ---
 

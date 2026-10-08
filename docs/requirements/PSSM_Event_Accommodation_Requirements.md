@@ -1,20 +1,22 @@
 # Requirements Specification  
-## PSSM Spiritual Event – Accommodation Management System
+## PSSM Buddha Sangha — Event Accommodation Module
 
+**Project:** `pssm-buddha-sangha`  
 **Version:** 2.10 (Living Document)  
-**Last Updated:** 07 October 2026  
+**Last Updated:** 08 October 2026  
 **Related Documents:**  
 - PSSM_Event_Accommodation_Technical_Spec.md  
 - PSSM_Event_Accommodation_User_Stories.md  
 - PSSM_Event_Accommodation_Allocation_Summary.md  
 - PSSM_Event_Accommodation_API.md  
+- `docs/buddha-sangha/` (sangha register)
 
 ---
 
 ### 1. Introduction / Background
 
 **1.1 Purpose**  
-This Requirements Specification defines the functional and non-functional requirements for a system that supports the planning, promotion, registration, and management of large-scale spiritual events organized under the Pyramid Spiritual Societies Movement (PSSM).
+This Requirements Specification defines the functional and non-functional requirements for the **event accommodation module** of **PSSM Buddha Sangha** (`pssm-buddha-sangha`). It supports planning, promotion, registration, and management of large-scale spiritual events organized under the Pyramid Spiritual Societies Movement (PSSM).
 
 **1.2 Event Context**  
 PSSM conducts multi-day spiritual events every year. One of the major events is **Dhyana Maha Yagam**, which is held for a fixed duration (for example, Dhyana Maha Yagam-5 is conducted for **11 consecutive days**).

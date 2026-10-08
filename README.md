@@ -1,20 +1,16 @@
-# PSSM Event Accommodation System
+# PSSM Buddha Sangha
 
-Modular monolith for managing free and self-booked hotel accommodation during PSSM spiritual events (for example, Dhyana Maha Yagam).
+Package name: **`pssm-buddha-sangha`**.
+
+A club of Buddhas under the Pyramid Spiritual Societies Movement (PSSM). People join the sangha with their details and family, support spiritual events, and can book event accommodation without typing those details again.
 
 ## What the system does
 
-Organizers register visitors and their families and capture stay length and special needs. Booking closes two days before the event. Admin then runs smart room allocation. Hotel receptionists check guests in and out. Admin and reception stay in sync through live notifications.
+- **Join the sangha** — visitor and family details, place, and meditation background
+- **Login to My Space** — password from the first five letters of the name plus date and month of birth (prototype uses event code `DMY5` in front)
+- **Event accommodation** — free or paid stay for events such as Dhyana Maha Yagam; details can be prefilled from the sangha join record (a copy; edits for stay do not change the join)
 
-- Booking closes **2 days before** the event. Rooms are allotted afterward, when Admin runs smart allocation. A few hotels can be marked Reserved and assigned only by hand
-- Free rooms near the venue, plus an optional self-booking path
-- Priority for aged or sick guests, and for Pyramid Sevadal (volunteers), in the closest hotels
-- One ID card per party, with a live photo and an ID-proof photo from the web camera
-- Standard check-in and check-out at **11:00 AM**, including person-wise and early check-out
-- A husband and wife asked to share a 3-bed room may agree to separate into a ladies room and a gents room with two other couples, which frees one room. If they do not agree, they stay together
-- If a family’s size exactly matches an empty room, dormitory, or hall, that whole unit is theirs. Otherwise rooms may be shared, preferring families from the same place. A partly filled all-gents room takes only an all-gents party, and an all-ladies room takes only an all-ladies party
-- Single visitors go to a dormitory or hall of their gender first. Each dormitory or hall is gents only or ladies only, usually 10 to 50 beds, and the remaining beds stay open for more people of that gender
-- Room keys stay with the hotel receptionist
+Accommodation also covers organizer workflows when built out: booking closes two days before the event, Admin runs smart room allocation, hotel reception check-in and check-out, and live sync for Admin and reception.
 
 ## Stack
 
@@ -22,39 +18,65 @@ Organizers register visitors and their families and capture stay length and spec
 | --- | --- |
 | Frontend | HTML5, UIKit 3, Alpine.js |
 | Backend | Node.js, Express.js |
-| Real-time | Socket.io |
-| Notifications | WhatsApp |
+| Real-time | Socket.io (accommodation desk) |
+| Notifications | WhatsApp (accommodation) |
 | Database | MySQL |
-| Auth | JWT with roles: Admin, Hotel Receptionist, Visitor |
+| Auth | JWT with roles: Admin, Sangha member, Hotel Receptionist, Visitor |
 
-Architecture is a modular monolith (registration, allotment, check-in/check-out, notifications, admin). Microservices and Kafka are deferred until the system grows beyond a single event.
+Architecture is a modular monolith (sangha register, event support, accommodation registration and allotment, check-in/check-out, notifications, admin). Microservices and Kafka are deferred until the system grows beyond a single event.
 
 ## Documentation
 
+### Buddha Sangha
+
 | Document | Location |
 | --- | --- |
-| Requirements (v2.8) | `docs/requirements/PSSM_Event_Accommodation_Requirements.md` |
-| User stories (v2.2) | `docs/requirements/PSSM_Event_Accommodation_User_Stories.md` |
-| Technical spec (v2.2) | `docs/technical/PSSM_Event_Accommodation_Technical_Spec.md` |
+| Overview | `docs/buddha-sangha/README.md` |
+| Requirements | `docs/buddha-sangha/requirements/PSSM_Buddha_Sangha_Requirements.md` |
+| User stories | `docs/buddha-sangha/requirements/PSSM_Buddha_Sangha_User_Stories.md` |
+| Technical spec | `docs/buddha-sangha/technical/PSSM_Buddha_Sangha_Technical_Spec.md` |
+| Register summary | `docs/buddha-sangha/technical/PSSM_Buddha_Sangha_Register_Summary.md` |
+| UI prototype notes | `docs/buddha-sangha/assets/PSSM_Buddha_Sangha_UI_Prototype.md` |
+
+### Event accommodation (module)
+
+| Document | Location |
+| --- | --- |
+| Requirements | `docs/requirements/PSSM_Event_Accommodation_Requirements.md` |
+| User stories | `docs/requirements/PSSM_Event_Accommodation_User_Stories.md` |
+| Technical spec | `docs/technical/PSSM_Event_Accommodation_Technical_Spec.md` |
 | Allocation summary | `docs/technical/PSSM_Event_Accommodation_Allocation_Summary.md` |
 | REST API | `docs/technical/PSSM_Event_Accommodation_API.md` |
-| REST API | `docs/technical/PSSM_Event_Accommodation_API.md` |
+| UI prototype notes | `docs/assets/PSSM_Event_Accommodation_UI_Prototype.md` |
+| UIkit guide | `docs/assets/PSSM_Event_Accommodation_UIKit_Guide.md` |
 
-Suggested build order is in the user stories: foundation and master data first (US-01 to US-04), then registration and allotment, hotel operations, real-time admin control, and optional self-booking last.
+## Prototype
+
+Static look-and-feel pages (not application code):
+
+| Page | Path |
+| --- | --- |
+| Landing | `docs/prototype/index.html` |
+| Join | `docs/prototype/join.html` |
+| Login | `docs/prototype/login.html` |
+| Accommodation | `docs/prototype/visitor.html` |
+
+Open `docs/prototype/index.html` in a browser.
 
 ## Layout
 
 ```text
-docs/requirements/   requirements and user stories
-docs/technical/      technical specification
-docs/decisions/      architecture decision records
-docs/assets/         screenshots, diagrams, and the UIkit guide
-docs/prototype/      static look-and-feel pages, not application code
-src/frontend/        HTML + UIKit 3 + Alpine.js
-src/backend/         Node.js + Express + Socket.io
-src/shared/          code shared by frontend and backend
-database/            SQL scripts and migrations
-scripts/             utility scripts
+docs/buddha-sangha/   sangha requirements, technical notes, UI notes
+docs/requirements/    event accommodation requirements and user stories
+docs/technical/       event accommodation technical docs and API
+docs/decisions/       architecture decision records
+docs/assets/          screenshots, diagrams, UIkit guide
+docs/prototype/       static look-and-feel pages
+src/frontend/         HTML + UIKit 3 + Alpine.js
+src/backend/          Node.js + Express + Socket.io
+src/shared/           code shared by frontend and backend
+database/             SQL scripts and migrations
+scripts/              utility scripts
 ```
 
 Copy `.env.example` to `.env` before running the application. Application code is not implemented yet.

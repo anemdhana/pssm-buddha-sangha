@@ -1,13 +1,13 @@
 # Agile User Stories  
-## PSSM Spiritual Event – Accommodation Management System
+## PSSM Buddha Sangha — Event Accommodation Module
 
+**Project:** `pssm-buddha-sangha`  
 **Version:** 2.4 (Living Document)  
-**Last Updated:** 07 October 2026  
+**Last Updated:** 08 October 2026  
 **Related Documents:**  
 - PSSM_Event_Accommodation_Requirements.md  
 - PSSM_Event_Accommodation_Technical_Spec.md  
 - PSSM_Event_Accommodation_Allocation_Summary.md  
-- PSSM_Event_Accommodation_API.md  
 - PSSM_Event_Accommodation_API.md  
 
 ---

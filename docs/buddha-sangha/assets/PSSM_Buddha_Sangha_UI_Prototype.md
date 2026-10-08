@@ -1,12 +1,14 @@
 # UI Prototype  
 ## PSSM Buddha Sangha
 
+**Project:** `pssm-buddha-sangha`  
 **Version:** 1.9 (Living Document)  
-**Last Updated:** 06 October 2026  
+**Last Updated:** 08 October 2026  
 **Related Documents:**  
 - PSSM_Buddha_Sangha_Requirements.md  
 - PSSM_Buddha_Sangha_User_Stories.md  
 - PSSM_Buddha_Sangha_Technical_Spec.md  
+- Shared static pages: `docs/prototype/` (landing, join, login, accommodation)
 
 **UI kit:** [UIkit 3](https://getuikit.com/docs/introduction)
 
