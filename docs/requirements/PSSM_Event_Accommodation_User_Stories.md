@@ -1,7 +1,7 @@
 # Agile User Stories  
 ## PSSM Spiritual Event – Accommodation Management System
 
-**Version:** 2.2 (Living Document)  
+**Version:** 2.4 (Living Document)  
 **Last Updated:** 07 October 2026  
 **Related Documents:**  
 - PSSM_Event_Accommodation_Requirements.md  
@@ -82,6 +82,7 @@
 - The visitor can correct a suggested town, district, state, or country
 - Mobile number is validated for correct format
 - Registration creates a unique Visitor record
+- The party can later sign in with the main contact and the temporary password (US-26)
 
 ---
 
@@ -358,6 +359,22 @@
 
 ---
 
+### US-26: Visitor – Sign In and Change Password
+**As a** Visitor  
+**I want** to sign in for my family group with my contact number and a temporary password  
+**So that** I can return to our booking, and set my own password when I wish
+
+**Acceptance Criteria:**
+- One sign-in covers the whole party. The sign-in name is the main person’s contact number
+- The first password is the latest event code plus the last 5 digits of that contact, with nothing between them
+- Example: event code `DMY5` and contact `9848012345` produce `DMY512345`
+- The sign-in page states this rule and shows the latest event code
+- After sign-in, the visitor can change the password
+- After a change, only the new password works
+- A wrong contact or password is rejected
+
+---
+
 ### US-23: Admin – Run Smart Room Allocation
 **As an** Admin  
 **I want** to start a smart allocation flow after booking has closed  
@@ -369,6 +386,8 @@
 - Self-booked parties are skipped
 - Hotels marked Reserved are skipped (US-25). Admin can still place a party into a reserved hotel by choosing it in the review override
 - The flow applies, together:
+  - First, parties whose place matches the event location (urban city, or rural town). Then other parties, only into beds still free (FR-30)
+  - A party that still has no room is left unmatched for Admin to assign by hand
   - Special-needs priority for the closest rooms (US-07)
   - Pyramid Sevadal restricted to nearby hotels (US-21)
   - If party size exactly equals the capacity of an empty room, dormitory, or hall, assign that entire unit to the family and do not share it (FR-25). A dormitory or hall is used only when the whole family matches its gender
@@ -392,7 +411,7 @@
 | Priority | User Stories                          | Focus Area                  |
 |----------|---------------------------------------|-----------------------------|
 | P1       | US-01, US-02, US-03, US-04, US-25     | Foundation & Master Data    |
-| P2       | US-05, US-06, US-08, US-09, US-22, US-24 | Registration & booking window |
+| P2       | US-05, US-06, US-08, US-09, US-22, US-24, US-26 | Registration & booking window |
 | P2b      | US-23, US-07, US-18, US-20, US-21     | Admin smart allocation |
 | P3       | US-10, US-11, US-12, US-13, US-19     | Hotel Receptionist Operations |
 | P4       | US-14, US-15, US-17                   | Real-time & Admin Control |

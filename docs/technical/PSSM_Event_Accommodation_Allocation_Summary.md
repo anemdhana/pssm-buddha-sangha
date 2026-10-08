@@ -1,14 +1,14 @@
 # Allocation Summary  
 ## PSSM Spiritual Event – Accommodation Management System
 
-**Version:** 1.3 (Living Document)  
+**Version:** 1.4 (Living Document)  
 **Last Updated:** 07 October 2026  
 **Related Documents:**  
 - PSSM_Event_Accommodation_Requirements.md  
 - PSSM_Event_Accommodation_User_Stories.md  
 - PSSM_Event_Accommodation_Technical_Spec.md  
 
-This is a reading guide for how smart allocation works so far. The rules themselves live in the requirements (FR-18, FR-20, FR-21, FR-23, FR-24, FR-25, FR-26) and in Technical Specification section 7.
+This is a reading guide for how smart allocation works so far. The rules themselves live in the requirements (FR-18, FR-20, FR-21, FR-23, FR-24, FR-25, FR-26, FR-30) and in Technical Specification section 7.
 
 ---
 
@@ -16,7 +16,9 @@ This is a reading guide for how smart allocation works so far. The rules themsel
 
 Allocation runs only after booking closes, **2 days before the event**. Admin starts it. It covers free-accommodation parties only. Self-booked parties are left out. Hotels marked **Reserved** are left out of this automatic run. Admin can still assign those hotels by hand, and can override any other result.
 
-For each party, in this order:
+Parties from the **event location** are placed first. An urban visitor matches the event city or town on **city**. A rural visitor matches it on **town**. Everyone else is placed only into beds that are still free. A party that still has no room is left for Admin to assign by hand.
+
+For each of those groups, in this order:
 
 1. Use the details already captured: size, gender of each person, aged or sickness, AC or Non-AC, Pyramid Sevadal, and, for a couple, whether they agreed to separate.
 2. Aged or sickness moves them toward the **closest** rooms. Pyramid Sevadal stays in **nearby hotels** only.
@@ -26,7 +28,7 @@ For each party, in this order:
 6. A **single person** with no exact bed goes to a matching dormitory or hall first.
 7. Otherwise **share**: same place first (rural: same town; urban: same city), and a partly filled all-gents room takes only an all-gents party. An all-ladies room takes only an all-ladies party.
 
-Check-in and check-out stay at **11:00 AM**. Each person keeps their own check-out date. A party that cannot be fitted is listed for Admin to place by hand.
+Check-in and check-out stay at **11:00 AM**. Each person keeps their own check-out date. After the local parties and then the others have been tried, anyone still without a room is listed for Admin to place by hand. That manual step is the only way those remaining parties get a room.
 
 ---
 

@@ -1,7 +1,7 @@
 # REST API  
 ## PSSM Spiritual Event – Accommodation Management System
 
-**Version:** 1.0 (Living Document)  
+**Version:** 1.2 (Living Document)  
 **Last Updated:** 07 October 2026  
 **Related Documents:**  
 - PSSM_Event_Accommodation_Requirements.md  
@@ -39,7 +39,7 @@ Live pushes (check-in, check-out, admin changes) stay on Socket.io. These endpoi
 
 Roles: `admin`, `receptionist`, `visitor`.
 
-A visitor token is returned when a booking is created. Admin and receptionist use login.
+Admin and receptionist sign in with a username. A visitor family group signs in with the main contact and a password. The first password is temporary. Creating a booking also returns a visitor token so the form can continue in that visit.
 
 ---
 
@@ -110,15 +110,23 @@ Rural `place`: `{ "village", "town", "district", "state", "country" }`.
 ### 3. Auth
 
 #### `POST /auth/login`  
-Admin, receptionist.
+Admin, receptionist, or a visitor family group.
 
-Request
+Staff request
 
 ```json
 { "username": "reception.saiprakash", "password": "secret" }
 ```
 
-Response `200`
+Visitor request. One login for the whole party. `contact` is the main person’s number.
+
+```json
+{ "contact": "9848012345", "password": "DMY512345" }
+```
+
+The temporary password is the latest event `code` plus the last 5 digits of `contact`, with no separator. For event code `DMY5` and contact `9848012345`, the password is `DMY512345`. After the visitor changes it, only the new password is accepted.
+
+Staff response `200`
 
 ```json
 {
@@ -131,7 +139,41 @@ Response `200`
 }
 ```
 
-Admin response omits `hotelId`. `401` when the credentials do not match.
+Visitor response `200`
+
+```json
+{
+  "data": {
+    "token": "jwt",
+    "role": "visitor",
+    "partyId": "pty_2",
+    "name": "Lakshmi",
+    "passwordTemporary": true
+  }
+}
+```
+
+Admin response omits `hotelId`. `401` when the contact or password does not match. `400` when the contact has fewer than 5 digits.
+
+#### `POST /auth/password`  
+Visitor, while signed in. Replaces the temporary password.
+
+Request
+
+```json
+{
+  "currentPassword": "DMY512345",
+  "newPassword": "a password they choose"
+}
+```
+
+Response `200`
+
+```json
+{ "data": { "passwordTemporary": false } }
+```
+
+`401` when `currentPassword` is wrong.
 
 #### `POST /auth/logout`  
 Any logged-in role. Request body empty. Response `204`.
@@ -160,7 +202,9 @@ Response `200`
 {
   "data": {
     "id": "evt_1",
+    "code": "DMY5",
     "name": "Dhyana Maha Yagam",
+    "location": { "place": "Vijayawada", "state": "Andhra Pradesh", "country": "India" },
     "startDate": "2026-12-01",
     "endDate": "2026-12-11",
     "bookingClosesOn": "2026-11-29",
@@ -178,7 +222,9 @@ Request
 
 ```json
 {
+  "code": "DMY5",
   "name": "Dhyana Maha Yagam",
+  "location": { "place": "Vijayawada", "state": "Andhra Pradesh", "country": "India" },
   "startDate": "2026-12-01",
   "endDate": "2026-12-11"
 }
@@ -687,11 +733,11 @@ Response `200`
 }
 ```
 
-`reason` is a short label such as `exact capacity`, `closest room`, `same town`, `same city`, `gents dormitory`, `ladies hall`, `beds left in an all-gents room`, `sevadal`, `couple exchange`.
+`reason` is a short label such as `event location`, `exact capacity`, `closest room`, `same town`, `same city`, `gents dormitory`, `ladies hall`, `beds left in an all-gents room`, `sevadal`, `couple exchange`.
 
 `409` `BOOKING_OPEN` when the window has not closed.
 
-The proposal follows the allocation summary: exact capacity, reserved hotels skipped, couple exchange only for three agreeing couples in the closest capacity-3 rooms, single visitors into a matching dormitory or hall, then sharing by town or city and by gender.
+The proposal follows the allocation summary. Parties from the event location are placed first (`location.place` matches an urban city or a rural town). Other parties use only beds still free. `unmatched` is the manual list: Admin assigns those parties by hand. Exact capacity, reserved hotels skipped, couple exchange, dormitory gender, and sharing by town or city still apply inside each group.
 
 #### `GET /admin/allocation/runs/:runId`  
 Admin. The proposal, including any overrides saved so far.
@@ -950,7 +996,8 @@ Admin or the receptionist of that hotel. Full payload of the change.
 
 | Method | Path | Who |
 | --- | --- | --- |
-| POST | `/auth/login` | Admin, receptionist |
+| POST | `/auth/login` | Admin, receptionist, visitor |
+| POST | `/auth/password` | Visitor |
 | POST | `/auth/logout` | Any token |
 | GET | `/auth/me` | Any token |
 | GET | `/events/current` | Visitor, admin, receptionist |

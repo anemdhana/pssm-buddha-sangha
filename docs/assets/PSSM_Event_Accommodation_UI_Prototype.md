@@ -1,13 +1,14 @@
 # UI Prototype  
 ## PSSM Spiritual Event – Accommodation Management System
 
-**Version:** 1.0 (Living Document)  
+**Version:** 1.6 (Living Document)  
 **Last Updated:** 07 October 2026  
 **Related Documents:**  
 - PSSM_Event_Accommodation_Requirements.md  
 - PSSM_Event_Accommodation_User_Stories.md  
 - PSSM_Event_Accommodation_Technical_Spec.md  
 - PSSM_Event_Accommodation_API.md  
+- PSSM_Event_Accommodation_UIKit_Guide.md  
 
 **UI kit:** [UIkit 3](https://getuikit.com/docs/introduction)
 
@@ -15,7 +16,7 @@
 
 ### 1. Purpose of this Document
 
-This document holds the paper-and-pen UI sketches and the UIkit components chosen for each screen. Section 5 lists the fields to draw for Visitor, Admin, and Hotel Receptionist.
+This document holds the paper-and-pen UI sketches and the UIkit components chosen for each screen. Section 5 is how each page should look. Section 6 lists the fields to draw for Visitor, Admin, and Hotel Receptionist.
 
 Screenshots go in `docs/assets/screenshots/`. Each sketch is embedded below, then mapped to UIkit markup before any HTML is written in `src/frontend/`.
 
@@ -38,13 +39,23 @@ Screenshots go in `docs/assets/screenshots/`. Each sketch is embedded below, the
 
 | # | File | Screen | Roles | UIkit pieces | Status |
 |---|------|--------|-------|--------------|--------|
-| | | | | | Waiting for sketches |
+| 1 | `docs/prototype/index.html` | Landing | Visitor | buttons | Draft |
+| 2 | `docs/prototype/login.html` | Login to My space | Visitor | form, grid | Draft |
+| 3 | `docs/prototype/visitor.html` | Register wizard | Visitor | switcher, progress, form, grid, subnav, modal, description list | Draft |
 
 ---
 
 ### 4. Screens
 
-_No sketches yet. Drop images into `screenshots/` and they will be attached here._
+A static look-and-feel page is at `docs/prototype/index.html`. Open that file in a browser. It is not the working app, and it does not live in `src/frontend/`.
+
+The header is one compact bar: the PSSM logo on the left, the title **Dhyana Maha Yagam - 5**, and Patriji, the pyramid, and the wall painting on the far right. Under it are two actions: **Register for Accommodation** and **Login to My space**.
+
+Login is `docs/prototype/login.html`. The password is the event code, the first 5 letters of the name, then the date and month of birth. Example: `DMY5`, Ramakrishna, 15 August gives `DMY5Ramak1508`.
+
+The visitor wizard is `docs/prototype/visitor.html`. It opens from Register. There is no sign-in step. The steps are Free or Paid accommodation, who is coming, place, family, days, the couple question when the party is one male and one female, ID, and the summary. UIkit pieces in use: form, switcher, progress, grid, subnav pills, modal, and a description list.
+
+Paper screenshots will be added here when they are shared.
 
 Screens still to expect from the product rules:
 
@@ -53,38 +64,76 @@ Screens still to expect from the product rules:
 
 ---
 
-### 5. Fields to draw (paper and pen)
+### 5. How each page should look
+
+The UI is **mobile first**, **minimal**, and collected as a **wizard**. The same pages must stay readable on a phone. A wide screen uses the same steps. It does not add a second, denser layout.
+
+- One step on the screen. A phone should not need to scroll through a long form.
+- One short title, the fields for that step, and one primary button.
+- A single line shows progress, such as “Step 2 of 6”. Do not explain the whole process on the page.
+- Labels sit above the fields. Buttons are full width.
+- Help text is one short line, or it is omitted.
+- Lists (hotels, guests, allocation review) show a few columns. Extra detail opens on the next step, not on the same screen.
+- UIkit pieces for this: `uk-container` with a narrow width, `uk-form-stacked`, `uk-width-1-1` controls, `uk-button-primary uk-width-1-1`, and `uk-card-small`.
+
+Visitor booking is the wizard opened from Register for Accommodation. There is no sign-in inside it. The steps are accommodation, who is coming, place, family, days, the couple question when it applies, ID photos, and the summary. Back returns to the previous step. Next stores that step.
+
+Admin and receptionist follow the same rule. Hotel entry, room entry, allocation review, check-in, and check-out are separate steps, not one crowded page.
+
+Paper sketches can be phone-sized. When the screenshots arrive, each image is one wizard step.
+
+### 6. Fields to draw (paper and pen)
 
 Draw **one page per screen** below. Put a star on required fields. Leave a clear primary button at the bottom of each form. Fixed times are always **11:00 AM**. The visitor does not type those times.
 
 A booking request does not assign a room. Booking closes **2 days before the event start**. Admin runs smart allocation after that.
 
-Suggested drawing order: Visitor V1–V6, then Admin A1–A6, then Receptionist R1–R4.
+Suggested drawing order: Visitor V0, then V1–V6, then Admin A1–A6, then Receptionist R1–R4.
+
+Each heading below is one phone screen. If a heading lists more than a few fields, draw the extra group on the next screen. Place is its own step. Family members are their own step. Login is its own page, opened from the landing page.
 
 #### Visitor
 
-The visitor fills these while booking is open. After the cutoff, draw only V6.
+**Landing**
 
-**V1 — How will you stay?**
+Two buttons, before any form.
+
+| Action | Opens |
+| --- | --- |
+| Register for Accommodation | The visitor wizard |
+| Login to My space | The login page |
+
+**Login to My space**
 
 | Field | Required | Draw as | Notes |
 | --- | --- | --- | --- |
-| Accommodation choice | Yes | Two choices: Free accommodation / Self booking | Self booking skips room allotment |
+| Name | Yes | Text | The first 5 letters are used in the password |
+| Date | Yes | Number | Day of birth, 1–31, and valid for the month. No year |
+| Month | Yes | Number | 1–12 |
 
-If they choose self booking, the rest of the visit can be a short confirmation: “You will arrange your own stay.” No hotel search is defined yet.
+The password is the event code + the first 5 letters of the name + date + month. Date and month are two digits. Example: code `DMY5`, name Ramakrishna, 15 August gives `DMY5Ramak1508`.
+
+The visitor fills the wizard while booking is open. After the cutoff, a signed-in visitor can still open their party. A new booking is not accepted. Draw V6 for someone who is not continuing an existing party.
+
+**V1 — Accommodation**
+
+| Field | Required | Draw as | Notes |
+| --- | --- | --- | --- |
+| Accommodation choice | Yes | Two choices: Free Accommodation / Paid Accommodation | Both continue through the same steps |
 
 **V2 — Who is coming?**
 
 | Field | Required | Draw as | Notes |
 | --- | --- | --- | --- |
-| Full name | Yes | Text | Primary visitor |
-| Mobile number | Yes | Phone | Validated format |
-| Gender | Yes | Gents / Ladies | Needed so a dormitory or hall of the matching gender can be used |
-| Coming from | Yes | Rural / Urban | Shows only the fields for that choice |
-| Pyramid Sevadal | Yes | Yes / No | Yes means nearby hotels only |
-| Room type preference | Yes, for free stay | AC / Non-AC | Default **AC**. Hide this if they chose self booking |
+| Full name | Yes | Text | Primary visitor. The first 5 letters are used at login |
+| Mobile number | Yes | Phone | |
+| Gender | Yes | Male / Female | Needed so a dormitory or hall of the matching gender can be used |
+| How long into meditation? | Yes | One row, no wrap: I am very new here, 1 year, 2 years, 3 years, 4 years, 5 years, > 5 years | |
+| Date of birth | Yes | Two number boxes: date and month | No year. Digits only. The date must be valid for that month |
 
-**If Rural** — draw these under Coming from. Each box should show a suggestion list while typing.
+**Place** — its own step. Rural or Urban. Each box should show a suggestion list while typing.
+
+**If Rural**
 
 | Field | Required | Draw as | Notes |
 | --- | --- | --- | --- |
@@ -109,24 +158,23 @@ Same-location sharing later uses the rural **town** or the urban **city**.
 | Field | Required | Draw as | Notes |
 | --- | --- | --- | --- |
 | Name | Yes | Text | |
-| Gender | Yes | Gents / Ladies | Same choice as the visitor. A mixed party stays in a regular room |
+| Gender | Yes | Male / Female | Same choice as the visitor. A mixed party stays in a regular room |
+| How long into meditation? | Yes | Same choices as the visitor | One row, or a second line if the row is tight |
 | Relation | No | Text | Example: spouse, child, parent |
+| Mobile | No | Phone | Optional |
 | Age group | No | Child / Adult / Senior | On the data model. Useful for children and seniors |
+| Address | Yes | Two buttons | **Same as my address** is the default. **Different address** opens a popup with the same place fields as the visitor’s place step |
 
 Button: Add another family member.
 
-**V3 — How long, and any special needs?**
+**V3 — How long?**
 
 One stay row per person already entered (visitor and each family member).
 
 | Field | Required | Draw as | Notes |
 | --- | --- | --- | --- |
 | Days of stay | Yes | Number, minimum 1 | Can differ per person |
-| Any aged / elderly person in the party? | Yes | Yes / No | Yes gets the closest rooms |
-| Aged-person details | No | Short text | Shown only if Yes |
-| Any sickness / medical condition? | Yes | Yes / No | Yes gets the closest rooms |
-| Sickness details | No | Short text | Shown only if Yes |
-| Separate gents and ladies rooms? | Yes, only for a husband and wife | Yes / No | Show only when the party is exactly two people, one gent and one lady. Yes means three such couples can fill one ladies room and one gents room in the closest 3-bed rooms, freeing the third. No means this couple stays together in one room even if it has 3 beds |
+| Separate rooms? | Yes, only for a husband and wife | Yes / No | Show only when the party is exactly two people, one male and one female. Yes means three such couples can fill one ladies room and one gents room in the closest 3-bed rooms, freeing the third. No means this couple stays together in one room even if it has 3 beds |
 
 Check-in and check-out dates are calculated from these days. Show them as read-only, with time **11:00 AM**.
 
@@ -145,14 +193,16 @@ Only one person provides ID. Draw a picker, then two camera boxes.
 
 No new typing. Draw a summary card the visitor can keep:
 
-- Party name and mobile
+- Free Accommodation or Paid Accommodation
+- Party name, mobile, gender, meditation, and date and month of birth
 - Number of persons
 - Rural or urban place (village and town, or city)
-- Sevadal, special needs, room-type preference
+- Family, including meditation and whether the address is the same or their own
 - Stay dates at 11:00 AM
 - ID card number (one card for the party)
 - Status: **Waiting for room allocation**
 - Note: rooms are allotted after booking closes, when Admin runs allocation
+- How to sign in again: Login to My space. The password is the event code, the first 5 letters of the name, then date and month
 
 **V6 — Booking closed**
 
@@ -166,7 +216,11 @@ Needed so the system knows when booking closes.
 
 | Field | Required | Draw as | Notes |
 | --- | --- | --- | --- |
+| Event code | Yes | Short text | Example: `DMY5`. Latest code is the start of each family’s first password |
 | Event name | Yes | Text | Example: Dhyana Maha Yagam |
+| Event place | Yes | Text | City or town where the event is held. Parties from this place are allotted first |
+| State | Yes | Text | |
+| Country | Yes | Text | |
 | Start date | Yes | Date | |
 | End date | Yes | Date | Example span: 11 days |
 | Booking closes on | — | Read-only date | Start date minus 2 days |
@@ -223,7 +277,7 @@ Then a review table. One row per free-accommodation party:
 | Party | Text | Name, persons, origin, flags |
 | Proposed hotel | Text | |
 | Proposed room | Text | Room number, AC/Non-AC, shared or not |
-| Why | Short text | Example: exact capacity, closest room, same city, gents dormitory, ladies hall, beds left in an all-gents room, Sevadal |
+| Why | Short text | Example: event location, exact capacity, closest room, same city, gents dormitory, ladies hall, beds left in an all-gents room, Sevadal |
 | Override hotel | Dropdown | Optional. Includes reserved hotels, each labeled Reserved |
 | Override room | Dropdown | Optional. Rooms of the hotel chosen above, including a reserved hotel |
 | Unmatched | A separate list | Parties that did not fit, for Admin to place by hand |
@@ -300,7 +354,7 @@ A list of parties whose check-out is tomorrow. Each row shows name, room, and **
 
 ---
 
-### 6. Section template
+### 7. Section template
 
 Copy this block for each new sketch.
 

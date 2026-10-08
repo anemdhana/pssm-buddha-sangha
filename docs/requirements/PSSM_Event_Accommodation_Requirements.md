@@ -1,13 +1,12 @@
 # Requirements Specification  
 ## PSSM Spiritual Event – Accommodation Management System
 
-**Version:** 2.8 (Living Document)  
+**Version:** 2.10 (Living Document)  
 **Last Updated:** 07 October 2026  
 **Related Documents:**  
 - PSSM_Event_Accommodation_Technical_Spec.md  
 - PSSM_Event_Accommodation_User_Stories.md  
 - PSSM_Event_Accommodation_Allocation_Summary.md  
-- PSSM_Event_Accommodation_API.md  
 - PSSM_Event_Accommodation_API.md  
 
 ---
@@ -147,10 +146,21 @@ Rooms are **not** allotted at the time a visitor submits a booking.
 - The flow allots rooms for every party that requested **free** accommodation and is still waiting.  
 - Self-booked parties are excluded.  
 - Hotels marked **Reserved** (FR-28) are excluded. Their rooms are not used by this automatic flow.  
+- Parties from the **event location** are allotted first (FR-30). Other parties are allotted only into beds still free after that.  
 - The flow applies the allotment rules already defined: special-needs priority (FR-06), Pyramid Sevadal nearby-only priority (FR-21), room capacity, AC as the default room type, an exact capacity match for the whole family first (FR-25), then single-person dormitory/hall only in a room that allows their gender (FR-20, FR-24), a consented husband-and-wife exchange in the three closest capacity-3 rooms (FR-26), and shared rooms with same-location families first (FR-18). A partly filled room that is already all gents takes only an all-gents party. A partly filled room that is already all ladies takes only an all-ladies party.  
 - Stay length already captured for each person is respected, including different check-out dates inside one room.  
+- A party that still has no room after this run is **not** forced into a bed. Admin assigns that party by hand.  
 - Admin can review the result and override an allotment, including placing a party into a reserved hotel by hand.  
 - When allocation for a party is confirmed, the hotel receptionist is notified as in FR-08.
+
+**FR-30: Event Location Has First Priority**  
+Smart allocation fills rooms for people from the event’s own place before people from anywhere else.
+
+- Admin records the event location: the city or town, the state, and the country where the event is held.  
+- A party matches that location when an urban visitor’s **city**, or a rural visitor’s **town**, is the same as the event’s city or town.  
+- The automatic run allots matching parties first, using the other allotment rules.  
+- It then allots the remaining parties into beds that are still free, using the same rules.  
+- Any party that still cannot be placed is left for the **manual** process. Admin assigns them from the unmatched list.
 
 **FR-28: Reserved Hotels for Manual Assignment**  
 Admin may keep a few hotels out of automatic allocation and assign them only by hand.
@@ -197,6 +207,16 @@ The visitor shall say whether they come from a **rural** or an **urban** place. 
 - Choosing a suggestion fills the later fields in that row.  
 - If a suggestion is wrong, the visitor can change town, district, state, or country before submitting.  
 - Same-location room sharing uses the rural **town** or the urban **city**.
+
+**FR-29: Family-Group Sign-In**  
+Each visitor party signs in as one family group, using the main person’s contact.
+
+- The sign-in name is the main person’s contact number.  
+- The first password is temporary: the **latest event code** followed immediately by the **last 5 digits** of that contact.  
+- Example: event code `DMY5` and contact `9848012345` give the password `DMY512345`.  
+- Admin sets the event code on the event. The latest event’s code is the one used.  
+- After sign-in, the visitor may change the password whenever they wish. Once changed, the temporary password no longer works.  
+- The same sign-in opens the whole party, not a separate login for each family member.
 
 **FR-04: Stay Duration for Each Person**  
 The system shall capture the **number of days** each individual (primary visitor + every family member) wishes to stay.

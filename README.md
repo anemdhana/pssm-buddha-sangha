@@ -48,7 +48,8 @@ Suggested build order is in the user stories: foundation and master data first (
 docs/requirements/   requirements and user stories
 docs/technical/      technical specification
 docs/decisions/      architecture decision records
-docs/assets/         screenshots, sample ID cards, diagrams
+docs/assets/         screenshots, diagrams, and the UIkit guide
+docs/prototype/      static look-and-feel pages, not application code
 src/frontend/        HTML + UIKit 3 + Alpine.js
 src/backend/         Node.js + Express + Socket.io
 src/shared/          code shared by frontend and backend

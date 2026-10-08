@@ -1,7 +1,7 @@
 # Technical Specification  
 ## PSSM Spiritual Event – Accommodation Management System
 
-**Version:** 2.2 (Living Document)  
+**Version:** 2.5 (Living Document)  
 **Last Updated:** 07 October 2026  
 **Related Documents:**  
 - PSSM_Event_Accommodation_Requirements.md  
@@ -23,13 +23,13 @@ It complements the Functional Requirements Specification.
 
 | Layer              | Technology                          | Notes |
 |--------------------|-------------------------------------|-------|
-| Frontend           | HTML5 + **UIKit 3** + Alpine.js    | UIKit for styling (as preferred). Alpine.js for lightweight interactivity. |
+| Frontend           | HTML5 + **UIKit 3** + Alpine.js    | Mobile first, minimal, one wizard step per screen. UIKit for styling. Alpine.js for lightweight interactivity. |
 | Camera Capture     | Browser `getUserMedia` API          | Live photo + ID proof capture. |
 | Backend            | **Node.js + Express.js**            | Main application server. |
 | Real-time          | **Socket.io**                       | Live notifications between Admin and Hotel Receptionists. |
 | Notifications      | **WhatsApp** (primary for now)      | For alerts to Admin / Receptionist / Visitors as needed. |
 | Database           | **MySQL**                           | Structured relational data. |
-| Authentication     | JWT + Role-based Access Control     | Roles: Admin, Hotel Receptionist, Visitor. |
+| Authentication     | JWT + Role-based Access Control     | Roles: Admin, Hotel Receptionist, Visitor. A family group signs in with the main contact. First password is the latest event code plus the last 5 digits of that contact, and can be changed. |
 | File Storage       | Local storage or Cloud (S3/Cloudinary) | For live photos and ID proof images. |
 
 **Architecture Style:** Modular Monolith (recommended)
@@ -173,29 +173,30 @@ The system manages free and self-booked hotel accommodation for event visitors a
 
 **Rules applied by that flow**
 
-1. Use family size, gender of each person, special needs, room type preference (AC / Non-AC), and whether the visitor is **Pyramid Sevadal** (volunteer), as captured during registration. Ignore hotels marked Reserved.
-2. If aged persons or sickness is reported → prioritize rooms closest to the event venue.
-3. If the visitor is **Pyramid Sevadal** → allot only in nearby hotels (walkable or very short auto distance). Give highest priority to closest rooms.
-4. **Exact capacity:** If an empty room, dormitory, or hall has capacity exactly equal to the party size, assign that entire unit to the family. Do not share it. A dormitory or hall is eligible only when every person matches the gender it allows. A dormitory or hall is usually **10 to 50** beds, so this whole-unit match applies there only when the party is that large. A smaller same-gender party takes only the beds it needs, and the remaining beds stay open for more people of that gender. If several units match, apply steps 2, 3, and 6. For one person, prefer a matching dormitory or hall over a regular room of capacity 1.
-5. If no exact match exists, match room capacity ≥ number of persons requiring accommodation.
-6. Prefer requested room type (AC or Non-AC) where available (default = AC).
-7. **Husband and wife in a capacity-3 room**, only when step 4 did not assign a unit: the party is exactly one gent and one lady, registered as husband and wife. If they agreed during booking, and two other agreeing couples are also waiting, assign the three closest capacity-3 rooms as follows: all three ladies in one room, all three gents in one room, and leave the third room free. Repeat for each further set of three. A couple who did not agree stays together in one capacity-3 room. If fewer than three couples agreed, each keeps their own capacity-3 room.
-8. **Single person (party size = 1)**, only when step 4 did not assign a unit:  
+1. Use family size, gender of each person, place, special needs, room type preference (AC / Non-AC), and whether the visitor is **Pyramid Sevadal** (volunteer), as captured during registration. Ignore hotels marked Reserved. The event location is the city or town Admin recorded for the event.
+2. **Event location first.** Allot parties whose place matches the event location before any other party. An urban visitor matches on **city**. A rural visitor matches on **town**. Run steps 3 to 11 for that group. Then run steps 3 to 11 again for everyone else, using only beds still free. A party that still has no room is unmatched. Admin assigns unmatched parties by hand.
+3. If aged persons or sickness is reported → prioritize rooms closest to the event venue.
+4. If the visitor is **Pyramid Sevadal** → allot only in nearby hotels (walkable or very short auto distance). Give highest priority to closest rooms.
+5. **Exact capacity:** If an empty room, dormitory, or hall has capacity exactly equal to the party size, assign that entire unit to the family. Do not share it. A dormitory or hall is eligible only when every person matches the gender it allows. A dormitory or hall is usually **10 to 50** beds, so this whole-unit match applies there only when the party is that large. A smaller same-gender party takes only the beds it needs, and the remaining beds stay open for more people of that gender. If several units match, apply steps 3, 4, and 7. For one person, prefer a matching dormitory or hall over a regular room of capacity 1.
+6. If no exact match exists, match room capacity ≥ number of persons requiring accommodation.
+7. Prefer requested room type (AC or Non-AC) where available (default = AC).
+8. **Husband and wife in a capacity-3 room**, only when step 5 did not assign a unit: the party is exactly one gent and one lady, registered as husband and wife. If they agreed during booking, and two other agreeing couples are also waiting, assign the three closest capacity-3 rooms as follows: all three ladies in one room, all three gents in one room, and leave the third room free. Repeat for each further set of three. A couple who did not agree stays together in one capacity-3 room. If fewer than three couples agreed, each keeps their own capacity-3 room.
+9. **Single person (party size = 1)**, only when step 5 did not assign a unit:  
    - **First choice** → Dormitory or Hall that allows that person’s gender (**Gents allowed only** or **Ladies allowed only**).  
    - **Last choice** → Regular private/shared room.  
    - A Dormitory or Hall never mixes gents and ladies. A party that includes both stays in a regular room.
-9. **Support shared room allotment** when steps 4 and 7 did not assign a whole unit: A room can be shared by multiple families as long as total persons ≤ room capacity. In a Dormitory or Hall, every person must match the gender that room allows. After each placement, the remaining beds in that dormitory or hall stay open and allocation continues to fill them with the same gender until capacity is reached.  
+10. **Support shared room allotment** when steps 5 and 8 did not assign a whole unit: A room can be shared by multiple families as long as total persons ≤ room capacity. In a Dormitory or Hall, every person must match the gender that room allows. After each placement, the remaining beds in that dormitory or hall stay open and allocation continues to fill them with the same gender until capacity is reached.  
    - **First choice**: Families from the **same location** (rural: same town; urban: same city).  
    - Only if no suitable same-location family is available, consider families from different locations.  
    - If the room is **already partly occupied** and everyone in it is gents, fill the remaining beds only with a party that is entirely gents.  
    - If everyone already in it is ladies, fill the remaining beds only with a party that is entirely ladies.  
    - A mixed party is not added to a room that is already all one gender. Same-location preference still applies among the parties that match.
-10. Support partial / person-wise occupancy (one room can have members with different check-out dates).
+11. Support partial / person-wise occupancy (one room can have members with different check-out dates).
 
 **After guests are in the hotel**
 
-11. On check-out (full, person-wise, or early) at 11:00 AM → free the capacity for immediate re-use.  
-12. Early check-out is freely allowed before the scheduled check-out date. Hotel receptionist performs the action and Admin is notified automatically.
+12. On check-out (full, person-wise, or early) at 11:00 AM → free the capacity for immediate re-use.  
+13. Early check-out is freely allowed before the scheduled check-out date. Hotel receptionist performs the action and Admin is notified automatically.
 
 **Room Key Policy:**  
 Visitors must never take room keys with them. Keys must always be deposited with the Hotel Receptionist.
@@ -219,6 +220,8 @@ Visitors must never take room keys with them. Keys must always be deposited with
 | Dormitory / Hall gender | **Decision:** Each Dormitory or Hall is **Gents allowed only** or **Ladies allowed only**, usually **10 to 50** beds. Remaining beds stay open and are filled with that same gender until full. Regular rooms have no preset gender limit |
 | Couple and a capacity-3 room | **Decision:** Ask husband and wife. Three who agree use the three closest capacity-3 rooms: ladies together, gents together, one room freed. A couple who declines stays together in a capacity-3 room |
 | Reserved hotels | **Decision:** A Reserved switch on the hotel list (and on the hotel form) keeps that hotel out of smart allocation. Admin assigns it manually |
+| Visitor password | **Decision:** Temporary password is the latest event code plus the last 5 digits of the main contact. The visitor may change it |
+| Event location priority | **Decision:** Smart allocation places parties from the event’s city or town first. Anyone still without a room is assigned manually |
 
 ---
 
@@ -236,7 +239,8 @@ pssm-accommodation-system/
 │   ├── technical/
 │   │   └── PSSM_Event_Accommodation_Technical_Spec.md
 │   ├── decisions/                 ← (optional) Architecture Decision Records
-│   └── assets/                    ← Screenshots, sample ID cards, diagrams, etc.
+│   ├── assets/                    ← Screenshots, sample ID cards, diagrams, etc.
+│   └── prototype/                 ← Static look-and-feel pages, not application code
 │
 ├── src/                           ← Application code
 │   ├── frontend/                  ← HTML + UIKit 3 + Alpine.js
