@@ -1,0 +1,61 @@
+Act as a Senior React Architect specializing in React, UIkit 3, and Vite.
+
+Review my entire migrated React application and improve it according to modern production-grade best practices.
+
+### 1. React best practices
+- Use functional components and hooks correctly.
+- Create reusable components without overengineering.
+- Eliminate unnecessary `useEffect`, `useMemo`, and `useCallback`.
+- Avoid duplicated state, prop drilling, and direct DOM manipulation.
+- Ensure proper component lifecycle, cleanup, and error handling.
+- Use React Router correctly, including lazy-loaded routes where beneficial.
+
+### 2. UIkit 3 best practices
+- Preserve the existing UIkit design and visual appearance.
+- Prefer UIkit CSS classes over unnecessary custom CSS.
+- Ensure UIkit JavaScript does not conflict with React's rendering.
+- Use React state for modals, dropdowns, tabs, and interactive components where practical.
+- Avoid duplicate event listeners and memory leaks.
+- Maintain consistent spacing, typography, colors, and responsive layouts.
+
+### 3. Vite optimization
+- Use proper environment configuration.
+- Enable efficient production builds and route-based code splitting where beneficial.
+- Remove unused dependencies and assets.
+- Avoid unnecessarily large JavaScript bundles.
+- Configure a development proxy for future Spring Boot `/api` endpoints.
+- Ensure production asset paths and routing work correctly.
+
+### 4. Forms, tables, and API readiness
+- Improve form validation, loading states, and error messages.
+- Use server-side pagination and filtering when connected to Spring Boot.
+- Centralize API communication.
+- Prepare for Spring Security session authentication and CSRF protection.
+- Avoid storing sensitive member information in browser storage.
+
+### 5. Accessibility and responsiveness
+- Use semantic HTML and accessible form labels.
+- Ensure keyboard navigation and visible focus states.
+- Check mobile, tablet, and desktop layouts.
+- Improve tables and forms for smaller screens.
+- Respect reduced-motion preferences.
+
+### 6. Code quality and testing
+- Remove dead code, duplicate logic, and unnecessary dependencies.
+- Maintain consistent naming and folder organization.
+- Apply ESLint and Prettier.
+- Add meaningful tests for critical workflows.
+- Avoid premature abstractions and unnecessary libraries.
+
+### Execution instructions
+1. Audit the existing codebase first.
+2. Identify issues and prioritize them by impact.
+3. Fix high-impact problems before minor improvements.
+4. Preserve all existing functionality and UI appearance.
+5. Run linting, tests, and production build.
+6. Fix any errors introduced by the changes.
+7. Summarize improvements and remaining recommendations.
+
+**Goal:** Make the application clean, lightweight, fast, secure, accessible, and maintainable while preserving its existing UIkit design.
+
+**Important:** Do not redesign the UI, introduce unnecessary frameworks, or rewrite working code without a clear technical benefit.

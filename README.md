@@ -14,31 +14,44 @@ A club of Buddhas under the Pyramid Spiritual Societies Movement (PSSM). People 
 
 ## What the system does
 
-### Built (UI prototype in `docs/prototype/`)
+### Built (React app in `frontend/`)
 
-- **Join the sangha** — who / place / optional family / review; optional photos; temporary password from name + birth
-- **Login to My Space** — mobile + password; Stay + Account chrome after login
-- **My Profile / Change password** — edit join record; change password
-- **Roles** — PSSM Admin assigns Event Organizer, Pyramid Sevadal, PMMA Member
-- **PSSM Admin desk** — People & roles: search (1..n), assign/remove roles, remove person
-- **Create event** — Event Organizer sets name, start, end for later Stay
+Sangha register Join → My Space migrated from the static prototype (mock API, session-shaped for Spring Security later):
+
+- **Join the sangha** — who / place / family / review; temporary password from name + birth
+- **Login to My Space** — mobile + password
+- **My Profile / Change password**
+- **PSSM Admin desk** — People & roles
+- **Create event** — Event Organizer
+- Stay links show a **Coming soon** stub (accommodation next)
+
+### Reference prototype
+
+Static HTML under `docs/prototype/` remains for look-and-feel reference.
+
+### Built (Spring Boot in `backend/`)
+
+Register REST for the Done pages only (`/auth/*`, `/sangha/*`, `/events`) — session cookie auth, Flyway, seed admin.
 
 ### Next
 
-- **Accommodation module** (Accommodation Admin) for already joined sangha people — Free / Paid Stay against an event, booking window, smart room allocation, receptionist check-in/out. Prefill from a **copy** of the join record; Stay edits do not change the join.
+- Point React at live API (`VITE_USE_MOCK=false`) and harden CSRF/CORS for production
+- **Accommodation module** — Free / Paid Stay, allotment, receptionist desk
 
 ## Stack
 
 | Layer | Technology |
 | --- | --- |
-| Frontend | HTML5, UIKit 3, Alpine.js |
-| Backend | Node.js, Express.js |
-| Real-time | Socket.io (accommodation desk) |
+| Frontend | React.js + Vite, UIKit 3, React Router, Axios/Fetch |
+| Backend | Java 21 + Spring Boot 3.x (Maven) |
+| Security | Spring Security, **session-based** auth (not JWT) |
+| ORM / DB | Spring Data JPA + Hibernate, MySQL 8, Flyway |
+| Validation | Jakarta Bean Validation |
+| Real-time | Spring WebSocket (accommodation desk) |
 | Notifications | WhatsApp (accommodation) |
-| Database | MySQL |
-| Auth | JWT with roles: Register Admin, PSSM Admin (People & roles), Event Organizer, Pyramid Sevadal, PMMA Member, Sangha member, **Accommodation Admin**, Hotel Receptionist, Visitor |
+| Deploy | Docker Compose — Nginx + Spring Boot + MySQL on one VPS (resource limits) |
 
-Architecture is a modular monolith (sangha register, event support, accommodation registration and allotment, check-in/check-out, notifications, admin). Microservices and Kafka are deferred until the system grows beyond a single event.
+**Architecture:** single Spring Boot **modular monolith** (register, event support, accommodation, check-in/out, notifications, admin). Not microservices.
 
 ## Documentation
 
@@ -67,18 +80,56 @@ Static look-and-feel pages (not application code):
 
 Open `docs/prototype/index.html` in a browser. Join stores a sangha profile in the browser (`localStorage`). Login loads roles pre-assigned by PSSM Admin (Event Organizer, Pyramid Sevadal, PMMA Member). PSSM Admin lands on People & roles to search by mobile, assign/remove roles, and remove people. An Event Organizer can create events (name, start, end) for later Stay. Accommodation opens a **copy** of that profile; edits there do not change the sangha join record.
 
+## Run the React app
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+Open http://localhost:5173 — mock API is on by default (`VITE_USE_MOCK=true`). Sample PSSM Admin: mobile `9000000001`, password `PssmA0101`.
+
+```bash
+npm test
+npm run build
+```
+
+## Run the Spring Boot API
+
+```bash
+cd backend
+mvn spring-boot:run
+```
+
+Default profile `local` uses in-memory H2 (no Docker required). Sample admin: `9000000001` / `PssmA0101`.
+
+Optional MySQL (create DB + tables + sample UI data):
+
+```bash
+docker compose up -d mysql
+pip install -r scripts/requirements-db.txt
+python scripts/setup_sangha_db.py
+mvn spring-boot:run -Dspring-boot.run.profiles=mysql
+```
+
+Sample logins printed by the script (admin `9000000001` / `PssmA0101`).
+
+Wire React to the live API:
+
+```bash
+# frontend/.env
+VITE_USE_MOCK=false
+```
+
+Vite already proxies `/api` → `http://localhost:8080`.
+
 ## Layout
 
 ```text
-docs/buddha-sangha/   Requirements, Technical, UI
-docs/prototype/       static look-and-feel pages
-docs/decisions/       architecture decision records
-docs/assets/          screenshots and diagrams
-src/frontend/         HTML + UIKit 3 + Alpine.js
-src/backend/          Node.js + Express + Socket.io
-src/shared/           code shared by frontend and backend
-database/             SQL scripts and migrations
-scripts/              utility scripts
+docs/buddha-sangha/   Requirements, Technical, UI, WORK_SUMMARY
+docs/prototype/       static look-and-feel reference (UIKit)
+frontend/             React + Vite + UIKit 3 (Done register pages)
+backend/              Spring Boot 3 + Maven (register REST)
+docker-compose.yml    MySQL 8 (optional; local profile uses H2)
 ```
-
-Copy `.env.example` to `.env` before running the application. Application code is not implemented yet.

@@ -2,7 +2,17 @@
 
 **Updated:** 09 Oct 2026  
 **Specs:** `Requirements.md` · `Technical.md` · `UI.md`  
-**Prototype:** `docs/prototype/`
+**Prototype (reference):** `docs/prototype/`  
+**App:** `frontend/` (React) · `backend/` (Spring Boot)
+
+---
+
+## Stack (final)
+
+React + Vite + UIKit 3 · React Router · Fetch (`credentials: 'include'`)  
+Java 21 + Spring Boot 3 · Spring Security **session** · JPA + MySQL 8 / H2 local · Flyway · Maven  
+**Modular monolith** (not microservices)  
+**Deploy:** Docker Compose — Nginx + Spring Boot + MySQL on one VPS (resource limits)
 
 ---
 
@@ -10,44 +20,50 @@
 
 | # | Module | Status |
 |---|--------|--------|
-| 1 | **Sangha register** | Specced (paper) |
-| 2 | **Supporting events** | Specced — **Active/Inactive** anytime by Register Admin (not “five this week”) |
-| 3 | **Accommodation** | Specced — next to build; role = **Accommodation Admin** (≠ PSSM Admin) |
+| 1 | **Sangha register** | React Done pages + Spring REST scaffolded |
+| 2 | **Supporting events** | Specced — Active/Inactive graph not built |
+| 3 | **Accommodation** | Specced — Stay stub only |
 
 ---
 
-## Done (UI prototype)
+## Done (UI / React + matching API)
 
 Join → Login → My Space, roles, admin desk, create event.
 
-| Page | Who |
-|------|-----|
-| `join.html` | Guest — who / place / family / review |
-| `login.html` | Guest — mobile + password (`≤5` letters + DDMM) |
-| `profile.html` / `password.html` | Member |
-| `admin.html` | **PSSM Admin** — search people, assign/remove roles, remove person |
-| `events.html` | **Event Organizer** — name, start, end |
-| `visitor.html` | Stay shell (prefill copy of join) |
+| Route | Who | Backend |
+|------|-----|---------|
+| `/` | Home | — |
+| `/join` | Guest | `POST /api/v1/sangha/join` |
+| `/login` | Guest | `POST /api/v1/auth/login` |
+| `/profile` `/password` | Member | `GET`/`PUT /sangha/me`, `POST /auth/password` |
+| `/admin` | PSSM Admin | `GET /sangha/people`, `PUT …/roles`, `DELETE …`, `POST …/admin/claim` |
+| `/events` | Event Organizer | `GET`/`POST /api/v1/events` |
+| `/stay` | Coming soon | not built |
+
+Also: `GET /auth/me`, `POST /auth/logout`
 
 **Sample PSSM Admin:** mobile `9000000001` · password `PssmA0101`  
-**Shared logic:** `app-profile.js` (`localStorage`: people, roles, events, session)
+**Frontend:** `cd frontend && npm run dev` (`VITE_USE_MOCK=true` by default)  
+**Backend:** `cd backend && mvn spring-boot:run` (H2 `local` profile)  
+**MySQL sample data:** `python scripts/setup_sangha_db.py` (after `docker compose up -d mysql`)
 
 **Roles**
 
-- **PSSM Admin** — People & roles only  
+- **PSSM Admin** — People & roles  
 - Assignable: Event Organizer · Pyramid Sevadal · PMMA Member  
-- **Accommodation Admin** — hotels / allotment (docs only so far)
+- **Accommodation Admin** — docs only  
 
 ---
 
 ## Next
 
-**Accommodation module** for already-joined people: Free/Paid Stay against an event, booking window, smart allotment, receptionist desk.
+1. Run frontend against live API (`VITE_USE_MOCK=false`) and smoke-test Done flows  
+2. **Accommodation module** — Free/Paid Stay, booking window, smart allotment, receptionist  
 
 ---
 
 ## Spec pointers
 
+- Stack / deploy / register API: **Technical.md** → Sangha register — REST API  
 - Join / My Space: **FR-29j**, **US-26j…26c**  
-- Active events: **FR-14**, **US-09**, **US-11**  
 - Accommodation: Event accommodation section · Accommodation Admin US-01+  

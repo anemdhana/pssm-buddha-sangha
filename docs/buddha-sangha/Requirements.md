@@ -294,7 +294,7 @@ Each box shall show the remaining contributions needed for that event, then who 
 The interface shall stay limited to sign-in, the active-events support graph, support, the place list, the people dashboard, add or edit, and person detail.
 
 **NFR-02: Shared Stack with Event Accommodation**  
-The application shall use the same stack as the rest of **pssm-buddha-sangha**: HTML5, UIKit 3, and Alpine.js on the frontend, Node.js and Express.js on the backend, MySQL for data, and JWT for sign-in. Roles for the register are Admin and Sangha member.
+The application shall use the same stack as the rest of **pssm-buddha-sangha**: React + Vite + UIKit 3 on the frontend, Java 21 + Spring Boot 3 (modular monolith) on the backend, Spring Security session-based sign-in, MySQL 8 with Spring Data JPA and Flyway, and Docker Compose for deployment (Nginx + Spring Boot + MySQL on one VPS). Roles for the register are Admin and Sangha member.
 
 ---
 
@@ -368,7 +368,7 @@ The event is in Andhra Pradesh. Every person in the cities of that state must su
 - A person who is already on the register signs in with the Sangha member role and opens the dashboard
 - A successful sign-in opens the dashboard
 - Without a valid sign-in, the dashboard, add, edit, and detail screens stay closed
-- The session uses JWT
+- The session uses Spring Security session cookies (not JWT)
 
 ---
 
@@ -1207,7 +1207,7 @@ Visitors submit accommodation requests until **2 days before the event**. After 
 
 **Acceptance Criteria:**
 - Notifications for: Check-in, Check-out (full/person-wise/early), any updates
-- Notifications appear in real-time (via Socket.io + WhatsApp)
+- Notifications appear in real-time (via Spring WebSocket + WhatsApp)
 - Accommodation Admin can view history of all actions
 
 ---
@@ -1220,7 +1220,7 @@ Visitors submit accommodation requests until **2 days before the event**. After 
 **Acceptance Criteria:**
 - Accommodation Admin actions that affect a specific hotel trigger live notification to that hotel's receptionist
 - Notification contains clear details of the change
-- Uses Socket.io (in-app) + WhatsApp
+- Uses Spring WebSocket (in-app) + WhatsApp
 
 ---
 

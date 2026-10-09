@@ -2,7 +2,7 @@
 ## PSSM Buddha Sangha (pssm-buddha-sangha)
 
 **Project:** pssm-buddha-sangha  
-**Version:** 2.6 (Living Document)  
+**Version:** 2.8 (Living Document)  
 **Last Updated:** 09 October 2026  
 
 Sangha register technical notes and event accommodation (allocation + REST API) in one place.
@@ -12,6 +12,8 @@ Sangha register technical notes and event accommodation (allocation + REST API) 
 ## Table of contents
 
 - [Three modules](#three-modules)
+- [Chosen technical stack](#chosen-technical-stack)
+- [Production deployment](#production-deployment)
 - [Prototype (static UI + browser logic)](#prototype-static-ui-browser-logic)
   - [Pages](#pages)
   - [Browser storage keys](#browser-storage-keys)
@@ -26,6 +28,13 @@ Sangha register technical notes and event accommodation (allocation + REST API) 
   - [6. Register Rules](#6-register-rules)
   - [7. Next Steps / Open Items / Decisions](#7-next-steps-open-items-decisions)
   - [8. Project Structure & Documentation Organization](#8-project-structure-documentation-organization)
+- [Sangha register — REST API](#sangha-register--rest-api)
+  - [Conventions](#conventions)
+  - [Auth](#auth)
+  - [Join and My Profile](#join-and-my-profile)
+  - [PSSM Admin — people and roles](#pssm-admin--people-and-roles)
+  - [Events (Event Organizer)](#events-event-organizer)
+  - [Endpoint index](#endpoint-index)
 - [Part B — Register summary](#part-b-register-summary)
   - [What one row means](#what-one-row-means)
   - [Active events](#active-events)
@@ -75,12 +84,47 @@ Sangha register technical notes and event accommodation (allocation + REST API) 
 
 **Role note:** **PSSM Admin** (People & roles on My Space) assigns Event Organizer / Pyramid Sevadal / PMMA Member. That is not the same as **Accommodation Admin**, who runs hotels and room allotment for Stay.
 
+## Chosen technical stack
+
+**Decision (final):** one shared stack for all three modules. Build as a **single Spring Boot modular monolith** — not microservices.
+
+| Layer | Choice |
+| --- | --- |
+| Frontend | **React.js + Vite** |
+| UI framework | **UIKit 3** |
+| Routing | **React Router** |
+| API client | **Axios** or Fetch API |
+| Backend | **Java 21 + Spring Boot 3.x** |
+| Security | **Spring Security** |
+| Authentication | **Session-based** (HTTP session cookie; not JWT) |
+| Database | **MySQL 8** |
+| ORM | **Spring Data JPA + Hibernate** |
+| Validation | **Jakarta Bean Validation** |
+| Migrations | **Flyway** |
+| Build | **Maven** (backend) · Vite (frontend) |
+| Real-time (accommodation desk) | **Spring WebSocket** (STOMP) for in-app pushes; **WhatsApp** for alerts |
+| Deployment | **Docker Compose** |
+
+**Architecture:** modular packages inside one Spring Boot app (register, supporting events, accommodation, notifications, auth). Same MySQL database; clear module boundaries in code.
+
+## Production deployment
+
+**Target:** one VPS running **Nginx**, **Spring Boot**, and **MySQL** via **Docker Compose**, with **resource limits** on each service.
+
+| Service | Role |
+| --- | --- |
+| Nginx | TLS termination, static React build, reverse proxy `/api` (and WebSocket) to Spring Boot |
+| Spring Boot | Single API + session auth + business modules |
+| MySQL 8 | Persistent data; Flyway runs on app start |
+
+Compose sets CPU/memory limits so one noisy service cannot starve the others. Dev can run the same three services locally with Compose.
+
 ## Prototype (static UI + browser logic)
 
 **Location:** `docs/prototype/`  
 **Shared script:** `app-profile.js` · **Shared styles:** `app.css` · **UI kit:** UIkit 3.21.x  
 
-This layer is the look-and-feel and interaction draft for Join / My Space. It is not the Node/MySQL app. Production will replace `localStorage` with JWT + MySQL while keeping the same flows.
+This layer is the look-and-feel and interaction draft for Join / My Space. It is not the React + Spring Boot app. Production will replace `localStorage` with **session auth + MySQL** while keeping the same flows.
 
 ### Pages
 
@@ -127,22 +171,24 @@ Assignable by Admin UI: Event Organizer, Pyramid Sevadal, PMMA Member only. PSSM
 
 ### Next technical work (accommodation)
 
-Next: Accommodation module — wire Stay to events from `pssm_events` (then MySQL events), booking cutoff, smart allocation, receptionist desk, Socket.io / WhatsApp — see Event accommodation sections below. Prefer people who already have a sangha join record.
+Next: Accommodation module — wire Stay to events from `pssm_events` (then MySQL events), booking cutoff, smart allocation, receptionist desk, Spring WebSocket / WhatsApp — see Event accommodation sections below. Prefer people who already have a sangha join record.
 
 ## Sangha register
 
 ### 2. Recommended Technical Stack
 
+Uses the [Chosen technical stack](#chosen-technical-stack) for the whole project.
+
 | Layer | Technology | Notes |
 | --- | --- | --- |
-| Frontend | HTML5 + **UIKit 3** + Alpine.js | UIKit for styling. Alpine.js for lightweight interactivity. |
-| Backend | **Node.js + Express.js** | Main application server. |
-| Database | **MySQL** | A places table and a members table. |
-| Authentication | JWT + roles **Admin** and **Sangha member** | Both can open the dashboard. Admin keeps the register. |
+| Frontend | **React + Vite + UIKit 3** | React Router; Axios/Fetch to the API. |
+| Backend | **Java 21 + Spring Boot 3.x** | Modular monolith package for places, members, dashboard, active-events support. |
+| Database | **MySQL 8** + JPA + Flyway | Places table and members table. |
+| Authentication | **Spring Security session** + roles **Admin** and **Sangha member** | Both can open the dashboard. Admin keeps the register. |
 
-**Architecture style:** a small modular monolith with a places module, a members module (add, edit, view, search), the people dashboard, the active-events support graph, and sign-in.
+**Architecture style:** modular monolith modules for places, members (add, edit, view, search), people dashboard, active-events support graph, and sign-in.
 
-The event accommodation module in this same project also uses Socket.io and WhatsApp. The sangha register does not. There is no live hotel desk and no notification channel to build for the register alone.
+The accommodation module in this same Spring Boot app also uses WebSocket and WhatsApp. The sangha register does not. There is no live hotel desk and no notification channel to build for the register alone.
 
 ---
 
@@ -243,7 +289,7 @@ Grouped by location, the counts are Vijayawada 2, Bengaluru 1, Hyderabad 1. Grou
 | What the graph shows | **Decision:** The person who asked is shown as supported. The name of the person who contributed is shown beside them. One total: how much is supported |
 | Person in the circle | **Decision:** The person's photo is shown in the circle. Under it: contribution lines for each **Active** event, then their feedback / comments |
 | Database schema (indexes, exact SQL) | TODO when implementation starts |
-| API endpoints | None for now |
+| API endpoints | **Decision:** REST contract in [Sangha register — REST API](#sangha-register--rest-api). Session cookie auth (no JWT). React mock in `frontend/` matches these paths for later Spring Boot controllers |
 | Notifications, photos, ID proof | **Decision:** Out of scope |
 
 ---
@@ -256,19 +302,209 @@ pssm-buddha-sangha/
 │   ├── buddha-sangha/
 │   │   ├── Requirements.md
 │   │   ├── Technical.md
-│   │   └── UI.md
-│   ├── prototype/
-│   ├── decisions/
-│   └── assets/
-├── src/
-├── database/
-├── scripts/
-├── package.json
+│   │   ├── UI.md
+│   │   └── WORK_SUMMARY.md
+│   └── prototype/
+├── frontend/                 # React + Vite + UIKit 3
+├── backend/                  # Spring Boot 3 (Maven), modular packages
+│   └── src/main/resources/db/migration/   # Flyway
+├── docker-compose.yml        # Nginx + Spring Boot + MySQL
 ├── README.md
 └── .gitignore
 ```
 
-**Documentation:** `docs/buddha-sangha/{Requirements,Technical,UI}.md`.
+**Documentation:** `docs/buddha-sangha/{Requirements,Technical,UI,WORK_SUMMARY}.md`.
+
+---
+
+## Sangha register — REST API
+
+Base URL: `/api/v1`  
+Format: JSON  
+Auth: **Spring Security session cookie** (same-origin / `credentials: 'include'`). No Bearer JWT.
+
+These endpoints back Join → Login → My Space, PSSM Admin People & roles, and Event Organizer create-event. The React app in `frontend/` calls the same paths (mock by default) so Spring Boot controllers can bind 1:1 later.
+
+### Conventions
+
+| Item | Rule |
+| --- | --- |
+| Success | `{ "data": ... }` |
+| List success | `{ "data": [ ... ] }` |
+| Error | `{ "error": { "code": "UNAUTHORIZED", "message": "..." } }` |
+| Mobile | Digits only in storage and path params |
+| Roles | `pssm_admin`, `event_organizer`, `pyramid_sevadal`, `pmma_member` |
+
+| HTTP | When |
+| --- | --- |
+| 400 | Missing or invalid field |
+| 401 | Not signed in, or session expired |
+| 403 | Role not allowed |
+| 404 | Unknown mobile / resource |
+| 409 | Conflict (e.g. cannot remove self) |
+
+### Auth
+
+#### `POST /auth/login`
+
+Request
+
+```json
+{ "mobile": "9000000001", "password": "PssmA0101" }
+```
+
+Response `200` (session cookie set)
+
+```json
+{
+  "data": {
+    "mobile": "9000000001",
+    "name": "Pssm Admin",
+    "roles": ["pssm_admin"],
+    "home": "/admin"
+  }
+}
+```
+
+`home` is `/admin` when the user has `pssm_admin`, otherwise `/`.
+
+#### `POST /auth/logout`
+
+Response `200`: `{ "data": { "ok": true } }`. Clears the session cookie.
+
+#### `GET /auth/me`
+
+Response `200`
+
+```json
+{
+  "data": {
+    "mobile": "9000000001",
+    "name": "Pssm Admin",
+    "roles": ["pssm_admin"]
+  }
+}
+```
+
+`401` when not signed in.
+
+#### `POST /auth/password`
+
+Visitor/member, while signed in.
+
+```json
+{
+  "currentPassword": "PssmA0101",
+  "newPassword": "a password they choose",
+  "confirmPassword": "a password they choose"
+}
+```
+
+Response `200`: `{ "data": { "ok": true } }`. New password must be at least 6 characters and must match confirm.
+
+### Join and My Profile
+
+#### `POST /sangha/join`
+
+Create or upsert a sangha person by mobile. Returns the temporary composed password (≤5 name letters + DDMM).
+
+Request body is the join profile (who / place / family fields used by the UI). Minimum required for a successful join: `fullName`, `mobile`, `birthDate`, `birthMonth`, and a place object.
+
+Response `201`
+
+```json
+{
+  "data": {
+    "profile": { "mobile": "9876543210", "fullName": "Ramakrishna", "roles": [] },
+    "temporaryPassword": "Ramak1508"
+  }
+}
+```
+
+Does not open a session by itself; the person logs in next.
+
+#### `GET /sangha/me`
+
+Signed-in member. Response `200`: `{ "data": { ...profile } }` including roles. Mobile is always the session mobile.
+
+#### `PUT /sangha/me`
+
+Signed-in member. Body is the full profile fields (same shape as join). Response `200`: `{ "data": { ...profile } }`.
+
+### PSSM Admin — people and roles
+
+#### `GET /sangha/people?mobile=`
+
+PSSM Admin only. Search by mobile digits (partial match allowed).
+
+Response `200`: `{ "data": [ { "mobile", "fullName", "pyramidCenter", "roles": [] } ] }`  
+`404` when no matches (optional: empty list with `200` is also acceptable; mock returns `404` with message for UI parity).
+
+#### `PUT /sangha/people/{mobile}/roles`
+
+PSSM Admin only. Body: `{ "roles": ["event_organizer", "pyramid_sevadal"] }` — assignable roles only. Existing `pssm_admin` on that mobile is preserved.
+
+Response `200`: `{ "data": { "mobile", "roles": [] } }`.
+
+#### `DELETE /sangha/people/{mobile}`
+
+PSSM Admin only. Cannot delete the signed-in admin’s own account (`409`).
+
+Response `200`: `{ "data": { "ok": true } }`.
+
+#### `POST /sangha/admin/claim` (prototype / bootstrap)
+
+When no PSSM Admin exists yet, a signed-in member may claim `pssm_admin` once. Response `200`: `{ "data": { "roles": ["pssm_admin"] } }`. `409` if an admin already exists.
+
+### Events (Event Organizer)
+
+#### `GET /events`
+
+Signed-in. Lists events created in the system (header picker + Create event page).
+
+Response `200`
+
+```json
+{
+  "data": [
+    {
+      "id": "evt_1",
+      "name": "Dhyana Maha Yagam - 5",
+      "startDate": "2026-12-21",
+      "endDate": "2026-12-31",
+      "createdBy": "9876543210"
+    }
+  ]
+}
+```
+
+#### `POST /events`
+
+Event Organizer only.
+
+```json
+{ "name": "Dhyana Maha Yagam - 5", "startDate": "2026-12-21", "endDate": "2026-12-31" }
+```
+
+Response `201`: `{ "data": { ...event } }`. End date must be on or after start date.
+
+### Endpoint index
+
+| Method | Path | Roles |
+| --- | --- | --- |
+| POST | `/auth/login` | Public |
+| POST | `/auth/logout` | Signed-in |
+| GET | `/auth/me` | Signed-in |
+| POST | `/auth/password` | Signed-in |
+| POST | `/sangha/join` | Public |
+| GET | `/sangha/me` | Signed-in |
+| PUT | `/sangha/me` | Signed-in |
+| GET | `/sangha/people` | PSSM Admin |
+| PUT | `/sangha/people/{mobile}/roles` | PSSM Admin |
+| DELETE | `/sangha/people/{mobile}` | PSSM Admin |
+| POST | `/sangha/admin/claim` | Signed-in (bootstrap) |
+| GET | `/events` | Signed-in |
+| POST | `/events` | Event Organizer |
 
 ---
 
@@ -325,18 +561,21 @@ Admin or a person in the sangha opens the dashboard.
 
 ### 2. Recommended Technical Stack
 
+Same as [Chosen technical stack](#chosen-technical-stack). Accommodation-specific notes:
+
 | Layer              | Technology                          | Notes |
 |--------------------|-------------------------------------|-------|
-| Frontend           | HTML5 + **UIKit 3** + Alpine.js    | Mobile first, minimal, one wizard step per screen. UIKit for styling. Alpine.js for lightweight interactivity. |
+| Frontend           | **React + Vite + UIKit 3**          | Mobile first, one wizard step per screen. React Router; Axios/Fetch. |
 | Camera Capture     | Browser `getUserMedia` API          | Live photo + ID proof capture. |
-| Backend            | **Node.js + Express.js**            | Main application server. |
-| Real-time          | **Socket.io**                       | Live notifications between Accommodation Admin and Hotel Receptionists. |
-| Notifications      | **WhatsApp** (primary for now)      | For alerts to Accommodation Admin / Receptionist / Visitors as needed. |
-| Database           | **MySQL**                           | Structured relational data. |
-| Authentication     | JWT + Role-based Access Control     | Roles: Accommodation Admin, Hotel Receptionist, Visitor, Sangha member, plus **PSSM Admin** and pre-assigned member roles **Event Organizer**, **Pyramid Sevadal**, **PMMA Member** (one or more). PSSM Admin lands on People & roles to search by mobile, assign/remove those roles, and remove people. A family group signs in with mobile number + password. First password is up to 5 letters of the name + date + month (e.g. `Ramak1508`), created at join, and can be changed. After login, the UI shows Stay + Account only; My Profile edits the sangha record through a join-like wizard. Event Organizer may create events (name, start, end) used later for accommodation. |
-| File Storage       | Local storage or Cloud (S3/Cloudinary) | For live photos and ID proof images. |
+| Backend            | **Java 21 + Spring Boot 3.x**       | Accommodation packages inside the same modular monolith. |
+| Real-time          | **Spring WebSocket** (STOMP)        | Live notifications between Accommodation Admin and Hotel Receptionists. |
+| Notifications      | **WhatsApp** (primary for now)      | Alerts to Accommodation Admin / Receptionist / Visitors as needed. |
+| Database           | **MySQL 8** + JPA + Flyway          | Structured relational data. |
+| Authentication     | **Spring Security session** + RBAC  | Roles: Accommodation Admin, Hotel Receptionist, Visitor, Sangha member, plus **PSSM Admin** and pre-assigned member roles **Event Organizer**, **Pyramid Sevadal**, **PMMA Member** (one or more). PSSM Admin lands on People & roles to search by mobile, assign/remove those roles, and remove people. A family group signs in with mobile number + password. First password is up to 5 letters of the name + date + month (e.g. `Ramak1508`), created at join, and can be changed. After login, the UI shows Stay + Account only; My Profile edits the sangha record through a join-like wizard. Event Organizer may create events (name, start, end) used later for accommodation. |
+| File Storage       | Local disk or Cloud (S3/Cloudinary) | For live photos and ID proof images. |
+| Deploy             | **Docker Compose** on one VPS       | Nginx + Spring Boot + MySQL with resource limits — see [Production deployment](#production-deployment). |
 
-**Architecture Style:** Modular Monolith (recommended)
+**Architecture Style:** Single Spring Boot **modular monolith** (final choice — not microservices).
 
 ---
 
@@ -344,23 +583,20 @@ Admin or a person in the sangha opens the dashboard.
 
 **Question:** Can we use microservices with Kafka streaming?
 
-**Answer:** Technically yes, but **not recommended** for this project at present.
+**Answer:** **No for this project.** Final choice is a **single Spring Boot modular monolith**.
 
-**Reasons against Microservices + Kafka right now:**
+**Reasons against Microservices + Kafka:**
 
 - Expected load is moderate (event-based, not continuous high traffic).
-- Team size is likely small.
-- Development and maintenance complexity increases significantly.
-- Kafka adds operational overhead (cluster management, monitoring, partitioning, etc.).
-- Socket.io already solves the real-time notification needs effectively.
-- Faster delivery and easier debugging with a well-structured modular monolith.
+- Team size is small; one VPS with Nginx + Spring Boot + MySQL is enough.
+- Microservices and Kafka add hosting, debugging, and maintenance cost without matching benefit.
+- Spring WebSocket covers in-app real-time desk notifications; WhatsApp covers outbound alerts.
+- Faster delivery and easier debugging with clear packages inside one app.
 
-**Recommended Approach:**
-1. Build as a **clean Modular Monolith** (separate modules for Registration, Allotment, Check-in/Check-out, Notifications, Accommodation Admin, etc.).
-2. Use Socket.io for real-time events.
-3. If the system grows significantly in future (multiple cities, year-round usage, very high concurrent users), then consider extracting services and introducing Kafka.
-
-This keeps the system simple, fast to develop, and easy to maintain while still allowing future scalability.
+**Approach:**
+1. Build as a **clean Modular Monolith** (packages for Registration, Allotment, Check-in/Check-out, Notifications, Accommodation Admin, etc.).
+2. Use Spring WebSocket for real-time desk events.
+3. Only if the system later grows to multiple cities / year-round high concurrency, reconsider extracting services — not now.
 
 ---
 
@@ -517,7 +753,8 @@ Visitors must never take room keys with them. Keys must always be deposited with
 | Detail technical implementation of web-camera capture | **Decision:** Normal / usual browser implementation only (standard `getUserMedia`, normal image quality & storage) |
 | Define notification channels | **Decision:** **WhatsApp** for now |
 | Database schema (tables, relationships, indexes) | TODO later via Agile user stories |
-| API endpoints | **Decision:** REST contract for the UI is in this document (Part C). Live updates stay on Socket.io |
+| API endpoints | **Decision:** REST contract for the UI is in this document (Part C). Live updates stay on Spring WebSocket |
+| Application stack | **Decision:** React + Vite + UIKit 3 · Java 21 + Spring Boot 3 · Spring Security session · MySQL 8 + JPA + Flyway · Maven · Docker Compose (Nginx + app + MySQL on one VPS). Modular monolith — not microservices |
 | User roles and permissions (Accommodation Admin, Hotel Receptionist, Visitor) | TODO later via Agile user stories |
 | When booking closes | **Decision:** Booking closes **2 days before** the event start |
 | When rooms are allotted | **Decision:** Accommodation Admin runs a **smart allocation** flow after booking closes. Rules in Section 7 |
@@ -537,16 +774,10 @@ Visitors must never take room keys with them. Keys must always be deposited with
 pssm-buddha-sangha/
 ├── docs/
 │   ├── buddha-sangha/
-│   │   ├── Requirements.md
-│   │   ├── Technical.md
-│   │   └── UI.md
-│   ├── prototype/
-│   ├── decisions/
-│   └── assets/
-├── src/
-├── database/
-├── scripts/
-├── package.json
+│   └── prototype/
+├── frontend/                 # React + Vite + UIKit 3
+├── backend/                  # Spring Boot 3 (Maven)
+├── docker-compose.yml        # Nginx + Spring Boot + MySQL
 ├── README.md
 └── .gitignore
 ```
@@ -641,8 +872,8 @@ They are a mixed party, so a dormitory or hall is not used while they stay toget
 
 Base URL: `/api/v1`  
 Format: JSON, except photo uploads, which are `multipart/form-data`.  
-Auth: `Authorization: Bearer <token>`  
-Live pushes (check-in, check-out, admin changes) stay on Socket.io. These endpoints are what the UI calls. WhatsApp is sent by the server after a confirmed action. The UI does not call WhatsApp directly.
+Auth: **Spring Security session cookie** (same-origin / `credentials: 'include'`). No Bearer JWT.  
+Live pushes (check-in, check-out, admin changes) stay on **Spring WebSocket**. These endpoints are what the UI calls. WhatsApp is sent by the server after a confirmed action. The UI does not call WhatsApp directly.
 
 ---
 
@@ -661,14 +892,14 @@ Live pushes (check-in, check-out, admin changes) stay on Socket.io. These endpoi
 | HTTP | When |
 | --- | --- |
 | 400 | Missing or invalid field |
-| 401 | Missing or expired token |
+| 401 | Not signed in, or session expired |
 | 403 | Role not allowed, or receptionist asking for another hotel |
 | 404 | Unknown id |
 | 409 | Conflict: duplicate room number, booking closed, allocation before close, reserved hotel used by the automatic run |
 
 Roles: `admin`, `receptionist`, `visitor`.
 
-Accommodation Admin and receptionist sign in with a username. A visitor family group signs in with mobile number and password; the first password is temporary and composed at join. Creating a booking also returns a visitor token so the form can continue in that visit.
+Accommodation Admin and receptionist sign in with a username. A visitor family group signs in with mobile number and password; the first password is temporary and composed at join. Creating a booking while already signed in continues under that session; creating a booking as a guest may establish a visitor session so the form can continue.
 
 ---
 
@@ -755,12 +986,11 @@ Visitor request. One login for the whole party (Login to My Space). Uses mobile 
 
 The temporary password is created at join: up to the first 5 letters of the name (letters only), then birth date and month as two digits. No event code. For name Ramakrishna, 15 August, the password is `Ramak1508`. Login matches mobile on the party record and that password. After the visitor changes it, only the new password is accepted.
 
-Staff response `200`
+Staff response `200` (session cookie set by Spring Security)
 
 ```json
 {
   "data": {
-    "token": "jwt",
     "role": "receptionist",
     "hotelId": "htl_1",
     "name": "Sai Prakash desk"
@@ -768,12 +998,11 @@ Staff response `200`
 }
 ```
 
-Visitor response `200`
+Visitor response `200` (session cookie set)
 
 ```json
 {
   "data": {
-    "token": "jwt",
     "role": "visitor",
     "partyId": "pty_2",
     "name": "Lakshmi",
@@ -782,7 +1011,7 @@ Visitor response `200`
 }
 ```
 
-Accommodation Admin response omits `hotelId`. `401` when mobile or password does not match. `400` when mobile is missing or invalid.
+Accommodation Admin response omits `hotelId`. `401` when mobile or password does not match. `400` when mobile is missing or invalid. Subsequent API calls rely on the session cookie, not a token field.
 
 #### `POST /auth/password`  
 Visitor, while signed in. Replaces the temporary password.
@@ -1106,13 +1335,12 @@ Response `201`
 ```json
 {
   "data": {
-    "booking": { "id": "pty_2", "status": "waiting", "personCount": 1 },
-    "token": "visitor-jwt"
+    "booking": { "id": "pty_2", "status": "waiting", "personCount": 1 }
   }
 }
 ```
 
-`self` is stored as `self_booked` and is skipped by allocation. `409` `BOOKING_CLOSED` after the cutoff.
+If the caller was a guest, the server may establish a visitor session cookie so later steps stay authenticated. `self` is stored as `self_booked` and is skipped by allocation. `409` `BOOKING_CLOSED` after the cutoff.
 
 #### `GET /bookings/:bookingId`  
 Visitor (own booking), admin.
@@ -1591,7 +1819,7 @@ Response `200`: the reminder row with `informed: true`.
 
 ### 14. Notifications
 
-Socket.io delivers these as they happen. The UI also loads history from here.
+Spring WebSocket delivers these as they happen. The UI also loads history from here.
 
 #### `GET /notifications`  
 Accommodation Admin: every hotel. Receptionist: their hotel only.

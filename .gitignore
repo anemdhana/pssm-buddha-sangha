@@ -4,3 +4,11 @@ uploads/
 *.log
 .DS_Store
 Thumbs.db
+frontend/dist/
+frontend/node_modules/
+backend/target/
+**/__pycache__/
+*.pyc
+*.pyo
+.idea/
+.vscode/

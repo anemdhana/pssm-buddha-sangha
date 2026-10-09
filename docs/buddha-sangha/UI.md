@@ -377,7 +377,7 @@ Copy this block for each new sketch.
 
 ### 4. Screens
 
-A static look-and-feel page is at `docs/prototype/index.html`. Open that file in a browser. It is not the working app, and it does not live in `src/frontend/`.
+A static look-and-feel page is at `docs/prototype/index.html`. Open that file in a browser. It is not the working app, and it does not live in `frontend/`.
 
 The landing is **PSSM Buddha Sangha**: Join, Login to My Space, and Free / Paid Accommodation. The header keeps Patriji and the PSSM logo, with an event picker and Stay / Sangha / Account menus.
 
@@ -799,7 +799,7 @@ These are the items under **Getting started** in the documentation menu. Use the
 | Page | Use it for | Leave it until later |
 | --- | --- | --- |
 | [Introduction](https://getuikit.com/docs/introduction) | The three files to include, and the rule that pages are normal HTML plus `uk-` classes | |
-| [Installation](https://getuikit.com/docs/installation) | CDN links for the prototype. Same version number on every page | `pnpm add uikit` when `src/frontend/` starts |
+| [Installation](https://getuikit.com/docs/installation) | CDN links for the prototype. Same version number on every page | Install UIKit in the React + Vite app when `frontend/` starts |
 | Less, Sass | | A compiled theme. Colour changes stay in `app.css` for now |
 | [JavaScript](https://getuikit.com/docs/javascript) | Components that need behaviour: `uk-switcher`, `uk-modal`, `uk-grid`, `uk-icon`. Call `UIkit.switcher(...)` or `UIkit.modal(...)` when the page must open a step or a popup from code | |
 | Webpack | | Bundling the real app. The prototype stays as plain HTML files |
@@ -918,7 +918,7 @@ They are in the same Documentation menu. They do not help this app.
 - The header is 72 pixels, with no vertical padding. Do not add a second toolbar or a larger logo. Patriji and the PSSM logo sit on the left (`object-fit: cover` / `contain`). The event picker and Stay / Sangha / Account menus sit in the same bar. Soft Patriji background on the page body is in `app.css` (`body::before`); do not put a second full-bleed photo in the header.
 - Status is a word in a label, not only a colour. Waiting, Allotted, and Checked in must stay readable in grey.
 - Icons are optional. A field does not need an icon to look finished.
-- Alpine.js, named in the technical spec, will hold the real step state later. UIkit still draws the controls. Do not rebuild pills, modals, or the grid in Alpine.
+- React holds step state in the real app; UIkit still draws the controls. Do not rebuild pills, modals, or the grid in custom CSS when a UIkit component already fits.
 - Shared sangha profile helpers live in `docs/prototype/app-profile.js`. Accommodation prefills from a copy; it must not write back to the sangha join record.
 
 ---
@@ -935,6 +935,6 @@ They are in the same Documentation menu. They do not help this app.
 | `docs/prototype/visitor.html` | Accommodation wizard (`?plan=free` or `?plan=paid`) |
 | `docs/buddha-sangha/UI.md` | Accommodation fields and steps |
 | `docs/buddha-sangha/` | Sangha register specs and UI notes |
-| `src/frontend/` | Real app, later. Same components, same `app.css` rules |
+| `frontend/` | Real React + Vite + UIKit 3 app, later. Same look as the prototype; session API to Spring Boot |
 
 When a new prototype page is added, copy the header from `index.html`, link `app.css` and the UIkit 3.21.13 files, and choose components from section 4 of this guide.
