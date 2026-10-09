@@ -3,124 +3,162 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Dhyana Maha Yagam - 5</title>
+    <title>Login to My Space</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/uikit@3.21.13/dist/css/uikit.min.css">
     <link rel="stylesheet" href="app.css">
 </head>
 <body>
     <div class="app-top">
         <header class="app-header">
-        <div class="brand-mark">
-            <img class="patriji" src="assets/patriji.jpg" alt="Patriji">
-            <img class="logo" src="assets/pssm-logo.png" alt="Pyramid Spiritual Societies Movement">
-        </div>
-        <div class="event-pick">
-            <button class="event-pick-toggle" type="button" aria-label="Choose event">
-                <span class="event-pick-copy">
-                    <span class="event-pick-label">Dhyana Maha Yagam - 5</span>
-                    <span class="event-pick-sub">December 21 to 31 · Kailasapuri</span>
-                </span>
-                <span uk-icon="icon: chevron-down; ratio: 0.7"></span>
-            </button>
-            <div uk-dropdown="mode: click; pos: bottom-left; offset: -1; delay-hide: 0">
-                <ul class="uk-nav uk-dropdown-nav event-pick-menu">
-                    <li class="uk-active">
-                        <a href="#" data-event="Dhyana Maha Yagam - 5" data-sub="December 21 to 31 · Kailasapuri">
-                            <span class="event-name">Dhyana Maha Yagam - 5</span>
-                            <span class="event-sub">December 21 to 31 · Kailasapuri</span>
-                        </a>
-                    </li>
+            <div class="brand-mark">
+                <img class="patriji" src="assets/patriji.jpg" alt="Patriji">
+                <img class="logo" src="assets/pssm-logo.png" alt="Pyramid Spiritual Societies Movement">
+            </div>
+            <div class="event-pick">
+                <button class="event-pick-toggle" type="button" aria-label="Choose event">
+                    <span class="event-pick-copy">
+                        <span class="event-pick-label">PSSM Buddha Sangha</span>
+                        <span class="event-pick-sub">Login to My Space</span>
+                    </span>
+                    <span uk-icon="icon: chevron-down; ratio: 0.7"></span>
+                </button>
+                <div uk-dropdown="mode: click; pos: bottom-left; offset: -1; delay-hide: 0">
+                    <ul class="uk-nav uk-dropdown-nav event-pick-menu">
+                        <li class="uk-active">
+                            <a href="index.html" data-event="PSSM Buddha Sangha" data-sub="Login to My Space">
+                                <span class="event-name">PSSM Buddha Sangha</span>
+                                <span class="event-sub">Login to My Space</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="#" data-event="Dhyana Maha Yagam - 5" data-sub="December 21 to 31 · Kailasapuri">
+                                <span class="event-name">Dhyana Maha Yagam - 5</span>
+                                <span class="event-sub">December 21 to 31 · Kailasapuri</span>
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+            <nav class="app-nav uk-visible@m" uk-navbar="mode: click; offset: 0; flip: false; delay-hide: 0" aria-label="Main">
+                <ul class="uk-navbar-nav">
                     <li>
-                        <a href="#" data-event="Dussehra Sangeetha Dhyana Maha Yagnam" data-sub="October 17 to 20 · Vishakhapatnam">
-                            <span class="event-name">Dussehra Sangeetha Dhyana Maha Yagnam</span>
-                            <span class="event-sub">October 17 to 20 · Vishakhapatnam</span>
-                        </a>
+                        <a href="#">Stay <span uk-navbar-parent-icon></span></a>
+                        <div class="uk-navbar-dropdown">
+                            <ul class="uk-nav uk-navbar-dropdown-nav">
+                                <li><a href="visitor.html?plan=free">Free Accommodation</a></li>
+                                <li><a href="visitor.html?plan=paid">Paid Accommodation</a></li>
+                            </ul>
+                        </div>
+                    </li>
+                    <li data-auth="out">
+                        <a href="#">Sangha <span uk-navbar-parent-icon></span></a>
+                        <div class="uk-navbar-dropdown">
+                            <ul class="uk-nav uk-navbar-dropdown-nav">
+                                <li><a href="join.html">Join PSSM Buddha Sangha</a></li>
+                                <li class="uk-active"><a href="login.html">Login to My Space</a></li>
+                            </ul>
+                        </div>
+                    </li>
+                    <li data-auth="out">
+                        <a href="#">Account <span uk-navbar-parent-icon></span></a>
+                        <div class="uk-navbar-dropdown">
+                            <ul class="uk-nav uk-navbar-dropdown-nav">
+                                <li class="uk-active"><a href="login.html">Login to My Space</a></li>
+                                <li><a href="index.html">Home</a></li>
+                                <li><a href="join.html">Join PSSM Buddha Sangha</a></li>
+                            </ul>
+                        </div>
+                    </li>
+                                        <li data-auth="in" hidden>
+                        <a href="#">Account <span uk-navbar-parent-icon></span></a>
+                        <div class="uk-navbar-dropdown">
+                            <ul class="uk-nav uk-navbar-dropdown-nav">
+                                <li data-role="pssm_admin" hidden><a href="admin.html">People &amp; roles</a></li>
+                                <li><a href="profile.html">My Profile</a></li>
+                                <li><a href="password.html">Change my password</a></li>
+                                <li data-role="event_organizer" hidden><a href="events.html">Create event</a></li>
+                                <li><a href="#" data-logout>Logout</a></li>
+                            </ul>
+                        </div>
                     </li>
                 </ul>
+            </nav>
+            <div class="app-nav-mobile uk-hidden@m">
+                <button class="uk-button uk-button-text app-menu-toggle" type="button" aria-label="Open menu">
+                    <span uk-icon="icon: menu"></span>
+                </button>
+                <div uk-dropdown="mode: click; pos: bottom-right; offset: 0; flip: false; delay-hide: 0">
+                    <ul class="uk-nav uk-dropdown-nav">
+                        <li class="uk-nav-header">Stay</li>
+                        <li><a href="visitor.html?plan=free">Free Accommodation</a></li>
+                        <li><a href="visitor.html?plan=paid">Paid Accommodation</a></li>
+                        <li class="uk-nav-header" data-auth="out">Sangha</li>
+                        <li data-auth="out"><a href="join.html">Join PSSM Buddha Sangha</a></li>
+                        <li data-auth="out"><a href="login.html">Login to My Space</a></li>
+                                                <li class="uk-nav-header">Account</li>
+                        <li data-auth="in" data-role="pssm_admin" hidden><a href="admin.html">People &amp; roles</a></li>
+                        <li data-auth="in" hidden><a href="profile.html">My Profile</a></li>
+                        <li data-auth="in" hidden><a href="password.html">Change my password</a></li>
+                        <li data-auth="in" data-role="event_organizer" hidden><a href="events.html">Create event</a></li>
+                        <li data-auth="out"><a href="login.html">Login to My Space</a></li>
+                        <li data-auth="out"><a href="index.html">Home</a></li>
+                        <li data-auth="out"><a href="join.html">Join PSSM Buddha Sangha</a></li>
+                        <li data-auth="in" hidden><a href="#" data-logout>Logout</a></li>
+                    </ul>
+                </div>
             </div>
-        </div>
-        <nav class="app-nav uk-visible@m" uk-navbar="mode: click; offset: 0; flip: false; delay-hide: 0" aria-label="Main">
-            <ul class="uk-navbar-nav">
-                <li>
-                    <a href="#">Stay <span uk-navbar-parent-icon></span></a>
-                    <div class="uk-navbar-dropdown">
-                        <ul class="uk-nav uk-navbar-dropdown-nav">
-                            <li><a href="visitor.html?plan=free">Free Accommodation</a></li>
-                            <li><a href="visitor.html?plan=paid">Paid Accommodation</a></li>
-                        </ul>
-                    </div>
-                </li>
-                <li>
-                    <a href="#">Sangha <span uk-navbar-parent-icon></span></a>
-                    <div class="uk-navbar-dropdown">
-                        <ul class="uk-nav uk-navbar-dropdown-nav">
-                            <li><a href="join.html">Join PSSM Buddha Sangha</a></li>
-                            <li class="uk-active"><a href="login.html">Login to My Space</a></li>
-                        </ul>
-                    </div>
-                </li>
-                <li>
-                    <a href="#">Account <span uk-navbar-parent-icon></span></a>
-                    <div class="uk-navbar-dropdown">
-                        <ul class="uk-nav uk-navbar-dropdown-nav">
-                            <li class="uk-active"><a href="login.html">Login to My Space</a></li>
-                            <li><a href="index.html">Home</a></li>
-                            <li><a href="join.html">Join PSSM Buddha Sangha</a></li>
-                        </ul>
-                    </div>
-                </li>
-            </ul>
-        </nav>
-        <div class="app-nav-mobile uk-hidden@m">
-            <button class="uk-button uk-button-text app-menu-toggle" type="button" aria-label="Open menu">
-                <span uk-icon="icon: menu"></span>
-            </button>
-            <div uk-dropdown="mode: click; pos: bottom-right; offset: 0; flip: false; delay-hide: 0">
-                <ul class="uk-nav uk-dropdown-nav">
-                    <li class="uk-nav-header">Stay</li>
-                    <li><a href="visitor.html?plan=free">Free Accommodation</a></li>
-                    <li><a href="visitor.html?plan=paid">Paid Accommodation</a></li>
-                    <li class="uk-nav-header">Sangha</li>
-                    <li><a href="join.html">Join PSSM Buddha Sangha</a></li>
-                    <li><a href="login.html">Login to My Space</a></li>
-                    <li class="uk-nav-header">Account</li>
-                    <li><a href="login.html">Login to My Space</a></li>
-                    <li><a href="index.html">Home</a></li>
-                    <li><a href="join.html">Join PSSM Buddha Sangha</a></li>
-                </ul>
-            </div>
-        </div>
-    </header>
+        </header>
     </div>
 
     <main class="uk-section uk-section-small uk-padding-remove-top">
         <div class="uk-container app-column app-narrow">
-        <div class="uk-card uk-card-default uk-card-small uk-card-body">
-            <h2 class="uk-h4 uk-margin-remove-top">Login to My Space</h2>
-            <form class="uk-form-stacked" id="login-form">
-                <div class="uk-margin-small">
-                    <label class="uk-form-label" for="name">Name</label>
-                    <input class="uk-input uk-form-small" id="name" type="text" autocomplete="name">
-                </div>
-                <div class="uk-grid-small uk-child-width-1-2" uk-grid>
-                    <div>
-                        <label class="uk-form-label" for="birth-date">Date</label>
-                        <input class="uk-input uk-form-small" id="birth-date" type="text" inputmode="numeric" maxlength="2" placeholder="15" autocomplete="off">
+            <div class="uk-card uk-card-default uk-card-small uk-card-body uk-box-shadow-medium">
+                <header class="x-step-head form-head">
+                    <h2 class="form-title">Login to My Space</h2>
+                    <p class="form-summary">Your mobile and join password open the door — same numbers you already know.</p>
+                </header>
+                <form class="uk-form-stacked" id="login-form">
+                    <section class="x-group" aria-labelledby="g-login">
+                        <h3 class="x-group-title" id="g-login"><span uk-icon="icon: lock; ratio: 0.75"></span> Sign in</h3>
+                        <div class="uk-grid-small uk-child-width-1-1" uk-grid>
+                            <div class="x-field">
+                                <label class="x-label" for="mobile">Mobile number</label>
+                                <div class="uk-inline uk-width-1-1">
+                                    <span class="uk-form-icon" uk-icon="icon: receiver"></span>
+                                    <input class="uk-input uk-form-small" id="mobile" type="tel" inputmode="tel" autocomplete="tel" placeholder="98765 43210">
+                                </div>
+                            </div>
+                            <div class="x-field">
+                                <label class="x-label" for="password">Password</label>
+                                <div class="uk-inline uk-width-1-1">
+                                    <span class="uk-form-icon" uk-icon="icon: lock"></span>
+                                    <input class="uk-input uk-form-small" id="password" type="password" autocomplete="current-password" placeholder="Your join password">
+                                </div>
+                            </div>
+                        </div>
+                        <p class="hint uk-margin-small-top uk-margin-remove-bottom">Password is up to 5 letters of your name, then birthday date and month. Example: Ramak1508.</p>
+                        <p id="login-error" class="hint" hidden></p>
+                    </section>
+                    <section class="x-group" id="sample-admin-box" aria-labelledby="g-sample">
+                        <h3 class="x-group-title" id="g-sample"><span uk-icon="icon: star; ratio: 0.75"></span> Sample PSSM Admin</h3>
+                        <p class="hint uk-margin-remove-top">Prototype login to try People &amp; roles.</p>
+                        <div class="x-admin-person">
+                            <div class="x-admin-name" id="sample-admin-name">Pssm Admin</div>
+                            <div class="x-admin-meta">
+                                Mobile <strong id="sample-admin-mobile">9000000001</strong>
+                                · Password <strong id="sample-admin-password">PssmA0101</strong>
+                            </div>
+                        </div>
+                        <button class="uk-button uk-button-default uk-width-1-1 uk-margin-small-top" type="button" id="sample-admin-fill">Use sample admin</button>
+                    </section>
+                    <div class="step-actions">
+                        <button class="uk-button uk-button-primary uk-width-1-1" type="button" id="login-button">Login</button>
                     </div>
-                    <div>
-                        <label class="uk-form-label" for="birth-month">Month</label>
-                        <input class="uk-input uk-form-small" id="birth-month" type="text" inputmode="numeric" maxlength="2" placeholder="8" autocomplete="off">
-                    </div>
-                </div>
-                <p class="uk-text-meta uk-margin-small-bottom uk-margin-small-top">Password</p>
-                <p id="login-password" class="password-line">DMY5</p>
-                <p class="hint">Event code, the first 5 letters of the name, then date and month. Ramakrishna, 15 August: DMY5Ramak1508.</p>
-                <p id="login-error" class="hint" hidden></p>
-                <button class="uk-button uk-button-primary uk-width-1-1 uk-margin-small-top" type="button" id="login-button">Login</button>
-                <p id="login-done" class="hint" hidden>Signed in.</p>
-                <a class="uk-button uk-button-text uk-margin-small-top" href="index.html">Back</a>
-            </form>
-        </div>
+                    <p class="uk-text-center uk-margin-small-top">
+                        <a class="uk-button uk-button-text" href="join.html">New here? Join the sangha</a>
+                    </p>
+                </form>
+            </div>
         </div>
     </main>
 
@@ -129,64 +167,33 @@
     <script src="app-profile.js"></script>
     <script>
         PssmProfile.bindEventPick();
-
-        function digits(input) {
-            input.value = input.value.replace(/\D/g, '').slice(0, 2);
-        }
-
-        function daysInMonth(month) {
-            if (month === 2) return 29;
-            if (month === 4 || month === 6 || month === 9 || month === 11) return 30;
-            return 31;
-        }
-
-        function birthError() {
-            const dateText = document.getElementById('birth-date').value;
-            const monthText = document.getElementById('birth-month').value;
-            const date = parseInt(dateText, 10);
-            const month = parseInt(monthText, 10);
-            if (!dateText || !monthText) return 'Enter date and month.';
-            if (!month || month < 1 || month > 12) return 'Month must be 1 to 12.';
-            if (!date || date < 1 || date > daysInMonth(month)) return 'That date is not valid for this month.';
-            return '';
-        }
-
-        function password() {
-            const letters = document.getElementById('name').value.replace(/[^A-Za-z]/g, '').slice(0, 5);
-            const date = document.getElementById('birth-date').value;
-            const month = document.getElementById('birth-month').value;
-            return 'DMY5' + letters + (date ? date.padStart(2, '0') : '') + (month ? month.padStart(2, '0') : '');
-        }
-
-        function refresh() {
-            document.getElementById('login-password').textContent = password();
-            document.getElementById('login-done').hidden = true;
-        }
-
-        document.getElementById('name').addEventListener('input', refresh);
-        ['birth-date', 'birth-month'].forEach((id) => {
-            document.getElementById(id).addEventListener('input', (event) => {
-                digits(event.target);
-                refresh();
-            });
+        PssmProfile.applyChromeNav();
+        const sample = PssmProfile.ensureSampleAdmin();
+        document.getElementById('sample-admin-name').textContent = sample.name;
+        document.getElementById('sample-admin-mobile').textContent = sample.mobile;
+        document.getElementById('sample-admin-password').textContent = sample.password;
+        document.getElementById('sample-admin-fill').addEventListener('click', () => {
+            document.getElementById('mobile').value = sample.mobile;
+            document.getElementById('password').value = sample.password;
+            document.getElementById('password').type = 'text';
         });
+        if (PssmProfile.isSignedIn()) {
+            const profile = PssmProfile.readSanghaProfile();
+            window.location.replace(PssmProfile.homeAfterLogin(profile));
+        }
 
         document.getElementById('login-button').addEventListener('click', () => {
             const error = document.getElementById('login-error');
-            const letters = document.getElementById('name').value.replace(/[^A-Za-z]/g, '');
-            const birth = birthError();
-            if (!letters) {
+            const result = PssmProfile.loginWithMobile(
+                document.getElementById('mobile').value,
+                document.getElementById('password').value
+            );
+            if (!result.ok) {
                 error.hidden = false;
-                error.textContent = 'Enter the name.';
+                error.textContent = result.message;
                 return;
             }
-            if (birth) {
-                error.hidden = false;
-                error.textContent = birth;
-                return;
-            }
-            error.hidden = true;
-            document.getElementById('login-done').hidden = false;
+            window.location.href = result.home || PssmProfile.homeAfterLogin(result.profile);
         });
     </script>
 </body>

@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Experiment · Who is coming?</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/uikit@3.21.13/dist/css/uikit.min.css">
+    <link rel="stylesheet" href="app.css">
+    <style>
+        .x-page { max-width: 720px; margin: 0 auto; padding: 16px 12px 40px; }
+        .x-card {
+            border: 1px solid #e6e9f2;
+            border-radius: 14px;
+            background: rgba(255, 255, 255, 0.94);
+            box-shadow: 0 10px 28px rgba(27, 42, 107, 0.06);
+            overflow: hidden;
+        }
+        .x-hero {
+            display: flex;
+            align-items: flex-end;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 14px 16px 12px;
+            background: linear-gradient(135deg, #1b2a6b 0%, #2a4494 55%, #3d5bb0 100%);
+            color: #fff;
+        }
+        .x-hero h1 {
+            margin: 0;
+            font-size: 1.15rem;
+            font-weight: 650;
+            letter-spacing: -0.02em;
+        }
+        .x-hero p {
+            margin: 2px 0 0;
+            opacity: 0.85;
+            font-size: 0.78rem;
+            line-height: 1.35;
+        }
+        .x-badge {
+            flex: 0 0 auto;
+            padding: 4px 10px;
+            border-radius: 999px;
+            background: rgba(224, 178, 58, 0.95);
+            color: #1b2a6b;
+            font-size: 0.68rem;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+        }
+        .x-body { padding: 12px 14px 14px; }
+        .x-group {
+            margin: 0 0 10px;
+            padding: 10px 10px 8px;
+            border: 1px solid #eef0f6;
+            border-radius: 12px;
+            background: #fbfbfd;
+        }
+        .x-group-title {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin: 0 0 8px;
+            color: var(--ink);
+            font-size: 0.72rem;
+            font-weight: 700;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+        }
+        .x-group-title span[uk-icon] { color: #e0b23a; }
+        .x-label {
+            display: block;
+            margin: 0 0 3px;
+            color: #5a6275;
+            font-size: 0.72rem;
+            font-weight: 600;
+        }
+        .x-field { margin: 0 0 8px; }
+        .x-field:last-child { margin-bottom: 0; }
+        .x-chips {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+        .x-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            margin: 0;
+            padding: 5px 10px;
+            border: 1px solid #d9deed;
+            border-radius: 999px;
+            background: #fff;
+            color: var(--ink);
+            font-size: 0.78rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: border-color 0.12s ease, background 0.12s ease, color 0.12s ease;
+        }
+        .x-chip:hover { border-color: #c5cce3; background: #fffcf5; }
+        .x-chip:has(input:checked) {
+            border-color: var(--ink);
+            background: var(--ink);
+            color: #fff;
+        }
+        .x-chip input { position: absolute; opacity: 0; pointer-events: none; }
+        .x-pass {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            margin-top: 8px;
+            padding: 8px 10px;
+            border-radius: 10px;
+            background: #fff8e8;
+            border: 1px solid #f0dfb0;
+        }
+        .x-pass strong {
+            color: var(--ink);
+            font-size: 0.95rem;
+            letter-spacing: 0.02em;
+        }
+        .x-pass small { color: #7a7158; font-size: 0.7rem; }
+        .x-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 12px;
+        }
+        .x-actions .uk-button { border-radius: 10px; }
+        .x-note {
+            margin: 8px 0 0;
+            color: #889;
+            font-size: 0.72rem;
+        }
+        .uk-form-label { font-size: 0.72rem; }
+        .uk-input.uk-form-small,
+        .uk-select.uk-form-small { border-radius: 8px; }
+        @media (min-width: 640px) {
+            .x-page { padding-top: 28px; }
+            .x-hero { padding: 18px 20px 14px; }
+            .x-hero h1 { font-size: 1.35rem; }
+            .x-body { padding: 14px 16px 16px; }
+        }
+    </style>
+</head>
+<body>
+    <main class="x-page">
+        <p class="x-note"><a href="visitor.html">← Back to visitor wizard</a> · Experiment layout only</p>
+
+        <div class="x-card">
+            <div class="x-hero">
+                <div>
+                    <h1>Who is coming?</h1>
+                    <p>All identity inputs in one compact sheet. Password builds as you type.</p>
+                </div>
+                <span class="x-badge">Step 1 · Experiment</span>
+            </div>
+
+            <div class="x-body">
+                <form class="uk-form-stacked" id="x-form" autocomplete="on">
+
+                    <section class="x-group" aria-labelledby="g-stay">
+                        <h2 class="x-group-title" id="g-stay"><span uk-icon="icon: home; ratio: 0.75"></span> Stay</h2>
+                        <div class="x-chips" data-choice="plan">
+                            <label class="x-chip"><input type="radio" name="plan" value="free" checked><span>Free</span></label>
+                            <label class="x-chip"><input type="radio" name="plan" value="paid"><span>Paid</span></label>
+                        </div>
+                    </section>
+
+                    <section class="x-group" aria-labelledby="g-identity">
+                        <h2 class="x-group-title" id="g-identity"><span uk-icon="icon: user; ratio: 0.75"></span> Identity</h2>
+                        <div class="uk-grid-small uk-child-width-1-1 uk-child-width-1-2@s" uk-grid>
+                            <div class="x-field">
+                                <label class="x-label" for="full-name">Full name</label>
+                                <div class="uk-inline uk-width-1-1">
+                                    <span class="uk-form-icon" uk-icon="icon: user"></span>
+                                    <input class="uk-input uk-form-small" id="full-name" type="text" placeholder="Ramakrishna" autocomplete="name">
+                                </div>
+                            </div>
+                            <div class="x-field">
+                                <label class="x-label" for="mobile">Mobile</label>
+                                <div class="uk-inline uk-width-1-1">
+                                    <span class="uk-form-icon" uk-icon="icon: receiver"></span>
+                                    <input class="uk-input uk-form-small" id="mobile" type="tel" inputmode="tel" placeholder="98765 43210" autocomplete="tel">
+                                </div>
+                            </div>
+                            <div class="x-field">
+                                <label class="x-label" for="email">Email <span class="uk-text-muted">(optional)</span></label>
+                                <div class="uk-inline uk-width-1-1">
+                                    <span class="uk-form-icon" uk-icon="icon: mail"></span>
+                                    <input class="uk-input uk-form-small" id="email" type="email" placeholder="name@email.com" autocomplete="email">
+                                </div>
+                            </div>
+                            <div class="x-field">
+                                <label class="x-label" for="alt-mobile">Alt. mobile <span class="uk-text-muted">(optional)</span></label>
+                                <div class="uk-inline uk-width-1-1">
+                                    <span class="uk-form-icon" uk-icon="icon: phone"></span>
+                                    <input class="uk-input uk-form-small" id="alt-mobile" type="tel" inputmode="tel" placeholder="Optional">
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <section class="x-group" aria-labelledby="g-profile">
+                        <h2 class="x-group-title" id="g-profile"><span uk-icon="icon: tag; ratio: 0.75"></span> Profile</h2>
+                        <div class="uk-grid-small uk-child-width-1-1 uk-child-width-1-2@s" uk-grid>
+                            <div class="x-field">
+                                <span class="x-label">Gender</span>
+                                <div class="x-chips" data-choice="gender">
+                                    <label class="x-chip"><input type="radio" name="gender" value="male"><span>Male</span></label>
+                                    <label class="x-chip"><input type="radio" name="gender" value="female"><span>Female</span></label>
+                                </div>
+                            </div>
+                            <div class="x-field">
+                                <span class="x-label">Age group</span>
+                                <div class="x-chips" data-choice="age">
+                                    <label class="x-chip"><input type="radio" name="age" value="child"><span>Child · &lt;12</span></label>
+                                    <label class="x-chip"><input type="radio" name="age" value="adult" checked><span>Adult · 12–59</span></label>
+                                    <label class="x-chip"><input type="radio" name="age" value="senior"><span>Senior · 60+</span></label>
+                                </div>
+                            </div>
+                            <div class="x-field uk-width-1-1">
+                                <span class="x-label">How long into meditation?</span>
+                                <div class="x-chips" data-choice="meditation">
+                                    <label class="x-chip"><input type="radio" name="meditation" value="new"><span>New</span></label>
+                                    <label class="x-chip"><input type="radio" name="meditation" value="1"><span>1 yr</span></label>
+                                    <label class="x-chip"><input type="radio" name="meditation" value="2"><span>2 yr</span></label>
+                                    <label class="x-chip"><input type="radio" name="meditation" value="3"><span>3 yr</span></label>
+                                    <label class="x-chip"><input type="radio" name="meditation" value="4"><span>4 yr</span></label>
+                                    <label class="x-chip"><input type="radio" name="meditation" value="5"><span>5 yr</span></label>
+                                    <label class="x-chip"><input type="radio" name="meditation" value="6"><span>&gt; 5 yr</span></label>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <section class="x-group" aria-labelledby="g-birth">
+                        <h2 class="x-group-title" id="g-birth"><span uk-icon="icon: calendar; ratio: 0.75"></span> Birth · login key</h2>
+                        <div class="uk-grid-small uk-child-width-1-2 uk-child-width-1-4@s" uk-grid>
+                            <div class="x-field">
+                                <label class="x-label" for="birth-date">Date</label>
+                                <div class="uk-inline uk-width-1-1">
+                                    <span class="uk-form-icon" uk-icon="icon: calendar"></span>
+                                    <input class="uk-input uk-form-small" id="birth-date" type="text" inputmode="numeric" maxlength="2" placeholder="15">
+                                </div>
+                            </div>
+                            <div class="x-field">
+                                <label class="x-label" for="birth-month">Month</label>
+                                <div class="uk-inline uk-width-1-1">
+                                    <span class="uk-form-icon" uk-icon="icon: calendar"></span>
+                                    <input class="uk-input uk-form-small" id="birth-month" type="text" inputmode="numeric" maxlength="2" placeholder="8">
+                                </div>
+                            </div>
+                            <div class="x-field uk-width-1-1@s uk-width-1-2@s">
+                                <label class="x-label" for="language">Preferred language</label>
+                                <select class="uk-select uk-form-small" id="language">
+                                    <option value="">Select</option>
+                                    <option>English</option>
+                                    <option>Telugu</option>
+                                    <option>Hindi</option>
+                                    <option>Tamil</option>
+                                    <option>Kannada</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="x-pass">
+                            <div>
+                                <small>Login password preview</small>
+                                <div><strong id="pass-preview">—</strong></div>
+                            </div>
+                            <small>≤5 letters + DDMM</small>
+                        </div>
+                        <p id="birth-error" class="hint" hidden></p>
+                    </section>
+
+                    <section class="x-group" aria-labelledby="g-sangha">
+                        <h2 class="x-group-title" id="g-sangha"><span uk-icon="icon: users; ratio: 0.75"></span> Sangha links</h2>
+                        <div class="uk-grid-small uk-child-width-1-1 uk-child-width-1-2@s" uk-grid>
+                            <div class="x-field">
+                                <label class="x-label" for="center">Pyramid center / group</label>
+                                <div class="uk-inline uk-width-1-1">
+                                    <span class="uk-form-icon" uk-icon="icon: location"></span>
+                                    <input class="uk-input uk-form-small" id="center" type="text" list="center-list" placeholder="Optional">
+                                </div>
+                                <datalist id="center-list">
+                                    <option value="Pyramid Meditation Center, Vijayawada"></option>
+                                    <option value="Indiranagar Pyramid Group"></option>
+                                    <option value="Pyramid Meditation Center, Hyderabad"></option>
+                                </datalist>
+                            </div>
+                            <div class="x-field">
+                                <label class="x-label" for="since">Since year</label>
+                                <div class="uk-inline uk-width-1-1">
+                                    <span class="uk-form-icon" uk-icon="icon: history"></span>
+                                    <input class="uk-input uk-form-small" id="since" type="text" inputmode="numeric" maxlength="4" placeholder="2019">
+                                </div>
+                            </div>
+                            <div class="x-field uk-width-1-1">
+                                <span class="x-label">Roles & needs</span>
+                                <div class="x-chips">
+                                    <label class="x-chip"><input type="checkbox" name="sevadal" value="yes"><span>Pyramid Sevadal</span></label>
+                                    <label class="x-chip"><input type="checkbox" name="aged" value="yes"><span>Aged in party</span></label>
+                                    <label class="x-chip"><input type="checkbox" name="sickness" value="yes"><span>Sickness in party</span></label>
+                                    <label class="x-chip"><input type="checkbox" name="first-visit" value="yes"><span>First event visit</span></label>
+                                </div>
+                            </div>
+                            <div class="x-field uk-width-1-1" id="need-note-wrap" hidden>
+                                <label class="x-label" for="need-note">Special needs note</label>
+                                <textarea class="uk-textarea uk-form-small" id="need-note" rows="2" placeholder="Short note for reception"></textarea>
+                            </div>
+                        </div>
+                    </section>
+
+                    <div class="x-actions">
+                        <button class="uk-button uk-button-default uk-width-expand" type="reset">Clear</button>
+                        <button class="uk-button uk-button-primary uk-width-expand" type="button" id="continue">Continue</button>
+                    </div>
+                    <p id="done" class="hint" hidden>Experiment form captured locally — not saved to the server.</p>
+                </form>
+            </div>
+        </div>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/uikit@3.21.13/dist/js/uikit.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/uikit@3.21.13/dist/js/uikit-icons.min.js"></script>
+    <script>
+        function digits(el, max) {
+            el.value = el.value.replace(/\D/g, '').slice(0, max);
+        }
+
+        function daysInMonth(month) {
+            if (month === 2) return 29;
+            if (month === 4 || month === 6 || month === 9 || month === 11) return 30;
+            return 31;
+        }
+
+        function birthError() {
+            const d = document.getElementById('birth-date').value;
+            const m = document.getElementById('birth-month').value;
+            const date = parseInt(d, 10);
+            const month = parseInt(m, 10);
+            if (!d || !m) return 'Enter date and month.';
+            if (!month || month < 1 || month > 12) return 'Month must be 1 to 12.';
+            if (!date || date < 1 || date > daysInMonth(month)) return 'That date is not valid for this month.';
+            return '';
+        }
+
+        function password() {
+            const letters = document.getElementById('full-name').value.replace(/[^A-Za-z]/g, '').slice(0, 5);
+            const d = document.getElementById('birth-date').value;
+            const m = document.getElementById('birth-month').value;
+            if (!letters || !d || !m || birthError()) return '—';
+            return letters + d.padStart(2, '0') + m.padStart(2, '0');
+        }
+
+        function refresh() {
+            document.getElementById('pass-preview').textContent = password();
+            const err = document.getElementById('birth-error');
+            const message = (document.getElementById('birth-date').value || document.getElementById('birth-month').value)
+                ? birthError()
+                : '';
+            err.hidden = !message;
+            err.textContent = message;
+            const needs = document.querySelector('[name="aged"]').checked || document.querySelector('[name="sickness"]').checked;
+            document.getElementById('need-note-wrap').hidden = !needs;
+        }
+
+        ['full-name', 'birth-date', 'birth-month'].forEach((id) => {
+            document.getElementById(id).addEventListener('input', (event) => {
+                if (id === 'birth-date' || id === 'birth-month') digits(event.target, 2);
+                refresh();
+            });
+        });
+        document.getElementById('since').addEventListener('input', (event) => digits(event.target, 4));
+        document.querySelectorAll('[name="aged"], [name="sickness"]').forEach((el) => {
+            el.addEventListener('change', refresh);
+        });
+
+        document.getElementById('continue').addEventListener('click', () => {
+            const name = document.getElementById('full-name').value.trim();
+            const mobile = document.getElementById('mobile').value.trim();
+            const gender = document.querySelector('[name="gender"]:checked');
+            const err = birthError();
+            if (!name || !mobile || !gender || err) {
+                document.getElementById('birth-error').hidden = false;
+                document.getElementById('birth-error').textContent = err || 'Fill name, mobile, gender, and birth date.';
+                return;
+            }
+            document.getElementById('done').hidden = false;
+        });
+
+        document.getElementById('x-form').addEventListener('reset', () => {
+            setTimeout(() => {
+                document.getElementById('done').hidden = true;
+                refresh();
+            }, 0);
+        });
+
+        refresh();
+    </script>
+</body>
+</html>

@@ -39,7 +39,7 @@
                     </ul>
                 </div>
             </div>
-            <nav class="app-nav uk-visible@m" uk-navbar="mode: click; offset: 0; flip: false; delay-hide: 0" aria-label="Main">
+                        <nav class="app-nav uk-visible@m" uk-navbar="mode: click; offset: 0; flip: false; delay-hide: 0" aria-label="Main">
                 <ul class="uk-navbar-nav">
                     <li>
                         <a href="#">Stay <span uk-navbar-parent-icon></span></a>
@@ -50,7 +50,7 @@
                             </ul>
                         </div>
                     </li>
-                    <li>
+                    <li data-auth="out">
                         <a href="#">Sangha <span uk-navbar-parent-icon></span></a>
                         <div class="uk-navbar-dropdown">
                             <ul class="uk-nav uk-navbar-dropdown-nav">
@@ -59,7 +59,7 @@
                             </ul>
                         </div>
                     </li>
-                    <li>
+                    <li data-auth="out">
                         <a href="#">Account <span uk-navbar-parent-icon></span></a>
                         <div class="uk-navbar-dropdown">
                             <ul class="uk-nav uk-navbar-dropdown-nav">
@@ -69,9 +69,21 @@
                             </ul>
                         </div>
                     </li>
+                                        <li data-auth="in" hidden>
+                        <a href="#">Account <span uk-navbar-parent-icon></span></a>
+                        <div class="uk-navbar-dropdown">
+                            <ul class="uk-nav uk-navbar-dropdown-nav">
+                                <li data-role="pssm_admin" hidden><a href="admin.html">People &amp; roles</a></li>
+                                <li><a href="profile.html">My Profile</a></li>
+                                <li><a href="password.html">Change my password</a></li>
+                                <li data-role="event_organizer" hidden><a href="events.html">Create event</a></li>
+                                <li><a href="#" data-logout>Logout</a></li>
+                            </ul>
+                        </div>
+                    </li>
                 </ul>
             </nav>
-            <div class="app-nav-mobile uk-hidden@m">
+                        <div class="app-nav-mobile uk-hidden@m">
                 <button class="uk-button uk-button-text app-menu-toggle" type="button" aria-label="Open menu">
                     <span uk-icon="icon: menu"></span>
                 </button>
@@ -80,16 +92,22 @@
                         <li class="uk-nav-header">Stay</li>
                         <li><a href="visitor.html?plan=free">Free Accommodation</a></li>
                         <li><a href="visitor.html?plan=paid">Paid Accommodation</a></li>
-                        <li class="uk-nav-header">Sangha</li>
-                        <li><a href="join.html">Join PSSM Buddha Sangha</a></li>
-                        <li><a href="login.html">Login to My Space</a></li>
-                        <li class="uk-nav-header">Account</li>
-                        <li><a href="login.html">Login to My Space</a></li>
-                        <li><a href="index.html">Home</a></li>
-                        <li><a href="join.html">Join PSSM Buddha Sangha</a></li>
+                        <li class="uk-nav-header" data-auth="out">Sangha</li>
+                        <li data-auth="out"><a href="join.html">Join PSSM Buddha Sangha</a></li>
+                        <li data-auth="out"><a href="login.html">Login to My Space</a></li>
+                                                <li class="uk-nav-header">Account</li>
+                        <li data-auth="in" data-role="pssm_admin" hidden><a href="admin.html">People &amp; roles</a></li>
+                        <li data-auth="in" hidden><a href="profile.html">My Profile</a></li>
+                        <li data-auth="in" hidden><a href="password.html">Change my password</a></li>
+                        <li data-auth="in" data-role="event_organizer" hidden><a href="events.html">Create event</a></li>
+                        <li data-auth="out"><a href="login.html">Login to My Space</a></li>
+                        <li data-auth="out"><a href="index.html">Home</a></li>
+                        <li data-auth="out"><a href="join.html">Join PSSM Buddha Sangha</a></li>
+                        <li data-auth="in" hidden><a href="#" data-logout>Logout</a></li>
                     </ul>
                 </div>
             </div>
+</div>
         </header>
     </div>
 
@@ -580,15 +598,15 @@
                 <div class="pick-list pick-row">
                     <label class="pick">
                         <input class="uk-radio uk-form-large" type="radio" name="age" value="child">
-                        <span>Child</span>
+                        <span>Child (under 12)</span>
                     </label>
                     <label class="pick">
                         <input class="uk-radio uk-form-large" type="radio" name="age" value="adult">
-                        <span>Adult</span>
+                        <span>Adult (12–59)</span>
                     </label>
                     <label class="pick">
                         <input class="uk-radio uk-form-large" type="radio" name="age" value="senior">
-                        <span>Senior</span>
+                        <span>Senior (60+)</span>
                     </label>
                 </div>
             </div>
@@ -853,7 +871,7 @@
             if (birthError()) return '';
             const letters = field('full-name').replace(/[^A-Za-z]/g, '').slice(0, 5);
             if (!letters) return '';
-            return 'DMY5' + letters + field('birth-date').padStart(2, '0') + field('birth-month').padStart(2, '0');
+            return letters + field('birth-date').padStart(2, '0') + field('birth-month').padStart(2, '0');
         }
 
         function readVisitorPlace() {
@@ -1062,8 +1080,8 @@
             list.append(dt, dd);
             const made = composedPassword();
             document.getElementById('summary-login').textContent = made
-                ? 'Login to My Space with password ' + made + '.'
-                : 'Login to My Space with DMY5, the first 5 letters of your name, then date and month.';
+                ? 'Login to My Space with your mobile number and password ' + made + '.'
+                : 'Login to My Space with up to 5 letters of your name, then date and month.';
         }
 
         function show(id) {
@@ -1225,6 +1243,7 @@
             event.target.value = event.target.value.replace(/\D/g, '').slice(0, 3);
         });
         PssmProfile.bindEventPick();
+        PssmProfile.applyChromeNav();
 
         // Deep copy only — accommodation edits never write back to sangha localStorage.
         const sanghaDraft = PssmProfile.copySanghaProfile();

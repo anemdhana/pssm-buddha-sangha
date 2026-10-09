@@ -39,7 +39,7 @@
                     </ul>
                 </div>
             </div>
-            <nav class="app-nav uk-visible@m" uk-navbar="mode: click; offset: 0; flip: false; delay-hide: 0" aria-label="Main">
+                        <nav class="app-nav uk-visible@m" uk-navbar="mode: click; offset: 0; flip: false; delay-hide: 0" aria-label="Main">
                 <ul class="uk-navbar-nav">
                     <li>
                         <a href="#">Stay <span uk-navbar-parent-icon></span></a>
@@ -50,7 +50,7 @@
                             </ul>
                         </div>
                     </li>
-                    <li>
+                    <li data-auth="out">
                         <a href="#">Sangha <span uk-navbar-parent-icon></span></a>
                         <div class="uk-navbar-dropdown">
                             <ul class="uk-nav uk-navbar-dropdown-nav">
@@ -59,7 +59,7 @@
                             </ul>
                         </div>
                     </li>
-                    <li>
+                    <li data-auth="out">
                         <a href="#">Account <span uk-navbar-parent-icon></span></a>
                         <div class="uk-navbar-dropdown">
                             <ul class="uk-nav uk-navbar-dropdown-nav">
@@ -69,9 +69,21 @@
                             </ul>
                         </div>
                     </li>
+                                        <li data-auth="in" hidden>
+                        <a href="#">Account <span uk-navbar-parent-icon></span></a>
+                        <div class="uk-navbar-dropdown">
+                            <ul class="uk-nav uk-navbar-dropdown-nav">
+                                <li data-role="pssm_admin" hidden><a href="admin.html">People &amp; roles</a></li>
+                                <li><a href="profile.html">My Profile</a></li>
+                                <li><a href="password.html">Change my password</a></li>
+                                <li data-role="event_organizer" hidden><a href="events.html">Create event</a></li>
+                                <li><a href="#" data-logout>Logout</a></li>
+                            </ul>
+                        </div>
+                    </li>
                 </ul>
             </nav>
-            <div class="app-nav-mobile uk-hidden@m">
+                        <div class="app-nav-mobile uk-hidden@m">
                 <button class="uk-button uk-button-text app-menu-toggle" type="button" aria-label="Open menu">
                     <span uk-icon="icon: menu"></span>
                 </button>
@@ -80,16 +92,22 @@
                         <li class="uk-nav-header">Stay</li>
                         <li><a href="visitor.html?plan=free">Free Accommodation</a></li>
                         <li><a href="visitor.html?plan=paid">Paid Accommodation</a></li>
-                        <li class="uk-nav-header">Sangha</li>
-                        <li><a href="join.html">Join PSSM Buddha Sangha</a></li>
-                        <li><a href="login.html">Login to My Space</a></li>
-                        <li class="uk-nav-header">Account</li>
-                        <li><a href="login.html">Login to My Space</a></li>
-                        <li><a href="index.html">Home</a></li>
-                        <li><a href="join.html">Join PSSM Buddha Sangha</a></li>
+                        <li class="uk-nav-header" data-auth="out">Sangha</li>
+                        <li data-auth="out"><a href="join.html">Join PSSM Buddha Sangha</a></li>
+                        <li data-auth="out"><a href="login.html">Login to My Space</a></li>
+                                                <li class="uk-nav-header">Account</li>
+                        <li data-auth="in" data-role="pssm_admin" hidden><a href="admin.html">People &amp; roles</a></li>
+                        <li data-auth="in" hidden><a href="profile.html">My Profile</a></li>
+                        <li data-auth="in" hidden><a href="password.html">Change my password</a></li>
+                        <li data-auth="in" data-role="event_organizer" hidden><a href="events.html">Create event</a></li>
+                        <li data-auth="out"><a href="login.html">Login to My Space</a></li>
+                        <li data-auth="out"><a href="index.html">Home</a></li>
+                        <li data-auth="out"><a href="join.html">Join PSSM Buddha Sangha</a></li>
+                        <li data-auth="in" hidden><a href="#" data-logout>Logout</a></li>
                     </ul>
                 </div>
             </div>
+</div>
         </header>
     </div>
 
@@ -99,6 +117,7 @@
                 <li class="uk-active"><a href="#">Who</a></li>
                 <li><a href="#">Place</a></li>
                 <li><a href="#">Family</a></li>
+                <li><a href="#">Review</a></li>
                 <li><a href="#">Done</a></li>
             </ul>
 
@@ -106,79 +125,179 @@
                 <button id="chrome-back" class="uk-button uk-button-text chrome-back" type="button" data-back hidden aria-label="Back">
                     <span uk-icon="icon: chevron-left; ratio: 0.85"></span>
                 </button>
-                <p id="step-label" class="step-label">Step 1 of 4 · Who is joining?</p>
+                <p id="step-label" class="step-label">Step 1 of 5 · Who is joining?</p>
             </div>
             <div class="app-progress">
-                <progress id="wizard-progress" class="uk-progress" value="1" max="4" aria-label="Join progress"></progress>
+                <progress id="wizard-progress" class="uk-progress" value="1" max="5" aria-label="Join progress"></progress>
             </div>
 
             <div class="uk-card uk-card-default uk-card-small uk-card-body uk-box-shadow-medium">
                 <ul id="wizard" class="uk-switcher">
                     <li class="uk-active" data-step="who">
-                        <header class="form-head">
+                        <header class="x-step-head form-head">
                             <h2 class="form-title">Who is joining?</h2>
-                            <p class="form-summary">Your name, mobile, gender, meditation, and date of birth. The first five letters of your name and the date and month become your login password.</p>
+                            <p class="form-summary">A few details about you. Your mobile and a name-and-birthday password open My Space later.</p>
                         </header>
-                        <form class="uk-form-stacked desk-fields">
-                            <div class="uk-margin-small">
-                                <label class="uk-form-label" for="full-name">Full name</label>
-                                <div class="uk-form-controls">
-                                    <div class="uk-inline">
-                                        <span class="uk-form-icon" uk-icon="icon: user"></span>
-                                        <input class="uk-input uk-form-small" id="full-name" type="text" autocomplete="name">
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="uk-margin-small">
-                                <label class="uk-form-label" for="mobile">Mobile number</label>
-                                <div class="uk-form-controls">
-                                    <div class="uk-inline">
-                                        <span class="uk-form-icon" uk-icon="icon: receiver"></span>
-                                        <input class="uk-input uk-form-small" id="mobile" type="tel" inputmode="tel" autocomplete="tel">
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="uk-margin-small span-all" data-choice="visitor-gender">
-                                <span class="uk-form-label">Gender</span>
-                                <div class="pick-list pick-row">
-                                    <label class="pick"><input class="uk-radio uk-form-large" type="radio" name="visitor-gender" value="male"><span>Male</span></label>
-                                    <label class="pick"><input class="uk-radio uk-form-large" type="radio" name="visitor-gender" value="female"><span>Female</span></label>
-                                </div>
-                            </div>
-                            <div class="uk-margin-small span-all">
-                                <span class="uk-form-label">How long into meditation?</span>
-                                <div class="med-fit">
-                                    <ul class="med-choice uk-subnav uk-subnav-pill" data-choice="meditation">
-                                        <li data-value="new"><a href="#">New here</a></li>
-                                        <li data-value="1"><a href="#">1 year</a></li>
-                                        <li data-value="2"><a href="#">2 years</a></li>
-                                        <li data-value="3"><a href="#">3 years</a></li>
-                                        <li data-value="4"><a href="#">4 years</a></li>
-                                        <li data-value="5"><a href="#">5 years</a></li>
-                                        <li data-value="6"><a href="#">&gt; 5 years</a></li>
-                                    </ul>
-                                </div>
-                            </div>
-                            <div class="uk-margin-small span-all">
-                                <span class="uk-form-label">Date of birth</span>
-                                <div class="uk-grid-small uk-child-width-1-2 short-pair" uk-grid>
-                                    <div>
-                                        <label class="uk-form-label" for="birth-date">Date</label>
-                                        <div class="uk-inline">
-                                            <span class="uk-form-icon" uk-icon="icon: calendar"></span>
-                                            <input class="uk-input uk-form-small" id="birth-date" type="text" inputmode="numeric" maxlength="2" placeholder="15">
+                        <form class="uk-form-stacked" id="join-who-form">
+                            <section class="x-group" aria-labelledby="g-identity">
+                                <h3 class="x-group-title" id="g-identity"><span uk-icon="icon: user; ratio: 0.75"></span> Identity</h3>
+                                <div class="uk-grid-small uk-child-width-1-1 uk-child-width-1-2@s" uk-grid>
+                                    <div class="x-field">
+                                        <label class="x-label" for="full-name">Full name</label>
+                                        <div class="uk-inline uk-width-1-1">
+                                            <span class="uk-form-icon" uk-icon="icon: user"></span>
+                                            <input class="uk-input uk-form-small" id="full-name" type="text" placeholder="Ramakrishna" autocomplete="name">
                                         </div>
                                     </div>
-                                    <div>
-                                        <label class="uk-form-label" for="birth-month">Month</label>
-                                        <div class="uk-inline">
-                                            <span class="uk-form-icon" uk-icon="icon: calendar"></span>
-                                            <input class="uk-input uk-form-small" id="birth-month" type="text" inputmode="numeric" maxlength="2" placeholder="8">
+                                    <div class="x-field">
+                                        <label class="x-label" for="mobile">Mobile</label>
+                                        <div class="uk-inline uk-width-1-1">
+                                            <span class="uk-form-icon" uk-icon="icon: receiver"></span>
+                                            <input class="uk-input uk-form-small" id="mobile" type="tel" inputmode="tel" placeholder="98765 43210" autocomplete="tel">
                                         </div>
                                     </div>
+                                    <div class="x-field">
+                                        <label class="x-label" for="email">Email <span class="uk-text-muted">(optional)</span></label>
+                                        <div class="uk-inline uk-width-1-1">
+                                            <span class="uk-form-icon" uk-icon="icon: mail"></span>
+                                            <input class="uk-input uk-form-small" id="email" type="email" placeholder="name@email.com" autocomplete="email">
+                                        </div>
+                                    </div>
+                                    <div class="x-field">
+                                        <label class="x-label" for="alt-mobile">Alt. mobile <span class="uk-text-muted">(optional)</span></label>
+                                        <div class="uk-inline uk-width-1-1">
+                                            <span class="uk-form-icon" uk-icon="icon: phone"></span>
+                                            <input class="uk-input uk-form-small" id="alt-mobile" type="tel" inputmode="tel" placeholder="Optional">
+                                        </div>
+                                    </div>
+                                </div>
+                            </section>
+
+                            <section class="x-group" aria-labelledby="g-profile">
+                                <h3 class="x-group-title" id="g-profile"><span uk-icon="icon: tag; ratio: 0.75"></span> Profile</h3>
+                                <div class="uk-grid-small uk-child-width-1-1 uk-child-width-1-2@s" uk-grid>
+                                    <div class="x-field">
+                                        <span class="x-label">Gender</span>
+                                        <div class="x-chips" data-choice="visitor-gender">
+                                            <label class="x-chip"><input type="radio" name="visitor-gender" value="male"><span>Male</span></label>
+                                            <label class="x-chip"><input type="radio" name="visitor-gender" value="female"><span>Female</span></label>
+                                        </div>
+                                    </div>
+                                    <div class="x-field">
+                                        <span class="x-label">Age group</span>
+                                        <div class="x-chips" data-choice="visitor-age">
+                                            <label class="x-chip"><input type="radio" name="visitor-age" value="child"><span>Child · &lt;12</span></label>
+                                            <label class="x-chip"><input type="radio" name="visitor-age" value="adult" checked><span>Adult · 12–59</span></label>
+                                            <label class="x-chip"><input type="radio" name="visitor-age" value="senior"><span>Senior · 60+</span></label>
+                                        </div>
+                                    </div>
+                                    <div class="x-field uk-width-1-1">
+                                        <span class="x-label">How long into meditation?</span>
+                                        <div class="x-chips" data-choice="meditation">
+                                            <label class="x-chip"><input type="radio" name="meditation" value="new"><span>New</span></label>
+                                            <label class="x-chip"><input type="radio" name="meditation" value="1"><span>1 yr</span></label>
+                                            <label class="x-chip"><input type="radio" name="meditation" value="2"><span>2 yr</span></label>
+                                            <label class="x-chip"><input type="radio" name="meditation" value="3"><span>3 yr</span></label>
+                                            <label class="x-chip"><input type="radio" name="meditation" value="4"><span>4 yr</span></label>
+                                            <label class="x-chip"><input type="radio" name="meditation" value="5"><span>5 yr</span></label>
+                                            <label class="x-chip"><input type="radio" name="meditation" value="6"><span>&gt; 5 yr</span></label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </section>
+
+                            <section class="x-group" aria-labelledby="g-birth">
+                                <h3 class="x-group-title" id="g-birth"><span uk-icon="icon: calendar; ratio: 0.75"></span> Birth · login key</h3>
+                                <div class="uk-grid-small uk-child-width-1-2 uk-child-width-1-4@s" uk-grid>
+                                    <div class="x-field">
+                                        <label class="x-label" for="birth-date">Date</label>
+                                        <div class="uk-inline uk-width-1-1">
+                                            <span class="uk-form-icon" uk-icon="icon: calendar"></span>
+                                            <input class="uk-input uk-form-small" id="birth-date" type="text" inputmode="numeric" maxlength="2" placeholder="15" autocomplete="bday-day">
+                                        </div>
+                                    </div>
+                                    <div class="x-field">
+                                        <label class="x-label" for="birth-month">Month</label>
+                                        <div class="uk-inline uk-width-1-1">
+                                            <span class="uk-form-icon" uk-icon="icon: calendar"></span>
+                                            <input class="uk-input uk-form-small" id="birth-month" type="text" inputmode="numeric" maxlength="2" placeholder="8" autocomplete="bday-month">
+                                        </div>
+                                    </div>
+                                    <div class="x-field uk-width-1-1@s uk-width-1-2@s">
+                                        <label class="x-label" for="language">Preferred language</label>
+                                        <select class="uk-select uk-form-small" id="language">
+                                            <option value="">Select</option>
+                                            <option>English</option>
+                                            <option>Telugu</option>
+                                            <option>Hindi</option>
+                                            <option>Tamil</option>
+                                            <option>Kannada</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="x-pass">
+                                    <div>
+                                        <small>Login password preview</small>
+                                        <div><strong id="pass-preview">—</strong></div>
+                                    </div>
+                                    <small>≤5 letters + DDMM</small>
                                 </div>
                                 <p id="birth-error" class="hint" hidden></p>
-                            </div>
+                            </section>
+
+                            <section class="x-group" aria-labelledby="g-sangha">
+                                <h3 class="x-group-title" id="g-sangha"><span uk-icon="icon: users; ratio: 0.75"></span> Sangha links</h3>
+                                <div class="uk-grid-small uk-child-width-1-1 uk-child-width-1-2@s" uk-grid>
+                                    <div class="x-field">
+                                        <label class="x-label" for="center">Pyramid center / group</label>
+                                        <div class="uk-inline uk-width-1-1">
+                                            <span class="uk-form-icon" uk-icon="icon: location"></span>
+                                            <input class="uk-input uk-form-small" id="center" type="text" list="center-list" placeholder="Optional" autocomplete="organization">
+                                        </div>
+                                        <datalist id="center-list">
+                                            <option value="Pyramid Meditation Center, Vijayawada"></option>
+                                            <option value="Indiranagar Pyramid Group"></option>
+                                            <option value="Pyramid Meditation Center, Hyderabad"></option>
+                                        </datalist>
+                                    </div>
+                                    <div class="x-field">
+                                        <label class="x-label" for="since">Since year</label>
+                                        <div class="uk-inline uk-width-1-1">
+                                            <span class="uk-form-icon" uk-icon="icon: history"></span>
+                                            <input class="uk-input uk-form-small" id="since" type="text" inputmode="numeric" maxlength="4" placeholder="2019">
+                                        </div>
+                                    </div>
+                                </div>
+                            </section>
+
+                            <section class="x-group" aria-labelledby="g-photos">
+                                <h3 class="x-group-title" id="g-photos"><span uk-icon="icon: camera; ratio: 0.75"></span> Photo &amp; ID <span class="x-advised">advised</span></h3>
+                                <div class="x-photo-bar">
+                                    <button type="button" class="x-pass-shot" data-photo-owner="self" data-photo-slot="live" data-photo-open aria-label="Take live photo">
+                                        <img class="x-pass-shot-img" data-photo-preview alt="" hidden>
+                                        <span class="x-pass-shot-ph" data-photo-empty uk-icon="icon: camera; ratio: 0.85"></span>
+                                        <span class="x-pass-shot-label" data-photo-state>Photo</span>
+                                    </button>
+                                    <button type="button" class="x-pass-shot x-pass-shot--id" data-photo-owner="self" data-photo-slot="proof" data-photo-open aria-label="Take ID proof photo">
+                                        <img class="x-pass-shot-img" data-photo-preview alt="" hidden>
+                                        <span class="x-pass-shot-ph" data-photo-empty uk-icon="icon: file-text; ratio: 0.85"></span>
+                                        <span class="x-pass-shot-label" data-photo-state>ID</span>
+                                    </button>
+                                    <div class="x-photo-type">
+                                        <label class="x-label" for="id-type">ID type</label>
+                                        <select class="uk-select uk-form-small" id="id-type">
+                                            <option value="">Later</option>
+                                            <option value="aadhaar">Aadhaar</option>
+                                            <option value="pan">PAN</option>
+                                            <option value="voter">Voter ID</option>
+                                            <option value="passport">Passport</option>
+                                            <option value="driving">Driving Licence</option>
+                                            <option value="other">Other</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </section>
+
                             <div class="step-actions">
                                 <button class="uk-button uk-button-primary uk-width-1-1" type="button" data-next>Continue</button>
                             </div>
@@ -186,99 +305,103 @@
                     </li>
 
                     <li data-step="place">
-                        <header class="form-head">
+                        <header class="x-step-head form-head">
                             <h2 class="form-title">Where are you from?</h2>
-                            <p class="form-summary">Choose rural or urban. A known place fills the next fields. You can correct them.</p>
+                            <p class="form-summary">Village or city — start typing, and we’ll fill what we know. You can always change it.</p>
                         </header>
-                        <div class="pick-list pick-row" data-choice="area">
-                            <label class="pick"><input class="uk-radio uk-form-large" type="radio" name="area" value="rural"><span>Rural</span></label>
-                            <label class="pick"><input class="uk-radio uk-form-large" type="radio" name="area" value="urban"><span>Urban</span></label>
-                        </div>
-                        <div id="rural-fields" class="uk-margin-small-top" hidden>
-                            <form class="uk-form-stacked desk-fields">
-                                <div class="uk-margin-small">
-                                    <label class="uk-form-label" for="village">Village</label>
-                                    <div class="uk-inline">
-                                        <span class="uk-form-icon" uk-icon="icon: location"></span>
-                                        <input class="uk-input uk-form-small" id="village" type="text" list="village-list">
-                                    </div>
-                                    <datalist id="village-list"><option value="Kadthal"></option></datalist>
-                                </div>
-                                <div class="uk-margin-small">
-                                    <label class="uk-form-label" for="town">Town</label>
-                                    <div class="uk-inline">
-                                        <span class="uk-form-icon" uk-icon="icon: home"></span>
-                                        <input class="uk-input uk-form-small" id="town" type="text">
-                                    </div>
-                                </div>
-                                <div class="uk-margin-small span-all">
-                                    <label class="uk-form-label" for="district">District</label>
-                                    <div class="uk-inline">
-                                        <span class="uk-form-icon" uk-icon="icon: location"></span>
-                                        <input class="uk-input uk-form-small" id="district" type="text">
-                                    </div>
-                                </div>
-                                <div class="uk-grid-small uk-child-width-1-2" uk-grid>
-                                    <div>
-                                        <label class="uk-form-label" for="state-rural">State</label>
-                                        <div class="uk-inline">
-                                            <span class="uk-form-icon" uk-icon="icon: world"></span>
-                                            <input class="uk-input uk-form-small" id="state-rural" type="text">
+                        <form class="uk-form-stacked" id="join-place-form">
+                            <section class="x-group" aria-labelledby="g-place">
+                                <h3 class="x-group-title" id="g-place"><span uk-icon="icon: location; ratio: 0.75"></span> Your place</h3>
+                                <ul id="place-tabs" class="uk-tab x-place-tabs" data-choice="area" uk-tab="connect: #place-panels">
+                                    <li class="uk-active" data-value="rural"><a href="#">Rural</a></li>
+                                    <li data-value="urban"><a href="#">Urban</a></li>
+                                </ul>
+                                <ul id="place-panels" class="uk-switcher">
+                                    <li id="rural-fields">
+                                        <div class="uk-grid-small uk-child-width-1-1 uk-child-width-1-2@s" uk-grid>
+                                            <div class="x-field">
+                                                <label class="x-label" for="village">Village</label>
+                                                <div class="uk-inline uk-width-1-1">
+                                                    <span class="uk-form-icon" uk-icon="icon: location"></span>
+                                                    <input class="uk-input uk-form-small" id="village" type="text" list="village-list" autocomplete="off">
+                                                </div>
+                                                <datalist id="village-list"><option value="Kadthal"></option></datalist>
+                                            </div>
+                                            <div class="x-field">
+                                                <label class="x-label" for="town">Town</label>
+                                                <div class="uk-inline uk-width-1-1">
+                                                    <span class="uk-form-icon" uk-icon="icon: home"></span>
+                                                    <input class="uk-input uk-form-small" id="town" type="text" autocomplete="address-level3">
+                                                </div>
+                                            </div>
+                                            <div class="x-field uk-width-1-1">
+                                                <label class="x-label" for="district">District</label>
+                                                <div class="uk-inline uk-width-1-1">
+                                                    <span class="uk-form-icon" uk-icon="icon: location"></span>
+                                                    <input class="uk-input uk-form-small" id="district" type="text">
+                                                </div>
+                                            </div>
+                                            <div class="x-field">
+                                                <label class="x-label" for="state-rural">State</label>
+                                                <div class="uk-inline uk-width-1-1">
+                                                    <span class="uk-form-icon" uk-icon="icon: world"></span>
+                                                    <input class="uk-input uk-form-small" id="state-rural" type="text" autocomplete="address-level1">
+                                                </div>
+                                            </div>
+                                            <div class="x-field">
+                                                <label class="x-label" for="country-rural">Country</label>
+                                                <div class="uk-inline uk-width-1-1">
+                                                    <span class="uk-form-icon" uk-icon="icon: world"></span>
+                                                    <input class="uk-input uk-form-small filled" id="country-rural" type="text" value="India" readonly>
+                                                </div>
+                                            </div>
                                         </div>
-                                    </div>
-                                    <div>
-                                        <label class="uk-form-label" for="country-rural">Country</label>
-                                        <div class="uk-inline">
-                                            <span class="uk-form-icon" uk-icon="icon: world"></span>
-                                            <input class="uk-input uk-form-small filled" id="country-rural" type="text" value="India" readonly>
+                                    </li>
+                                    <li id="urban-fields">
+                                        <div class="uk-grid-small uk-child-width-1-1 uk-child-width-1-2@s" uk-grid>
+                                            <div class="x-field uk-width-1-1">
+                                                <label class="x-label" for="city">City</label>
+                                                <div class="uk-inline uk-width-1-1">
+                                                    <span class="uk-form-icon" uk-icon="icon: location"></span>
+                                                    <input class="uk-input uk-form-small" id="city" type="text" list="city-list" autocomplete="address-level2">
+                                                </div>
+                                                <datalist id="city-list">
+                                                    <option value="Hyderabad"></option>
+                                                    <option value="Bengaluru"></option>
+                                                    <option value="Chennai"></option>
+                                                    <option value="Mumbai"></option>
+                                                    <option value="New Delhi"></option>
+                                                </datalist>
+                                            </div>
+                                            <div class="x-field">
+                                                <label class="x-label" for="state-urban">State</label>
+                                                <div class="uk-inline uk-width-1-1">
+                                                    <span class="uk-form-icon" uk-icon="icon: world"></span>
+                                                    <input class="uk-input uk-form-small" id="state-urban" type="text" autocomplete="address-level1">
+                                                </div>
+                                            </div>
+                                            <div class="x-field">
+                                                <label class="x-label" for="country-urban">Country</label>
+                                                <div class="uk-inline uk-width-1-1">
+                                                    <span class="uk-form-icon" uk-icon="icon: world"></span>
+                                                    <input class="uk-input uk-form-small" id="country-urban" type="text" value="India" autocomplete="country-name">
+                                                </div>
+                                            </div>
                                         </div>
-                                    </div>
-                                </div>
-                            </form>
-                        </div>
-                        <div id="urban-fields" class="uk-margin-small-top" hidden>
-                            <form class="uk-form-stacked desk-fields">
-                                <div class="uk-margin-small span-all">
-                                    <label class="uk-form-label" for="city">City</label>
-                                    <div class="uk-inline">
-                                        <span class="uk-form-icon" uk-icon="icon: location"></span>
-                                        <input class="uk-input uk-form-small" id="city" type="text" list="city-list">
-                                    </div>
-                                    <datalist id="city-list">
-                                        <option value="Hyderabad"></option>
-                                        <option value="Bengaluru"></option>
-                                        <option value="Chennai"></option>
-                                        <option value="Mumbai"></option>
-                                        <option value="New Delhi"></option>
-                                    </datalist>
-                                </div>
-                                <div class="uk-grid-small uk-child-width-1-2" uk-grid>
-                                    <div>
-                                        <label class="uk-form-label" for="state-urban">State</label>
-                                        <div class="uk-inline">
-                                            <span class="uk-form-icon" uk-icon="icon: world"></span>
-                                            <input class="uk-input uk-form-small" id="state-urban" type="text">
-                                        </div>
-                                    </div>
-                                    <div>
-                                        <label class="uk-form-label" for="country-urban">Country</label>
-                                        <div class="uk-inline">
-                                            <span class="uk-form-icon" uk-icon="icon: world"></span>
-                                            <input class="uk-input uk-form-small" id="country-urban" type="text" value="India">
-                                        </div>
-                                    </div>
-                                </div>
-                            </form>
-                        </div>
-                        <div class="step-actions">
-                            <button class="uk-button uk-button-primary uk-width-1-1" type="button" data-next>Continue</button>
-                        </div>
+                                    </li>
+                                </ul>
+                            </section>
+
+                            <div class="step-actions">
+                                <button class="uk-button uk-button-primary uk-width-1-1" type="button" data-next>Continue</button>
+                            </div>
+                        </form>
                     </li>
 
                     <li data-step="family">
-                        <header class="form-head">
+                        <header class="x-step-head form-head">
                             <h2 class="form-title">Family with you</h2>
-                            <p class="form-summary">Add family who join with you. Skip if you are alone.</p>
+                            <p class="form-summary">Coming with family? Add them here. Alone? Just continue.</p>
                         </header>
                         <p id="party-size" class="uk-text-meta uk-margin-remove-top">1 person</p>
                         <div id="members"></div>
@@ -287,23 +410,29 @@
                             <span class="uk-margin-small-left">Add a family member</span>
                         </button>
                         <div class="step-actions">
-                            <button class="uk-button uk-button-primary uk-width-1-1" type="button" data-next>Finish</button>
+                            <button class="uk-button uk-button-primary uk-width-1-1" type="button" data-next>Continue</button>
+                        </div>
+                    </li>
+
+                    <li data-step="review">
+                        <header class="x-step-head form-head">
+                            <h2 class="form-title">Review &amp; finish</h2>
+                            <p class="form-summary">A quick look before you join. Change anything with Back, then Finish.</p>
+                        </header>
+                        <div id="join-summary" class="x-summary"></div>
+                        <div class="step-actions">
+                            <button class="uk-button uk-button-primary uk-width-1-1" type="button" data-finish>Finish</button>
                         </div>
                     </li>
 
                     <li data-step="done">
-                        <header class="form-head">
-                            <h2 class="form-title">Welcome to the sangha</h2>
-                            <p class="form-summary">Your join request is saved for this prototype.</p>
+                        <header class="x-step-head form-head">
+                            <h2 class="form-title">You’re in</h2>
+                            <p class="form-summary" id="join-success">Welcome to the sangha. Login with your mobile number and the password below.</p>
                         </header>
-                        <p class="uk-text-lead" id="join-success">The first five letters of your name and the date and month become your login password.</p>
-                        <p id="join-password" class="password-line"></p>
-                        <p class="hint">Accommodation booking can use a copy of these details. Changes there will not change this sangha join record.</p>
-                        <div class="uk-margin-top">
-                            <a class="uk-button uk-button-primary uk-width-1-1" href="visitor.html?plan=free">Free Accommodation</a>
-                            <a class="uk-button uk-button-default uk-width-1-1 uk-margin-small-top" href="visitor.html?plan=paid">Paid Accommodation</a>
-                            <a class="uk-button uk-button-text uk-margin-small-top" href="index.html">Back to Home</a>
-                            <a class="uk-button uk-button-text uk-margin-small-top" href="login.html">Login to My Space</a>
+                        <p id="join-password" class="password-line uk-margin-small-bottom" hidden></p>
+                        <div class="step-actions">
+                            <a class="uk-button uk-button-primary uk-width-1-1" href="login.html">Login to My Space</a>
                         </div>
                     </li>
                 </ul>
@@ -311,81 +440,222 @@
         </div>
     </main>
 
-    <div id="address-modal" uk-modal>
-        <div class="uk-modal-dialog uk-modal-body">
-            <header class="form-head">
-                <h2 class="uk-modal-title form-title">Address</h2>
-                <p class="form-summary">Choose rural or urban.</p>
-            </header>
-            <div class="pick-list pick-row" data-choice="addr-area">
-                <label class="pick"><input class="uk-radio uk-form-large" type="radio" name="addr-area" value="rural"><span>Rural</span></label>
-                <label class="pick"><input class="uk-radio uk-form-large" type="radio" name="addr-area" value="urban"><span>Urban</span></label>
+    <div id="camera-modal" class="uk-modal-container" uk-modal>
+        <div class="uk-modal-dialog uk-modal-body x-camera-dialog">
+            <button class="uk-modal-close-default" type="button" uk-close></button>
+            <h3 class="form-title" id="camera-title">Take photo</h3>
+            <p class="form-summary" id="camera-hint">Keep your face in the frame.</p>
+            <div class="x-camera-stage" data-camera-stage>
+                <video id="camera-video" autoplay playsinline muted></video>
+                <img id="camera-shot" alt="Captured" hidden>
+                <div class="x-camera-guide" aria-hidden="true"></div>
+                <canvas id="camera-canvas" hidden></canvas>
             </div>
-            <div id="addr-rural-fields" class="uk-margin-small-top" hidden>
-                <div class="uk-margin-small"><label class="uk-form-label" for="addr-village">Village</label><div class="uk-inline"><span class="uk-form-icon" uk-icon="icon: location"></span><input class="uk-input uk-form-small" id="addr-village" type="text"></div></div>
-                <div class="uk-margin-small"><label class="uk-form-label" for="addr-town">Town</label><div class="uk-inline"><span class="uk-form-icon" uk-icon="icon: home"></span><input class="uk-input uk-form-small" id="addr-town" type="text"></div></div>
-                <div class="uk-margin-small"><label class="uk-form-label" for="addr-district">District</label><div class="uk-inline"><span class="uk-form-icon" uk-icon="icon: location"></span><input class="uk-input uk-form-small" id="addr-district" type="text"></div></div>
-                <div class="uk-grid-small uk-child-width-1-2" uk-grid>
-                    <div><label class="uk-form-label" for="addr-state-rural">State</label><div class="uk-inline"><span class="uk-form-icon" uk-icon="icon: world"></span><input class="uk-input uk-form-small" id="addr-state-rural" type="text"></div></div>
-                    <div><label class="uk-form-label" for="addr-country-rural">Country</label><div class="uk-inline"><span class="uk-form-icon" uk-icon="icon: world"></span><input class="uk-input uk-form-small filled" id="addr-country-rural" type="text" value="India" readonly></div></div>
-                </div>
+            <p id="camera-error" class="hint" hidden></p>
+            <div class="uk-grid-small uk-child-width-1-2 uk-margin-small-top" uk-grid>
+                <div><button class="uk-button uk-button-primary uk-width-1-1" type="button" id="camera-snap">Capture</button></div>
+                <div><button class="uk-button uk-button-default uk-width-1-1" type="button" id="camera-retake" hidden>Retake</button></div>
             </div>
-            <div id="addr-urban-fields" class="uk-margin-small-top" hidden>
-                <div class="uk-margin-small"><label class="uk-form-label" for="addr-city">City</label><div class="uk-inline"><span class="uk-form-icon" uk-icon="icon: location"></span><input class="uk-input uk-form-small" id="addr-city" type="text"></div></div>
-                <div class="uk-grid-small uk-child-width-1-2" uk-grid>
-                    <div><label class="uk-form-label" for="addr-state-urban">State</label><div class="uk-inline"><span class="uk-form-icon" uk-icon="icon: world"></span><input class="uk-input uk-form-small" id="addr-state-urban" type="text"></div></div>
-                    <div><label class="uk-form-label" for="addr-country-urban">Country</label><div class="uk-inline"><span class="uk-form-icon" uk-icon="icon: world"></span><input class="uk-input uk-form-small" id="addr-country-urban" type="text" value="India"></div></div>
-                </div>
-            </div>
-            <p id="addr-error" class="hint" hidden>Choose rural or urban.</p>
-            <button class="uk-button uk-button-primary uk-width-1-1 uk-margin-small-top" type="button" id="save-address">Use this address</button>
-            <button class="uk-button uk-button-text uk-modal-close" type="button">Cancel</button>
+            <button class="uk-button uk-button-primary uk-width-1-1 uk-margin-small-top" type="button" id="camera-use" hidden>Use this photo</button>
+            <button class="uk-button uk-button-text uk-width-1-1 uk-margin-small-top" type="button" id="camera-file-btn">Choose from device instead</button>
+            <input id="camera-file" type="file" accept="image/*" capture="environment" hidden>
         </div>
     </div>
 
     <template id="member-template">
-        <div class="member uk-background-muted uk-padding-small uk-margin-small">
-            <div class="uk-flex uk-flex-between uk-flex-middle">
-                <span class="person-no uk-text-meta"></span>
-                <button class="uk-button uk-button-text" type="button" data-remove>Remove</button>
-            </div>
-            <div class="uk-margin-small"><label class="uk-form-label">Name</label><div class="uk-inline"><span class="uk-form-icon" uk-icon="icon: user"></span><input class="uk-input uk-form-small" data-name type="text"></div></div>
-            <div class="uk-margin-small" data-choice="member-gender">
-                <span class="uk-form-label">Gender</span>
-                <div class="pick-list pick-row">
-                    <label class="pick"><input class="uk-radio uk-form-large" type="radio" name="member-gender" value="male"><span>Male</span></label>
-                    <label class="pick"><input class="uk-radio uk-form-large" type="radio" name="member-gender" value="female"><span>Female</span></label>
+        <article class="member x-member is-open">
+            <header class="x-member-head">
+                <button type="button" class="x-member-toggle" data-member-toggle aria-expanded="true">
+                    <span class="x-member-badge" data-person-badge>2</span>
+                    <span class="x-member-title">
+                        <span class="person-no">Person 2</span>
+                        <span class="x-member-sub" data-member-sub>New family member</span>
+                    </span>
+                    <span class="x-member-chevron" uk-icon="icon: chevron-down; ratio: 0.85"></span>
+                </button>
+                <button class="uk-button uk-button-text uk-button-small" type="button" data-remove>Remove</button>
+            </header>
+            <div class="x-member-body" data-member-body>
+
+            <section class="x-group">
+                <h4 class="x-group-title"><span uk-icon="icon: user; ratio: 0.75"></span> Identity</h4>
+                <div class="uk-grid-small uk-child-width-1-1 uk-child-width-1-2@s" uk-grid>
+                    <div class="x-field">
+                        <label class="x-label">Name</label>
+                        <div class="uk-inline uk-width-1-1">
+                            <span class="uk-form-icon" uk-icon="icon: user"></span>
+                            <input class="uk-input uk-form-small" data-name type="text" autocomplete="name">
+                        </div>
+                    </div>
+                    <div class="x-field">
+                        <label class="x-label">Relation</label>
+                        <div class="uk-inline uk-width-1-1">
+                            <span class="uk-form-icon" uk-icon="icon: users"></span>
+                            <input class="uk-input uk-form-small" data-relation type="text" placeholder="Spouse, child, parent" list="relation-list">
+                        </div>
+                    </div>
+                    <div class="x-field">
+                        <label class="x-label">Mobile <span class="uk-text-muted">(optional)</span></label>
+                        <div class="uk-inline uk-width-1-1">
+                            <span class="uk-form-icon" uk-icon="icon: receiver"></span>
+                            <input class="uk-input uk-form-small" data-mobile type="tel" inputmode="tel" placeholder="Optional">
+                        </div>
+                    </div>
                 </div>
-            </div>
-            <div class="uk-margin-small">
-                <span class="uk-form-label">How long into meditation?</span>
-                <ul class="med-choice can-wrap uk-subnav uk-subnav-pill" data-choice="member-meditation">
-                    <li data-value="new"><a href="#">I am very new here</a></li>
-                    <li data-value="1"><a href="#">1 year</a></li>
-                    <li data-value="2"><a href="#">2 years</a></li>
-                    <li data-value="3"><a href="#">3 years</a></li>
-                    <li data-value="4"><a href="#">4 years</a></li>
-                    <li data-value="5"><a href="#">5 years</a></li>
-                    <li data-value="6"><a href="#">&gt; 5 years</a></li>
-                </ul>
-            </div>
-            <div class="uk-margin-small"><label class="uk-form-label">Relation</label><div class="uk-inline"><span class="uk-form-icon" uk-icon="icon: users"></span><input class="uk-input uk-form-small" data-relation type="text" placeholder="Spouse, child, parent"></div></div>
-            <div class="uk-margin-small"><label class="uk-form-label">Mobile</label><div class="uk-inline"><span class="uk-form-icon" uk-icon="icon: receiver"></span><input class="uk-input uk-form-small" data-mobile type="tel" placeholder="Optional"></div></div>
-            <div class="uk-margin-small" data-choice="age">
-                <span class="uk-form-label">Age group</span>
-                <div class="pick-list pick-row">
-                    <label class="pick"><input class="uk-radio uk-form-large" type="radio" name="age" value="child"><span>Child</span></label>
-                    <label class="pick"><input class="uk-radio uk-form-large" type="radio" name="age" value="adult"><span>Adult</span></label>
-                    <label class="pick"><input class="uk-radio uk-form-large" type="radio" name="age" value="senior"><span>Senior</span></label>
+            </section>
+
+            <section class="x-group">
+                <h4 class="x-group-title"><span uk-icon="icon: tag; ratio: 0.75"></span> Profile</h4>
+                <div class="uk-grid-small uk-child-width-1-1 uk-child-width-1-2@s" uk-grid>
+                    <div class="x-field">
+                        <span class="x-label">Gender</span>
+                        <div class="x-chips" data-choice="member-gender">
+                            <label class="x-chip"><input type="radio" name="member-gender" value="male"><span>Male</span></label>
+                            <label class="x-chip"><input type="radio" name="member-gender" value="female"><span>Female</span></label>
+                        </div>
+                    </div>
+                    <div class="x-field">
+                        <span class="x-label">Age group</span>
+                        <div class="x-chips" data-choice="age">
+                            <label class="x-chip"><input type="radio" name="age" value="child"><span>Child · &lt;12</span></label>
+                            <label class="x-chip"><input type="radio" name="age" value="adult" checked><span>Adult · 12–59</span></label>
+                            <label class="x-chip"><input type="radio" name="age" value="senior"><span>Senior · 60+</span></label>
+                        </div>
+                    </div>
+                    <div class="x-field uk-width-1-1">
+                        <span class="x-label">How long into meditation?</span>
+                        <div class="x-chips" data-choice="member-meditation">
+                            <label class="x-chip"><input type="radio" name="member-meditation" value="new"><span>New</span></label>
+                            <label class="x-chip"><input type="radio" name="member-meditation" value="1"><span>1 yr</span></label>
+                            <label class="x-chip"><input type="radio" name="member-meditation" value="2"><span>2 yr</span></label>
+                            <label class="x-chip"><input type="radio" name="member-meditation" value="3"><span>3 yr</span></label>
+                            <label class="x-chip"><input type="radio" name="member-meditation" value="4"><span>4 yr</span></label>
+                            <label class="x-chip"><input type="radio" name="member-meditation" value="5"><span>5 yr</span></label>
+                            <label class="x-chip"><input type="radio" name="member-meditation" value="6"><span>&gt; 5 yr</span></label>
+                        </div>
+                    </div>
                 </div>
+            </section>
+
+            <section class="x-group">
+                <h4 class="x-group-title"><span uk-icon="icon: location; ratio: 0.75"></span> Address</h4>
+                <div class="x-field">
+                    <div class="x-chips" data-choice="addr-mode">
+                        <label class="x-chip"><input type="radio" name="addr-mode" value="same" checked><span>Same as mine</span></label>
+                        <label class="x-chip"><input type="radio" name="addr-mode" value="new"><span>New address</span></label>
+                    </div>
+                    <p class="hint uk-margin-small-top uk-margin-remove-bottom" data-same-hint>Uses your place from step 2.</p>
+                </div>
+                <div class="member-addr" data-addr-block hidden>
+                    <ul class="uk-tab x-place-tabs" data-choice="member-area" data-addr-tabs uk-tab>
+                        <li class="uk-active" data-value="rural"><a href="#">Rural</a></li>
+                        <li data-value="urban"><a href="#">Urban</a></li>
+                    </ul>
+                    <ul class="uk-switcher" data-addr-panels>
+                        <li>
+                            <div class="uk-grid-small uk-child-width-1-1 uk-child-width-1-2@s" uk-grid>
+                                <div class="x-field">
+                                    <label class="x-label">Village</label>
+                                    <div class="uk-inline uk-width-1-1">
+                                        <span class="uk-form-icon" uk-icon="icon: location"></span>
+                                        <input class="uk-input uk-form-small" data-village type="text" list="village-list" autocomplete="off">
+                                    </div>
+                                </div>
+                                <div class="x-field">
+                                    <label class="x-label">Town</label>
+                                    <div class="uk-inline uk-width-1-1">
+                                        <span class="uk-form-icon" uk-icon="icon: home"></span>
+                                        <input class="uk-input uk-form-small" data-town type="text" autocomplete="address-level3">
+                                    </div>
+                                </div>
+                                <div class="x-field uk-width-1-1">
+                                    <label class="x-label">District</label>
+                                    <div class="uk-inline uk-width-1-1">
+                                        <span class="uk-form-icon" uk-icon="icon: location"></span>
+                                        <input class="uk-input uk-form-small" data-district type="text">
+                                    </div>
+                                </div>
+                                <div class="x-field">
+                                    <label class="x-label">State</label>
+                                    <div class="uk-inline uk-width-1-1">
+                                        <span class="uk-form-icon" uk-icon="icon: world"></span>
+                                        <input class="uk-input uk-form-small" data-state-rural type="text" autocomplete="address-level1">
+                                    </div>
+                                </div>
+                                <div class="x-field">
+                                    <label class="x-label">Country</label>
+                                    <div class="uk-inline uk-width-1-1">
+                                        <span class="uk-form-icon" uk-icon="icon: world"></span>
+                                        <input class="uk-input uk-form-small filled" data-country-rural type="text" value="India" readonly>
+                                    </div>
+                                </div>
+                            </div>
+                        </li>
+                        <li>
+                            <div class="uk-grid-small uk-child-width-1-1 uk-child-width-1-2@s" uk-grid>
+                                <div class="x-field uk-width-1-1">
+                                    <label class="x-label">City</label>
+                                    <div class="uk-inline uk-width-1-1">
+                                        <span class="uk-form-icon" uk-icon="icon: location"></span>
+                                        <input class="uk-input uk-form-small" data-city type="text" list="city-list" autocomplete="address-level2">
+                                    </div>
+                                </div>
+                                <div class="x-field">
+                                    <label class="x-label">State</label>
+                                    <div class="uk-inline uk-width-1-1">
+                                        <span class="uk-form-icon" uk-icon="icon: world"></span>
+                                        <input class="uk-input uk-form-small" data-state-urban type="text" autocomplete="address-level1">
+                                    </div>
+                                </div>
+                                <div class="x-field">
+                                    <label class="x-label">Country</label>
+                                    <div class="uk-inline uk-width-1-1">
+                                        <span class="uk-form-icon" uk-icon="icon: world"></span>
+                                        <input class="uk-input uk-form-small" data-country-urban type="text" value="India" autocomplete="country-name">
+                                    </div>
+                                </div>
+                            </div>
+                        </li>
+                    </ul>
+                </div>
+            </section>
+
+            <section class="x-group">
+                <h4 class="x-group-title"><span uk-icon="icon: camera; ratio: 0.75"></span> Photo &amp; ID <span class="x-advised">advised</span></h4>
+                <div class="x-photo-bar">
+                    <button type="button" class="x-pass-shot" data-photo-owner="" data-photo-slot="live" data-photo-open aria-label="Take live photo">
+                        <img class="x-pass-shot-img" data-photo-preview alt="" hidden>
+                        <span class="x-pass-shot-ph" data-photo-empty uk-icon="icon: camera; ratio: 0.85"></span>
+                        <span class="x-pass-shot-label" data-photo-state>Photo</span>
+                    </button>
+                    <button type="button" class="x-pass-shot x-pass-shot--id" data-photo-owner="" data-photo-slot="proof" data-photo-open aria-label="Take ID proof photo">
+                        <img class="x-pass-shot-img" data-photo-preview alt="" hidden>
+                        <span class="x-pass-shot-ph" data-photo-empty uk-icon="icon: file-text; ratio: 0.85"></span>
+                        <span class="x-pass-shot-label" data-photo-state>ID</span>
+                    </button>
+                    <div class="x-photo-type">
+                        <label class="x-label">ID type</label>
+                        <select class="uk-select uk-form-small" data-id-type>
+                            <option value="">Later</option>
+                            <option value="aadhaar">Aadhaar</option>
+                            <option value="pan">PAN</option>
+                            <option value="voter">Voter ID</option>
+                            <option value="passport">Passport</option>
+                            <option value="driving">Driving Licence</option>
+                            <option value="other">Other</option>
+                        </select>
+                    </div>
+                </div>
+            </section>
             </div>
-            <div>
-                <span class="uk-form-label">Address</span>
-                <label class="pick uk-margin-small-top"><input class="uk-checkbox uk-form-large" type="checkbox" data-same-address checked><span>Same as my address</span></label>
-                <p class="address-summary uk-text-meta uk-margin-small-top uk-margin-remove-bottom" hidden></p>
-            </div>
-        </div>
+        </article>
     </template>
+    <datalist id="relation-list">
+        <option value="Spouse"></option>
+        <option value="Child"></option>
+        <option value="Parent"></option>
+        <option value="Sibling"></option>
+    </datalist>
 
     <script src="https://cdn.jsdelivr.net/npm/uikit@3.21.13/dist/js/uikit.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/uikit@3.21.13/dist/js/uikit-icons.min.js"></script>
@@ -401,8 +671,11 @@
             'new delhi': { state: 'Delhi', country: 'India' }
         };
         const switcher = UIkit.switcher('#wizard-nav');
-        let addressMember = null;
         let memberSeq = 0;
+        const photoStore = {};
+        let cameraTarget = null;
+        let cameraStream = null;
+        let cameraDataUrl = '';
 
         function field(id) { return document.getElementById(id).value.trim(); }
         function selectedValue(name, root) {
@@ -420,26 +693,116 @@
             group.querySelectorAll(':scope > li').forEach((item) => item.classList.toggle('uk-active', item.dataset.value === value));
         }
         function memberNodes() { return [...document.querySelectorAll('#members .member')]; }
+        function memberVal(member, sel) {
+            const el = member.querySelector(sel);
+            return el ? el.value.trim() : '';
+        }
+        function updateMemberAddrUI(member) {
+            const mode = selectedValue('addr-mode', member) || 'same';
+            const block = member.querySelector('[data-addr-block]');
+            const hint = member.querySelector('[data-same-hint]');
+            if (block) block.hidden = mode !== 'new';
+            if (hint) {
+                hint.hidden = mode !== 'same';
+                if (mode === 'same') {
+                    const line = placeLine(readVisitorPlace());
+                    hint.textContent = line ? ('Same as yours · ' + line) : 'Uses your place from step 2.';
+                }
+            }
+        }
         function stampMember(member) {
             memberSeq += 1;
+            const id = 'm' + memberSeq;
+            member.dataset.memberId = id;
             member.querySelectorAll('[data-choice] input[type="radio"]').forEach((input) => {
-                input.name = input.closest('[data-choice]').dataset.choice + '-' + memberSeq;
+                input.name = input.closest('[data-choice]').dataset.choice + '-' + id;
             });
+            const tabs = member.querySelector('[data-addr-tabs]');
+            const panels = member.querySelector('[data-addr-panels]');
+            if (tabs && panels) {
+                const panelId = 'addr-panels-' + id;
+                panels.id = panelId;
+                tabs.setAttribute('uk-tab', 'connect: #' + panelId);
+            }
+            member.querySelectorAll('[data-photo-slot]').forEach((box) => {
+                box.dataset.photoOwner = id;
+            });
+            updateMemberAddrUI(member);
+            refreshMemberTitle(member);
+        }
+        function refreshMemberTitle(member) {
+            const index = memberNodes().indexOf(member) + 2;
+            const name = memberVal(member, '[data-name]');
+            const relation = memberVal(member, '[data-relation]');
+            const title = member.querySelector('.person-no');
+            const sub = member.querySelector('[data-member-sub]');
+            const badge = member.querySelector('[data-person-badge]');
+            if (badge) badge.textContent = String(index);
+            if (name || relation) {
+                if (title) title.textContent = name || ('Person ' + index);
+                if (sub) sub.textContent = relation || ('Person ' + index);
+            } else {
+                if (title) title.textContent = 'Person ' + index;
+                if (sub) sub.textContent = 'Tap to fill details';
+            }
+        }
+        function setMemberOpen(member, open) {
+            member.classList.toggle('is-open', open);
+            const body = member.querySelector('[data-member-body]');
+            const toggle = member.querySelector('[data-member-toggle]');
+            if (body) body.hidden = !open;
+            if (toggle) toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+            refreshMemberTitle(member);
+        }
+        function expandMember(member) {
+            memberNodes().forEach((item) => setMemberOpen(item, item === member));
+            if (member) {
+                requestAnimationFrame(() => {
+                    const header = document.querySelector('.app-header');
+                    const chrome = document.querySelector('.step-bar');
+                    const offset = (header ? header.offsetHeight : 72) + (chrome ? chrome.offsetHeight : 0) + 12;
+                    const top = member.getBoundingClientRect().top + window.scrollY - offset;
+                    window.scrollTo({ top: Math.max(0, top), behavior: 'smooth' });
+                });
+            }
         }
         function renumberMembers() {
-            memberNodes().forEach((member, index) => {
-                member.querySelector('.person-no').textContent = 'Person ' + (index + 2);
-            });
+            memberNodes().forEach((member) => refreshMemberTitle(member));
             const count = 1 + memberNodes().length;
             document.getElementById('party-size').textContent = count === 1 ? '1 person' : count + ' persons';
         }
-        function showArea(area) {
-            document.getElementById('rural-fields').hidden = area !== 'rural';
-            document.getElementById('urban-fields').hidden = area !== 'urban';
+        function placeArea() {
+            return selectedValue('area') || 'rural';
         }
-        function showAddrArea(area) {
-            document.getElementById('addr-rural-fields').hidden = area !== 'rural';
-            document.getElementById('addr-urban-fields').hidden = area !== 'urban';
+
+        function placePanel() {
+            return document.getElementById(placeArea() === 'urban' ? 'urban-fields' : 'rural-fields');
+        }
+
+        function focusPlacePanel() {
+            const panel = placePanel();
+            if (!panel) return;
+            requestAnimationFrame(() => {
+                scrollWhoGroupIntoView(document.getElementById('join-place-form').querySelector('.x-group'));
+                const first = whoGroupFocusables(panel)[0];
+                if (first) first.focus({ preventScroll: true });
+            });
+        }
+
+        function showPlaceError() {
+            const area = placeArea();
+            const group = document.getElementById('join-place-form').querySelector('.x-group');
+            if (area === 'rural' && !field('village')) {
+                document.getElementById('village').focus();
+                scrollWhoGroupIntoView(group);
+                return false;
+            }
+            if (area === 'urban' && !field('city')) {
+                document.getElementById('city').focus();
+                scrollWhoGroupIntoView(group);
+                return false;
+            }
+            return true;
         }
         function digitsOnly(input) { input.value = input.value.replace(/\D/g, '').slice(0, 2); }
         function daysInMonth(month) {
@@ -471,25 +834,11 @@
             if (hit) apply(hit);
         }
         function readVisitorPlace() {
-            const area = selectedValue('area');
+            const area = placeArea();
             if (area === 'rural') {
                 return { area, village: field('village'), town: field('town'), district: field('district'), state: field('state-rural'), country: field('country-rural') || 'India' };
             }
-            if (area === 'urban') {
-                return { area, city: field('city'), state: field('state-urban'), country: field('country-urban') || 'India' };
-            }
-            return null;
-        }
-        function readAddrPlace() {
-            const modal = document.getElementById('address-modal');
-            const area = selectedValue('addr-area', modal);
-            if (area === 'rural') {
-                return { area, village: field('addr-village'), town: field('addr-town'), district: field('addr-district'), state: field('addr-state-rural'), country: field('addr-country-rural') || 'India' };
-            }
-            if (area === 'urban') {
-                return { area, city: field('addr-city'), state: field('addr-state-urban'), country: field('addr-country-urban') || 'India' };
-            }
-            return null;
+            return { area: 'urban', city: field('city'), state: field('state-urban'), country: field('country-urban') || 'India' };
         }
         function placeLine(place) {
             if (!place) return '';
@@ -497,32 +846,26 @@
             if (place.area === 'urban') return ['Urban', place.city].filter(Boolean).join(' · ');
             return '';
         }
-        function openAddress(member) {
-            addressMember = member;
-            const modal = document.getElementById('address-modal');
-            let saved = null;
-            if (member.dataset.address) saved = JSON.parse(member.dataset.address);
-            ['addr-village', 'addr-town', 'addr-district', 'addr-state-rural', 'addr-city', 'addr-state-urban'].forEach((id) => { document.getElementById(id).value = ''; });
-            document.getElementById('addr-country-rural').value = 'India';
-            document.getElementById('addr-country-urban').value = 'India';
-            const place = saved || readVisitorPlace();
-            if (!place) {
-                setChoice(modal, 'addr-area', '');
-                showAddrArea('');
-            } else {
-                setChoice(modal, 'addr-area', place.area);
-                showAddrArea(place.area);
-                if (place.area === 'rural') {
-                    document.getElementById('addr-village').value = place.village || '';
-                    document.getElementById('addr-town').value = place.town || '';
-                    document.getElementById('addr-district').value = place.district || '';
-                    document.getElementById('addr-state-rural').value = place.state || '';
-                } else {
-                    document.getElementById('addr-city').value = place.city || '';
-                    document.getElementById('addr-state-urban').value = place.state || '';
-                }
+        function readMemberAddress(member) {
+            const mode = selectedValue('addr-mode', member) || 'same';
+            if (mode !== 'new') return null;
+            const area = selectedValue('member-area', member) || 'rural';
+            if (area === 'rural') {
+                return {
+                    area,
+                    village: memberVal(member, '[data-village]'),
+                    town: memberVal(member, '[data-town]'),
+                    district: memberVal(member, '[data-district]'),
+                    state: memberVal(member, '[data-state-rural]'),
+                    country: memberVal(member, '[data-country-rural]') || 'India'
+                };
             }
-            UIkit.modal('#address-modal').show();
+            return {
+                area: 'urban',
+                city: memberVal(member, '[data-city]'),
+                state: memberVal(member, '[data-state-urban]'),
+                country: memberVal(member, '[data-country-urban]') || 'India'
+            };
         }
         function fitMeditationRows() {
             document.querySelectorAll('.med-fit').forEach((box) => {
@@ -535,7 +878,7 @@
                 box.style.height = Math.ceil(row.offsetHeight * scale) + 'px';
             });
         }
-        function route() { return ['who', 'place', 'family', 'done']; }
+        function route() { return ['who', 'place', 'family', 'review', 'done']; }
         function currentId() {
             const active = document.querySelector('#wizard > li.uk-active');
             return active ? active.dataset.step : 'who';
@@ -550,40 +893,414 @@
             bar.value = at + 1;
             document.getElementById('chrome-back').hidden = at === 0 || id === 'done';
         }
+        function idTypeLabel(select) {
+            if (!select || !select.selectedOptions[0] || !select.value) return '—';
+            return select.selectedOptions[0].textContent;
+        }
+        function labelMap(map, value) {
+            return map[value] || value || '—';
+        }
+        function photoKey(owner, slot) {
+            return (owner || 'self') + ':' + slot;
+        }
+        function getPhoto(owner, slot) {
+            return photoStore[photoKey(owner, slot)] || '';
+        }
         function collectProfile() {
             return {
                 fullName: field('full-name'),
                 mobile: field('mobile'),
+                email: field('email'),
+                altMobile: field('alt-mobile'),
                 gender: selectedValue('visitor-gender'),
+                age: selectedValue('visitor-age'),
                 meditation: selectedValue('meditation'),
                 birthDate: field('birth-date'),
                 birthMonth: field('birth-month'),
+                language: field('language'),
+                pyramidCenter: field('center'),
+                sinceYear: field('since'),
                 place: readVisitorPlace(),
-                members: memberNodes().map((member) => ({
-                    name: member.querySelector('[data-name]').value.trim(),
-                    gender: selectedValue('member-gender', member),
-                    meditation: selectedValue('member-meditation', member),
-                    relation: member.querySelector('[data-relation]').value.trim(),
-                    mobile: member.querySelector('[data-mobile]').value.trim(),
-                    age: selectedValue('age', member),
-                    address: member.dataset.address ? JSON.parse(member.dataset.address) : null
-                }))
+                idType: field('id-type'),
+                livePhoto: getPhoto('self', 'live'),
+                idProofPhoto: getPhoto('self', 'proof'),
+                members: memberNodes().map((member) => {
+                    const owner = member.dataset.memberId || '';
+                    return {
+                        name: memberVal(member, '[data-name]'),
+                        gender: selectedValue('member-gender', member),
+                        meditation: selectedValue('member-meditation', member),
+                        relation: memberVal(member, '[data-relation]'),
+                        mobile: memberVal(member, '[data-mobile]'),
+                        age: selectedValue('age', member),
+                        address: readMemberAddress(member),
+                        idType: memberVal(member, '[data-id-type]'),
+                        livePhoto: getPhoto(owner, 'live'),
+                        idProofPhoto: getPhoto(owner, 'proof')
+                    };
+                })
             };
+        }
+
+        function setPhotoBox(box, dataUrl) {
+            if (!box) return;
+            const owner = box.dataset.photoOwner || 'self';
+            const slot = box.dataset.photoSlot;
+            photoStore[photoKey(owner, slot)] = dataUrl || '';
+            const preview = box.querySelector('[data-photo-preview]');
+            const empty = box.querySelector('[data-photo-empty]');
+            const state = box.querySelector('[data-photo-state]');
+            box.classList.toggle('has-photo', Boolean(dataUrl));
+            if (dataUrl) {
+                preview.src = dataUrl;
+                preview.hidden = false;
+                if (empty) empty.hidden = true;
+                if (state) state.textContent = 'Retake';
+            } else {
+                preview.removeAttribute('src');
+                preview.hidden = true;
+                if (empty) empty.hidden = false;
+                if (state) state.textContent = slot === 'live' ? 'Photo' : 'ID';
+            }
+        }
+
+        function stopCamera() {
+            if (cameraStream) {
+                cameraStream.getTracks().forEach((track) => track.stop());
+                cameraStream = null;
+            }
+            const video = document.getElementById('camera-video');
+            if (video) video.srcObject = null;
+        }
+
+        function resetCameraUi(live) {
+            const video = document.getElementById('camera-video');
+            const shot = document.getElementById('camera-shot');
+            document.getElementById('camera-snap').hidden = false;
+            document.getElementById('camera-retake').hidden = true;
+            document.getElementById('camera-use').hidden = true;
+            shot.hidden = true;
+            shot.removeAttribute('src');
+            video.hidden = false;
+            cameraDataUrl = '';
+            document.getElementById('camera-error').hidden = true;
+            document.getElementById('camera-title').textContent = live ? 'Passport photo' : 'ID proof';
+            document.getElementById('camera-hint').textContent = live
+                ? 'Keep your face inside the oval.'
+                : 'Fit the ID card inside the frame.';
+            const stage = document.querySelector('[data-camera-stage]');
+            if (stage) stage.classList.toggle('is-id', !live);
+            const file = document.getElementById('camera-file');
+            file.setAttribute('capture', live ? 'user' : 'environment');
+        }
+
+        async function startCamera(box) {
+            cameraTarget = box;
+            const live = box.dataset.photoSlot === 'live';
+            resetCameraUi(live);
+            UIkit.modal('#camera-modal').show();
+            stopCamera();
+            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                document.getElementById('camera-error').hidden = false;
+                document.getElementById('camera-error').textContent = 'Camera not available here. Choose a photo from the device.';
+                document.getElementById('camera-snap').hidden = true;
+                return;
+            }
+            try {
+                cameraStream = await navigator.mediaDevices.getUserMedia({
+                    audio: false,
+                    video: {
+                        facingMode: live ? 'user' : { ideal: 'environment' },
+                        width: { ideal: 1280 },
+                        height: { ideal: 720 }
+                    }
+                });
+                const video = document.getElementById('camera-video');
+                video.srcObject = cameraStream;
+                await video.play();
+            } catch (error) {
+                document.getElementById('camera-error').hidden = false;
+                document.getElementById('camera-error').textContent = 'Could not open camera. Choose a photo from the device instead.';
+                document.getElementById('camera-snap').hidden = true;
+            }
+        }
+
+        function compressImage(source, options) {
+            const opts = options || {};
+            const passport = Boolean(opts.passport);
+            const quality = opts.quality || 0.72;
+            const canvas = document.getElementById('camera-canvas');
+            const w = source.videoWidth || source.naturalWidth || source.width;
+            const h = source.videoHeight || source.naturalHeight || source.height;
+            if (!w || !h) return '';
+            const ctx = canvas.getContext('2d');
+            if (passport) {
+                const ratio = 3 / 4;
+                let cw = w;
+                let ch = h;
+                let sx = 0;
+                let sy = 0;
+                if (w / h > ratio) {
+                    cw = h * ratio;
+                    sx = (w - cw) / 2;
+                } else {
+                    ch = w / ratio;
+                    sy = (h - ch) / 2;
+                }
+                canvas.width = 240;
+                canvas.height = 320;
+                ctx.drawImage(source, sx, sy, cw, ch, 0, 0, canvas.width, canvas.height);
+            } else {
+                const outW = 420;
+                const outH = 280;
+                const ratio = outW / outH;
+                let cw = w;
+                let ch = h;
+                let sx = 0;
+                let sy = 0;
+                if (w / h > ratio) {
+                    cw = h * ratio;
+                    sx = (w - cw) / 2;
+                } else {
+                    ch = w / ratio;
+                    sy = (h - ch) / 2;
+                }
+                canvas.width = outW;
+                canvas.height = outH;
+                ctx.drawImage(source, sx, sy, cw, ch, 0, 0, outW, outH);
+            }
+            return canvas.toDataURL('image/jpeg', quality);
+        }
+
+        function snapCamera() {
+            const video = document.getElementById('camera-video');
+            if (!video.srcObject) return;
+            const passport = cameraTarget && cameraTarget.dataset.photoSlot === 'live';
+            cameraDataUrl = compressImage(video, { passport, quality: 0.78 });
+            if (!cameraDataUrl) return;
+            const shot = document.getElementById('camera-shot');
+            shot.src = cameraDataUrl;
+            shot.hidden = false;
+            video.hidden = true;
+            document.getElementById('camera-snap').hidden = true;
+            document.getElementById('camera-retake').hidden = false;
+            document.getElementById('camera-use').hidden = false;
+        }
+
+        function useCameraShot() {
+            if (!cameraTarget || !cameraDataUrl) return;
+            setPhotoBox(cameraTarget, cameraDataUrl);
+            UIkit.modal('#camera-modal').hide();
+        }
+
+        function loadFileAsPhoto(file) {
+            if (!file || !cameraTarget) return;
+            const reader = new FileReader();
+            reader.onload = () => {
+                const img = new Image();
+                img.onload = () => {
+                    const passport = cameraTarget && cameraTarget.dataset.photoSlot === 'live';
+                    cameraDataUrl = compressImage(img, { passport, quality: 0.78 }) || reader.result;
+                    const shot = document.getElementById('camera-shot');
+                    shot.src = cameraDataUrl;
+                    shot.hidden = false;
+                    document.getElementById('camera-video').hidden = true;
+                    document.getElementById('camera-snap').hidden = true;
+                    document.getElementById('camera-retake').hidden = false;
+                    document.getElementById('camera-use').hidden = false;
+                    stopCamera();
+                };
+                img.src = reader.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function summaryRow(label, value) {
+            return '<div class="x-summary-row"><span>' + label + '</span><strong>' + (value || '—') + '</strong></div>';
+        }
+
+        function summaryPhotos(live, proof) {
+            if (!live && !proof) return summaryRow('Photos', 'Not provided');
+            return '<div class="x-summary-photos">' +
+                (live ? '<figure class="is-pass"><img src="' + live + '" alt="Live photo"><figcaption>Photo</figcaption></figure>' : '') +
+                (proof ? '<figure class="is-id"><img src="' + proof + '" alt="ID proof"><figcaption>ID</figcaption></figure>' : '') +
+                '</div>';
+        }
+
+        function renderJoinSummary() {
+            const profile = collectProfile();
+            const gender = labelMap({ male: 'Male', female: 'Female' }, profile.gender);
+            const ageLabels = { child: 'Child · under 12', adult: 'Adult · 12–59', senior: 'Senior · 60+' };
+            const age = labelMap(ageLabels, profile.age);
+            const med = labelMap({
+                new: 'New', '1': '1 yr', '2': '2 yr', '3': '3 yr', '4': '4 yr', '5': '5 yr', '6': 'Over 5 yr'
+            }, profile.meditation);
+            const place = placeLine(profile.place) || '—';
+            const membersHtml = profile.members.length
+                ? profile.members.map((m, i) => {
+                    const bits = [m.name || ('Person ' + (i + 2)), m.relation, labelMap(ageLabels, m.age)].filter(Boolean).join(' · ');
+                    const idLabel = m.idType
+                        ? ({ aadhaar: 'Aadhaar', pan: 'PAN', voter: 'Voter ID', passport: 'Passport', driving: 'Driving Licence', other: 'Other' }[m.idType] || m.idType)
+                        : '—';
+                    return summaryRow('Family ' + (i + 1), bits) +
+                        summaryRow('ID type', idLabel) +
+                        summaryPhotos(m.livePhoto, m.idProofPhoto);
+                }).join('')
+                : summaryRow('Family', 'None — joining alone');
+
+            const box = document.getElementById('join-summary');
+            box.innerHTML =
+                '<section class="x-group"><h3 class="x-group-title"><span uk-icon="icon: user; ratio: 0.75"></span> You</h3>' +
+                summaryRow('Name', profile.fullName) +
+                summaryRow('Mobile', profile.mobile) +
+                summaryRow('Email', profile.email || '—') +
+                summaryRow('Gender / age', gender + ' · ' + age) +
+                summaryRow('Meditation', med) +
+                summaryRow('Birth', (profile.birthDate || '—') + ' / ' + (profile.birthMonth || '—')) +
+                summaryRow('Language', profile.language || '—') +
+                summaryRow('Center', profile.pyramidCenter || '—') +
+                summaryRow('Since', profile.sinceYear || '—') +
+                summaryRow('ID type', idTypeLabel(document.getElementById('id-type'))) +
+                summaryPhotos(profile.livePhoto, profile.idProofPhoto) +
+                '</section>' +
+                '<section class="x-group"><h3 class="x-group-title"><span uk-icon="icon: location; ratio: 0.75"></span> Place</h3>' +
+                summaryRow('Address', place) +
+                '</section>' +
+                '<section class="x-group"><h3 class="x-group-title"><span uk-icon="icon: users; ratio: 0.75"></span> Family</h3>' +
+                membersHtml +
+                '</section>';
+            if (window.UIkit) UIkit.update(box);
+        }
+
+        function refreshPassPreview() {
+            const preview = document.getElementById('pass-preview');
+            if (!preview) return;
+            const letters = field('full-name').replace(/[^A-Za-z]/g, '').slice(0, 5);
+            const date = field('birth-date');
+            const month = field('birth-month');
+            if (!letters || !date || !month || birthError()) {
+                preview.textContent = '—';
+                return;
+            }
+            preview.textContent = letters + date.padStart(2, '0') + month.padStart(2, '0');
+        }
+
+        function whoGroupFocusables(group) {
+            return [...group.querySelectorAll('input:not([type="hidden"]), select, textarea, button')]
+                .filter((el) => !el.disabled && el.offsetParent !== null && el.type !== 'hidden');
+        }
+
+        function whoGroupFilled(group) {
+            const id = group.getAttribute('aria-labelledby') || '';
+            if (id === 'g-identity') return Boolean(field('full-name') && field('mobile'));
+            if (id === 'g-profile') return Boolean(selectedValue('visitor-gender') && selectedValue('meditation'));
+            if (id === 'g-birth') return !birthError();
+            if (id === 'g-sangha') return true;
+            if (id === 'g-photos') return true;
+            if (id === 'g-place') {
+                return placeArea() === 'urban' ? Boolean(field('city')) : Boolean(field('village'));
+            }
+            return true;
+        }
+
+        function scrollWhoGroupIntoView(group) {
+            if (!group) return;
+            const header = document.querySelector('.app-header');
+            const chrome = document.querySelector('.step-bar');
+            const offset = (header ? header.offsetHeight : 72) + (chrome ? chrome.offsetHeight : 0) + 16;
+            const top = group.getBoundingClientRect().top + window.scrollY - offset;
+            window.scrollTo({ top: Math.max(0, top), behavior: 'smooth' });
+        }
+
+        function nextWhoTabTarget(form, current) {
+            const list = whoGroupFocusables(form);
+            let index = list.indexOf(current);
+            if (index < 0) return null;
+            if (current.type === 'radio') {
+                while (index + 1 < list.length && list[index + 1].type === 'radio' && list[index + 1].name === current.name) {
+                    index += 1;
+                }
+            }
+            return list[index + 1] || null;
+        }
+
+        function bindGroupScroll(formId) {
+            const form = document.getElementById(formId);
+            if (!form) return;
+            let activeGroup = null;
+
+            form.addEventListener('focusin', (event) => {
+                const group = event.target.closest('.x-group');
+                if (!group || group.hidden || group === activeGroup) return;
+                activeGroup = group;
+                scrollWhoGroupIntoView(group);
+            });
+
+            form.addEventListener('keydown', (event) => {
+                if (event.key !== 'Tab' || event.shiftKey) return;
+                const group = event.target.closest('.x-group');
+                if (!group || group.hidden || !whoGroupFilled(group)) return;
+                const nextEl = nextWhoTabTarget(form, event.target);
+                if (!nextEl) return;
+                const nextGroup = nextEl.closest('.x-group');
+                if (!nextGroup || nextGroup.hidden || nextGroup === group) return;
+                event.preventDefault();
+                activeGroup = nextGroup;
+                scrollWhoGroupIntoView(nextGroup);
+                requestAnimationFrame(() => nextEl.focus({ preventScroll: true }));
+            });
+        }
+
+        function showWhoError() {
+            const hint = document.getElementById('birth-error');
+            if (!field('full-name') || !field('mobile') || !selectedValue('visitor-gender')) {
+                hint.hidden = false;
+                hint.textContent = 'Enter name, mobile, and gender.';
+                return false;
+            }
+            if (!selectedValue('meditation')) {
+                hint.hidden = false;
+                hint.textContent = 'Choose how long into meditation.';
+                return false;
+            }
+            return showBirthError();
         }
         function finishJoin() {
             const profile = collectProfile();
-            PssmProfile.saveSanghaProfile(profile);
+            PssmProfile.syncRolesOntoProfile(profile);
+            try {
+                PssmProfile.saveSanghaProfile(profile);
+            } catch (error) {
+                const slim = Object.assign({}, profile, {
+                    livePhoto: profile.livePhoto ? 'captured' : '',
+                    idProofPhoto: profile.idProofPhoto ? 'captured' : '',
+                    members: (profile.members || []).map((m) => Object.assign({}, m, {
+                        livePhoto: m.livePhoto ? 'captured' : '',
+                        idProofPhoto: m.idProofPhoto ? 'captured' : ''
+                    }))
+                });
+                PssmProfile.saveSanghaProfile(slim);
+            }
             const password = PssmProfile.composedPassword(profile);
-            document.getElementById('join-success').textContent = 'The first five letters of your name and the date and month become your login password.';
-            document.getElementById('join-password').textContent = password
-                ? 'Example password: ' + password
-                : 'You can login with the first 5 letters of your name, then date and month.';
+            document.getElementById('join-success').textContent = password
+                ? 'Welcome to the sangha. Login with your mobile number and this password.'
+                : 'Welcome to the sangha. Login with your mobile number and your name-and-birthday password.';
+            const passLine = document.getElementById('join-password');
+            if (password) {
+                passLine.hidden = false;
+                passLine.textContent = 'Password: ' + password;
+            } else {
+                passLine.hidden = true;
+                passLine.textContent = '';
+            }
             show('done');
         }
         function show(id) {
             const index = [...document.querySelectorAll('#wizard > li')].findIndex((item) => item.dataset.step === id);
             switcher.show(index);
             renderProgress(id);
+            if (id === 'family') memberNodes().forEach(updateMemberAddrUI);
+            if (id === 'review') renderJoinSummary();
             requestAnimationFrame(fitMeditationRows);
         }
         function go(delta) {
@@ -595,86 +1312,93 @@
 
         document.addEventListener('click', (event) => {
             const choiceLink = event.target.closest('[data-choice] > li > a');
-            if (choiceLink) {
+            if (choiceLink && !choiceLink.closest('[uk-tab]')) {
                 event.preventDefault();
                 const item = choiceLink.parentElement;
                 [...item.parentElement.children].forEach((sibling) => sibling.classList.remove('uk-active'));
                 item.classList.add('uk-active');
             }
             if (event.target.closest('[data-next]')) {
-                if (currentId() === 'who' && !showBirthError()) return;
-                if (currentId() === 'family') {
-                    finishJoin();
-                    return;
-                }
+                if (currentId() === 'who' && !showWhoError()) return;
+                if (currentId() === 'place' && !showPlaceError()) return;
                 go(1);
             }
+            if (event.target.closest('[data-finish]')) {
+                finishJoin();
+                return;
+            }
             if (event.target.closest('[data-back]')) go(-1);
+            const photoOpen = event.target.closest('[data-photo-open]');
+            if (photoOpen) {
+                startCamera(photoOpen.closest('[data-photo-slot]') || photoOpen);
+            }
+            const memberToggle = event.target.closest('[data-member-toggle]');
+            if (memberToggle) {
+                const member = memberToggle.closest('.member');
+                const opening = !member.classList.contains('is-open');
+                if (opening) expandMember(member);
+                else setMemberOpen(member, false);
+            }
             if (event.target.closest('#add-member')) {
+                memberNodes().forEach((item) => setMemberOpen(item, false));
                 document.getElementById('members').appendChild(document.getElementById('member-template').content.cloneNode(true));
                 renumberMembers();
                 const added = memberNodes().pop();
                 stampMember(added);
+                setMemberOpen(added, true);
                 UIkit.update(added);
+                expandMember(added);
                 added.querySelector('[data-name]').focus();
             }
             const remove = event.target.closest('[data-remove]');
             if (remove) {
-                remove.closest('.member').remove();
+                const card = remove.closest('.member');
+                const wasOpen = card.classList.contains('is-open');
+                card.remove();
                 renumberMembers();
+                if (wasOpen) {
+                    const last = memberNodes().pop();
+                    if (last) expandMember(last);
+                }
             }
         });
 
         document.addEventListener('change', (event) => {
             const choice = event.target.closest('[data-choice] input[type="radio"]');
-            if (choice) {
-                const name = choice.closest('[data-choice]').dataset.choice;
-                if (name === 'area') showArea(choice.value);
-                if (name === 'addr-area') showAddrArea(choice.value);
-            }
-            const sameBox = event.target.closest('[data-same-address]');
-            if (sameBox) {
-                const member = sameBox.closest('.member');
-                const summary = member.querySelector('.address-summary');
-                if (sameBox.checked) {
-                    delete member.dataset.address;
-                    summary.hidden = true;
-                    summary.textContent = '';
-                } else {
-                    openAddress(member);
-                }
+            if (choice && choice.closest('[data-choice]').dataset.choice === 'addr-mode') {
+                updateMemberAddrUI(choice.closest('.member'));
             }
         });
 
-        document.getElementById('save-address').addEventListener('click', () => {
-            if (!addressMember) return;
-            const place = readAddrPlace();
-            if (!place) {
-                document.getElementById('addr-error').hidden = false;
-                return;
+        document.getElementById('members').addEventListener('input', (event) => {
+            const member = event.target.closest('.member');
+            if (!member) return;
+            if (event.target.matches('[data-name], [data-relation]')) refreshMemberTitle(member);
+            if (event.target.matches('[data-village]')) {
+                fillIfKnown(event.target, villageHints, (hit) => {
+                    member.querySelector('[data-district]').value = hit.district;
+                    member.querySelector('[data-state-rural]').value = hit.state;
+                    member.querySelector('[data-country-rural]').value = hit.country;
+                });
             }
-            document.getElementById('addr-error').hidden = true;
-            addressMember.dataset.address = JSON.stringify(place);
-            const summary = addressMember.querySelector('.address-summary');
-            summary.hidden = false;
-            summary.textContent = placeLine(place);
-            addressMember.querySelector('[data-same-address]').checked = false;
-            UIkit.modal('#address-modal').hide();
-        });
-        UIkit.util.on('#address-modal', 'hidden', () => {
-            if (!addressMember) return;
-            if (!addressMember.dataset.address) {
-                const sameBox = addressMember.querySelector('[data-same-address]');
-                if (sameBox) sameBox.checked = true;
+            if (event.target.matches('[data-city]')) {
+                fillIfKnown(event.target, cityHints, (hit) => {
+                    member.querySelector('[data-state-urban]').value = hit.state;
+                    member.querySelector('[data-country-urban]').value = hit.country;
+                });
             }
-            addressMember = null;
         });
         ['birth-date', 'birth-month'].forEach((id) => {
             document.getElementById(id).addEventListener('input', (event) => {
                 digitsOnly(event.target);
                 event.target.classList.remove('uk-form-danger');
                 document.getElementById('birth-error').hidden = true;
+                refreshPassPreview();
             });
+        });
+        document.getElementById('full-name').addEventListener('input', refreshPassPreview);
+        document.getElementById('since').addEventListener('input', (event) => {
+            event.target.value = event.target.value.replace(/\D/g, '').slice(0, 4);
         });
         document.getElementById('village').addEventListener('input', (event) => {
             fillIfKnown(event.target, villageHints, (hit) => {
@@ -690,8 +1414,32 @@
             });
         });
 
+        document.getElementById('camera-snap').addEventListener('click', snapCamera);
+        document.getElementById('camera-retake').addEventListener('click', () => {
+            if (cameraTarget) startCamera(cameraTarget);
+        });
+        document.getElementById('camera-use').addEventListener('click', useCameraShot);
+        document.getElementById('camera-file-btn').addEventListener('click', () => {
+            document.getElementById('camera-file').click();
+        });
+        document.getElementById('camera-file').addEventListener('change', (event) => {
+            const file = event.target.files && event.target.files[0];
+            loadFileAsPhoto(file);
+            event.target.value = '';
+        });
+        UIkit.util.on('#camera-modal', 'hidden', () => {
+            stopCamera();
+            cameraTarget = null;
+            cameraDataUrl = '';
+        });
+
         PssmProfile.bindEventPick();
+        PssmProfile.applyChromeNav();
         renderProgress('who');
+        refreshPassPreview();
+        bindGroupScroll('join-who-form');
+        bindGroupScroll('join-place-form');
+        UIkit.util.on('#place-panels', 'shown', focusPlacePanel);
         window.addEventListener('resize', fitMeditationRows);
         UIkit.util.on('#wizard-nav', 'shown', fitMeditationRows);
     </script>

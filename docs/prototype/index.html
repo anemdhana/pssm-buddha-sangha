@@ -56,7 +56,7 @@
                             </ul>
                         </div>
                     </li>
-                    <li>
+                    <li data-auth="out">
                         <a href="#">Sangha <span uk-navbar-parent-icon></span></a>
                         <div class="uk-navbar-dropdown">
                             <ul class="uk-nav uk-navbar-dropdown-nav">
@@ -65,13 +65,25 @@
                             </ul>
                         </div>
                     </li>
-                    <li>
+                    <li data-auth="out">
                         <a href="#">Account <span uk-navbar-parent-icon></span></a>
                         <div class="uk-navbar-dropdown">
                             <ul class="uk-nav uk-navbar-dropdown-nav">
                                 <li><a href="login.html">Login to My Space</a></li>
                                 <li class="uk-active"><a href="index.html">Home</a></li>
                                 <li><a href="join.html">Join PSSM Buddha Sangha</a></li>
+                            </ul>
+                        </div>
+                    </li>
+                                        <li data-auth="in" hidden>
+                        <a href="#">Account <span uk-navbar-parent-icon></span></a>
+                        <div class="uk-navbar-dropdown">
+                            <ul class="uk-nav uk-navbar-dropdown-nav">
+                                <li data-role="pssm_admin" hidden><a href="admin.html">People &amp; roles</a></li>
+                                <li><a href="profile.html">My Profile</a></li>
+                                <li><a href="password.html">Change my password</a></li>
+                                <li data-role="event_organizer" hidden><a href="events.html">Create event</a></li>
+                                <li><a href="#" data-logout>Logout</a></li>
                             </ul>
                         </div>
                     </li>
@@ -86,13 +98,18 @@
                         <li class="uk-nav-header">Stay</li>
                         <li><a href="visitor.html?plan=free">Free Accommodation</a></li>
                         <li><a href="visitor.html?plan=paid">Paid Accommodation</a></li>
-                        <li class="uk-nav-header">Sangha</li>
-                        <li><a href="join.html">Join PSSM Buddha Sangha</a></li>
-                        <li><a href="login.html">Login to My Space</a></li>
-                        <li class="uk-nav-header">Account</li>
-                        <li><a href="login.html">Login to My Space</a></li>
-                        <li><a href="index.html">Home</a></li>
-                        <li><a href="join.html">Join PSSM Buddha Sangha</a></li>
+                        <li class="uk-nav-header" data-auth="out">Sangha</li>
+                        <li data-auth="out"><a href="join.html">Join PSSM Buddha Sangha</a></li>
+                        <li data-auth="out"><a href="login.html">Login to My Space</a></li>
+                                                <li class="uk-nav-header">Account</li>
+                        <li data-auth="in" data-role="pssm_admin" hidden><a href="admin.html">People &amp; roles</a></li>
+                        <li data-auth="in" hidden><a href="profile.html">My Profile</a></li>
+                        <li data-auth="in" hidden><a href="password.html">Change my password</a></li>
+                        <li data-auth="in" data-role="event_organizer" hidden><a href="events.html">Create event</a></li>
+                        <li data-auth="out"><a href="login.html">Login to My Space</a></li>
+                        <li data-auth="out"><a href="index.html">Home</a></li>
+                        <li data-auth="out"><a href="join.html">Join PSSM Buddha Sangha</a></li>
+                        <li data-auth="in" hidden><a href="#" data-logout>Logout</a></li>
                     </ul>
                 </div>
             </div>
@@ -106,7 +123,7 @@
                 <p class="form-summary">A club of Buddhas. Join with your details and family. Later you can book accommodation without typing them again.</p>
             </header>
             <div class="uk-grid-small uk-child-width-1-1" uk-grid>
-                <div>
+                <div data-auth="out">
                     <a class="uk-card uk-card-default uk-card-hover uk-card-body uk-card-small uk-link-reset" href="join.html">
                         <div class="uk-grid-small uk-flex-middle" uk-grid>
                             <div class="uk-width-auto">
@@ -122,7 +139,7 @@
                         </div>
                     </a>
                 </div>
-                <div>
+                <div data-auth="out">
                     <a class="uk-card uk-card-default uk-card-hover uk-card-body uk-card-small uk-link-reset" href="login.html">
                         <div class="uk-grid-small uk-flex-middle" uk-grid>
                             <div class="uk-width-auto">
@@ -130,7 +147,39 @@
                             </div>
                             <div class="uk-width-expand">
                                 <div class="uk-text-bold">Login to My Space</div>
-                                <div class="uk-text-meta">Name, date, and month</div>
+                                <div class="uk-text-meta">Mobile number and password</div>
+                            </div>
+                            <div class="uk-width-auto uk-text-muted">
+                                <span uk-icon="icon: chevron-right"></span>
+                            </div>
+                        </div>
+                    </a>
+                </div>
+                <div data-auth="in" data-role="pssm_admin" hidden>
+                    <a class="uk-card uk-card-default uk-card-hover uk-card-body uk-card-small uk-link-reset" href="admin.html">
+                        <div class="uk-grid-small uk-flex-middle" uk-grid>
+                            <div class="uk-width-auto">
+                                <span class="app-tile-icon" uk-icon="icon: users; ratio: 1.1"></span>
+                            </div>
+                            <div class="uk-width-expand">
+                                <div class="uk-text-bold">People &amp; roles</div>
+                                <div class="uk-text-meta">Search by mobile · assign roles · remove</div>
+                            </div>
+                            <div class="uk-width-auto uk-text-muted">
+                                <span uk-icon="icon: chevron-right"></span>
+                            </div>
+                        </div>
+                    </a>
+                </div>
+                <div data-auth="in" hidden>
+                    <a class="uk-card uk-card-default uk-card-hover uk-card-body uk-card-small uk-link-reset" href="profile.html">
+                        <div class="uk-grid-small uk-flex-middle" uk-grid>
+                            <div class="uk-width-auto">
+                                <span class="app-tile-icon" uk-icon="icon: user; ratio: 1.1"></span>
+                            </div>
+                            <div class="uk-width-expand">
+                                <div class="uk-text-bold">My Profile</div>
+                                <div class="uk-text-meta">See and update your sangha details</div>
                             </div>
                             <div class="uk-width-auto uk-text-muted">
                                 <span uk-icon="icon: chevron-right"></span>
@@ -185,6 +234,7 @@
     <script src="app-profile.js"></script>
     <script>
         PssmProfile.bindEventPick();
+        PssmProfile.applyChromeNav();
         if (PssmProfile.hasSanghaProfile()) {
             document.getElementById('stay-hint').textContent = 'Your sangha details will be prefilled for either option.';
         }
