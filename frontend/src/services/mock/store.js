@@ -7,11 +7,13 @@ import {
   normalizeMobile,
   normalizeRoles
 } from '../../utils/password.js';
+import seedPlaces from '../../data/sangha_places.json';
 
 const PEOPLE_KEY = 'pssm_sangha_people';
 const SESSION_KEY = 'pssm_sangha_session';
 const EVENTS_KEY = 'pssm_events';
 const ROLE_ASSIGN_KEY = 'pssm_role_assignments';
+const PLACES_KEY = 'pssm_sangha_places';
 
 const SAMPLE_ADMIN = {
   fullName: 'Pssm Admin',
@@ -75,6 +77,68 @@ function readJson(key, fallback) {
 
 function writeJson(key, value) {
   localStorage.setItem(key, JSON.stringify(value));
+}
+
+function placeLabel(place) {
+  return [place.name, place.district, place.state, place.country].filter(Boolean).join(' · ');
+}
+
+function toPlaceRow(raw, index) {
+  const kind = raw.kind === 'rural' ? 'rural' : 'urban';
+  const name = String(raw.name || raw.city || raw.village || '').trim();
+  return {
+    id: raw.id || `seed_${kind}_${index}`,
+    kind,
+    name,
+    city: kind === 'urban' ? name : null,
+    village: kind === 'rural' ? name : null,
+    town: raw.town || null,
+    district: raw.district || null,
+    state: raw.state || null,
+    country: raw.country || 'India',
+    usageCount: Number(raw.usageCount) || 0,
+    label: placeLabel({
+      name,
+      district: raw.district,
+      state: raw.state,
+      country: raw.country || 'India'
+    })
+  };
+}
+
+function ensurePlaces() {
+  const seeded = (Array.isArray(seedPlaces) ? seedPlaces : []).map((row, i) => toPlaceRow(row, i));
+  const existing = readJson(PLACES_KEY, null);
+  if (!Array.isArray(existing) || existing.length === 0) {
+    writeJson(PLACES_KEY, seeded);
+    return seeded;
+  }
+  if (existing.length >= seeded.length) {
+    return existing;
+  }
+  const merged = [...seeded];
+  existing
+    .filter((p) => String(p.id || '').startsWith('user_'))
+    .forEach((userPlace) => {
+      const dup = merged.some(
+        (p) =>
+          p.kind === userPlace.kind &&
+          p.name.toLowerCase() === String(userPlace.name || '').toLowerCase() &&
+          String(p.state || '').toLowerCase() === String(userPlace.state || '').toLowerCase() &&
+          String(p.country || '').toLowerCase() === String(userPlace.country || '').toLowerCase()
+      );
+      if (!dup) merged.push(userPlace);
+    });
+  writeJson(PLACES_KEY, merged);
+  return merged;
+}
+
+function readPlaces() {
+  return ensurePlaces();
+}
+
+function savePlaces(list) {
+  writeJson(PLACES_KEY, list);
 }
 
 function readPeople() {
@@ -282,6 +346,13 @@ export const mockApi = {
     if (!(body && body.birthDate) || !(body && body.birthMonth)) {
       throw apiError(400, 'VALIDATION', 'Enter birth date and month.');
     }
+    if (findPerson(digits)) {
+      throw apiError(
+        409,
+        'MOBILE_TAKEN',
+        'This mobile is already registered. Login to My Space instead.'
+      );
+    }
     const profile = {
       ...body,
       fullName,
@@ -398,6 +469,81 @@ export const mockApi = {
     if (!isSignedIn()) throw apiError(401, 'UNAUTHORIZED', 'Please login again.');
     const list = readJson(EVENTS_KEY, []);
     return { data: Array.isArray(list) ? list : [] };
+  },
+
+  async searchPlaces({ kind = 'urban', q = '', limit = 25 } = {}) {
+    const normalizedKind = kind === 'rural' ? 'rural' : 'urban';
+    const query = String(q || '')
+      .trim()
+      .toLowerCase();
+    const size = Math.min(Math.max(Number(limit) || 25, 1), 50);
+    const rows = readPlaces()
+      .filter((p) => p.kind === normalizedKind)
+      .filter((p) => {
+        if (!query) return true;
+        const hay = [p.name, p.town, p.district, p.state, p.country]
+          .filter(Boolean)
+          .join(' ')
+          .toLowerCase();
+        return hay.includes(query);
+      })
+      .sort((a, b) => (b.usageCount || 0) - (a.usageCount || 0) || a.name.localeCompare(b.name))
+      .slice(0, size);
+    return { data: rows };
+  },
+
+  async rememberPlace(body) {
+    const kind = body?.kind === 'rural' ? 'rural' : 'urban';
+    let name = String(body?.name || '').trim();
+    if (!name) {
+      name = String(kind === 'urban' ? body?.city || '' : body?.village || '').trim();
+    }
+    if (!name) throw apiError(400, 'VALIDATION', 'Enter a place name.');
+    const state = String(body?.state || '').trim();
+    const country = String(body?.country || '').trim() || 'India';
+    const town = String(body?.town || '').trim() || null;
+    const district = String(body?.district || '').trim() || null;
+    const list = readPlaces();
+    const idx = list.findIndex(
+      (p) =>
+        p.kind === kind &&
+        p.name.toLowerCase() === name.toLowerCase() &&
+        String(p.state || '').toLowerCase() === state.toLowerCase() &&
+        String(p.country || '').toLowerCase() === country.toLowerCase()
+    );
+    if (idx >= 0) {
+      const next = {
+        ...list[idx],
+        town: town || list[idx].town,
+        district: district || list[idx].district,
+        usageCount: (list[idx].usageCount || 0) + 1,
+        label: placeLabel({
+          name,
+          district: district || list[idx].district,
+          state,
+          country
+        })
+      };
+      list[idx] = next;
+      savePlaces(list);
+      return { data: next };
+    }
+    const created = toPlaceRow(
+      {
+        id: `user_${Date.now()}`,
+        kind,
+        name,
+        town,
+        district,
+        state: state || null,
+        country,
+        usageCount: 1
+      },
+      list.length
+    );
+    list.push(created);
+    savePlaces(list);
+    return { data: created };
   },
 
   async createEvent({ name, startDate, endDate }) {

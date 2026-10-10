@@ -1,22 +1,29 @@
 services:
-  mysql:
-    image: mysql:8.4
-    container_name: pssm-sangha-mysql
-    environment:
-      MYSQL_DATABASE: pssm_sangha
-      MYSQL_USER: pssm
-      MYSQL_PASSWORD: pssm
-      MYSQL_ROOT_PASSWORD: root
+  mongo:
+    image: mongo:7.0
+    container_name: pssm-sangha-mongo
     ports:
-      - "3306:3306"
+      - "27017:27017"
     volumes:
-      - pssm_mysql_data:/var/lib/mysql
-    command: ["--character-set-server=utf8mb4", "--collation-server=utf8mb4_unicode_ci"]
+      - pssm_mongo_data:/data/db
+      - ./scripts/mongo-init:/docker-entrypoint-initdb.d:ro
+    command:
+      - "--replSet"
+      - "rs0"
+      - "--bind_ip_all"
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-proot"]
+      test:
+        [
+          "CMD",
+          "mongosh",
+          "--quiet",
+          "--eval",
+          "try { rs.status().ok } catch (e) { rs.initiate({_id:'rs0', members:[{_id:0, host:'localhost:27017'}]}).ok }"
+        ]
       interval: 5s
-      timeout: 5s
+      timeout: 10s
       retries: 20
+      start_period: 10s
 
 volumes:
-  pssm_mysql_data:
+  pssm_mongo_data:

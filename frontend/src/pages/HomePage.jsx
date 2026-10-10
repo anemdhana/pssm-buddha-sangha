@@ -31,8 +31,9 @@ export function HomePage() {
         <header className="form-head">
           <h2 className="form-title">PSSM Buddha Sangha</h2>
           <p className="form-summary">
-            A club of Buddhas. Join with your details and family. Later you can book accommodation without typing them
-            again.
+            {signedIn
+              ? 'Your sangha space. Open My Profile anytime, or choose accommodation for an event.'
+              : 'A club of Buddhas. Join with your details and family, or login to My Space with your mobile and password.'}
           </p>
         </header>
         <div className="uk-grid-small uk-child-width-1-1" uk-grid="">
@@ -49,14 +50,18 @@ export function HomePage() {
             <Tile to="/profile" icon="user" title="My Profile" meta="See and update your sangha details" />
           )}
         </div>
-        <header className="form-head uk-margin-medium-top">
-          <h2 className="form-title">Accommodation</h2>
-          <p className="form-summary">Choose free or paid stay for the event.</p>
-        </header>
-        <div className="uk-grid-small uk-child-width-1-1 uk-child-width-1-2@s" uk-grid="">
-          <Tile to="/stay" icon="home" title="Free Accommodation" meta="Event stay at no charge" />
-          <Tile to="/stay" icon="credit-card" title="Paid Accommodation" meta="Self-booked stay" />
-        </div>
+        {signedIn && (
+          <>
+            <header className="form-head uk-margin-medium-top">
+              <h2 className="form-title">Accommodation</h2>
+              <p className="form-summary">Choose free or paid stay for the event.</p>
+            </header>
+            <div className="uk-grid-small uk-child-width-1-1 uk-child-width-1-2@s" uk-grid="">
+              <Tile to="/stay" icon="home" title="Free Accommodation" meta="Event stay at no charge" />
+              <Tile to="/stay" icon="credit-card" title="Paid Accommodation" meta="Self-booked stay" />
+            </div>
+          </>
+        )}
       </div>
     </main>
   );

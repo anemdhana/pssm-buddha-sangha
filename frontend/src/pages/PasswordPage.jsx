@@ -90,16 +90,14 @@ export function PasswordPage() {
               )}
               {done && <p className="hint">Password updated.</p>}
             </section>
-            <div className="step-actions">
-              <button className="uk-button uk-button-primary uk-width-1-1" type="submit" disabled={busy}>
+            <div className="step-actions is-split">
+              <Link className="step-actions-side" to="/profile">
+                Back to My Profile
+              </Link>
+              <button className="uk-button uk-button-primary" type="submit" disabled={busy}>
                 Save password
               </button>
             </div>
-            <p className="uk-text-center uk-margin-small-top">
-              <Link className="uk-button uk-button-text" to="/profile">
-                Back to My Profile
-              </Link>
-            </p>
           </form>
         </div>
       </div>

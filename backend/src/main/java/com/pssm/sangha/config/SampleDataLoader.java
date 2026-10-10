@@ -1,6 +1,7 @@
 package com.pssm.sangha.config;
 
 import com.pssm.sangha.domain.Person;
+import com.pssm.sangha.domain.PlaceInfo;
 import com.pssm.sangha.domain.SanghaRole;
 import com.pssm.sangha.repo.PersonRepository;
 import com.pssm.sangha.service.PasswordSupport;
@@ -37,10 +38,7 @@ public class SampleDataLoader {
             admin.setLanguage("English");
             admin.setPyramidCenter("Pyramid Meditation Center, Hyderabad");
             admin.setSinceYear("2010");
-            admin.setPlaceKind("urban");
-            admin.setPlaceCity("Hyderabad");
-            admin.setPlaceState("Telangana");
-            admin.setPlaceCountry("India");
+            admin.setPlace(urbanPlace("Hyderabad", "Telangana", "India"));
             String password = PasswordSupport.composedPassword(
                     admin.getFullName(), admin.getBirthDate(), admin.getBirthMonth());
             admin.setPasswordHash(passwordEncoder.encode(password));
@@ -83,13 +81,19 @@ public class SampleDataLoader {
         person.setBirthMonth(birthMonth);
         person.setLanguage("Telugu");
         person.setPyramidCenter(center);
-        person.setPlaceKind("urban");
-        person.setPlaceCity(city);
-        person.setPlaceState(state);
-        person.setPlaceCountry("India");
+        person.setPlace(urbanPlace(city, state, "India"));
         person.setPasswordHash(encoder.encode(
                 PasswordSupport.composedPassword(name, birthDate, birthMonth)));
         person.setRoles(new LinkedHashSet<>(roles));
         repo.save(person);
+    }
+
+    private static PlaceInfo urbanPlace(String city, String state, String country) {
+        PlaceInfo place = new PlaceInfo();
+        place.setKind("urban");
+        place.setCity(city);
+        place.setState(state);
+        place.setCountry(country);
+        return place;
     }
 }

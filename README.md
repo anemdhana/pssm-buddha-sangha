@@ -31,7 +31,7 @@ Static HTML under `docs/prototype/` remains for look-and-feel reference.
 
 ### Built (Spring Boot in `backend/`)
 
-Register REST for the Done pages only (`/auth/*`, `/sangha/*`, `/events`) — session cookie auth, Flyway, seed admin.
+Register REST for the Done pages only (`/auth/*`, `/sangha/*`, `/events`, `/places`) — session cookie auth, Spring Data MongoDB, seed admin + places.
 
 ### Next
 
@@ -45,11 +45,11 @@ Register REST for the Done pages only (`/auth/*`, `/sangha/*`, `/events`) — se
 | Frontend | React.js + Vite, UIKit 3, React Router, Axios/Fetch |
 | Backend | Java 21 + Spring Boot 3.x (Maven) |
 | Security | Spring Security, **session-based** auth (not JWT) |
-| ORM / DB | Spring Data JPA + Hibernate, MySQL 8, Flyway |
+| Persistence | Spring Data MongoDB, MongoDB 7 |
 | Validation | Jakarta Bean Validation |
 | Real-time | Spring WebSocket (accommodation desk) |
 | Notifications | WhatsApp (accommodation) |
-| Deploy | Docker Compose — Nginx + Spring Boot + MySQL on one VPS (resource limits) |
+| Deploy | Docker Compose — Nginx + Spring Boot + MongoDB on one VPS (resource limits) |
 
 **Architecture:** single Spring Boot **modular monolith** (register, event support, accommodation, check-in/out, notifications, admin). Not microservices.
 
@@ -95,25 +95,18 @@ npm test
 npm run build
 ```
 
-## Run the Spring Boot API
+## Run MongoDB + Spring Boot API
 
 ```bash
+docker compose up -d mongo
+pip install -r scripts/requirements-db.txt
+python scripts/setup_sangha_mongo.py
+
 cd backend
 mvn spring-boot:run
 ```
 
-Default profile `local` uses in-memory H2 (no Docker required). Sample admin: `9000000001` / `PssmA0101`.
-
-Optional MySQL (create DB + tables + sample UI data):
-
-```bash
-docker compose up -d mysql
-pip install -r scripts/requirements-db.txt
-python scripts/setup_sangha_db.py
-mvn spring-boot:run -Dspring-boot.run.profiles=mysql
-```
-
-Sample logins printed by the script (admin `9000000001` / `PssmA0101`).
+Default URI: `mongodb://localhost:27017/pssm_sangha?replicaSet=rs0` (override with `MONGODB_URI`). Sample admin: `9000000001` / `PssmA0101`.
 
 Wire React to the live API:
 
@@ -131,5 +124,6 @@ docs/buddha-sangha/   Requirements, Technical, UI, WORK_SUMMARY
 docs/prototype/       static look-and-feel reference (UIKit)
 frontend/             React + Vite + UIKit 3 (Done register pages)
 backend/              Spring Boot 3 + Maven (register REST)
-docker-compose.yml    MySQL 8 (optional; local profile uses H2)
+docker-compose.yml    MongoDB 7 replica set (rs0)
+scripts/              Mongo seed + cleanup helpers
 ```

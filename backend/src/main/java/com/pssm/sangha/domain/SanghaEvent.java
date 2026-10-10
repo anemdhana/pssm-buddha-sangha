@@ -1,33 +1,20 @@
 package com.pssm.sangha.domain;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
 import java.time.Instant;
 import java.time.LocalDate;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.mapping.Document;
 
-@Entity
-@Table(name = "sangha_event")
+@Document(collection = "events")
 public class SanghaEvent {
 
     @Id
-    @Column(length = 40)
     private String id;
 
-    @Column(nullable = false, length = 200)
     private String name;
-
-    @Column(name = "start_date", nullable = false)
     private LocalDate startDate;
-
-    @Column(name = "end_date", nullable = false)
     private LocalDate endDate;
-
-    @Column(name = "created_by_mobile", nullable = false, length = 20)
     private String createdBy;
-
-    @Column(name = "created_at", nullable = false)
     private Instant createdAt;
 
     public String getId() {

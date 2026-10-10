@@ -9,7 +9,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 
 public class SanghaUserDetails implements UserDetails {
 
-    private final Long id;
+    private final String id;
     private final String mobile;
     private final String fullName;
     private final String passwordHash;
@@ -25,7 +25,7 @@ public class SanghaUserDetails implements UserDetails {
                 .collect(Collectors.toSet());
     }
 
-    public Long getId() {
+    public String getId() {
         return id;
     }
 

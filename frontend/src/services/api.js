@@ -43,6 +43,15 @@ const liveApi = {
   claimAdmin: () => request('/sangha/admin/claim', { method: 'POST', body: '{}' }),
   listEvents: () => request('/events'),
   createEvent: (payload) => request('/events', { method: 'POST', body: JSON.stringify(payload) }),
+  searchPlaces: ({ kind = 'urban', q = '', limit = 25 } = {}) => {
+    const params = new URLSearchParams({
+      kind,
+      limit: String(limit)
+    });
+    if (q) params.set('q', q);
+    return request(`/places?${params.toString()}`);
+  },
+  rememberPlace: (payload) => request('/places', { method: 'POST', body: JSON.stringify(payload) }),
   countPssmAdmins: async () => 0
 };
 

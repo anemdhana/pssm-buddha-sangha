@@ -120,25 +120,27 @@ export function AppShell() {
 
           <nav
             className="app-nav uk-visible@m"
-            uk-navbar="mode: click; offset: 0; flip: false; delay-hide: 0"
+            uk-navbar="mode: click; align: right; offset: 0; flip: false; delay-hide: 0"
             aria-label="Main"
           >
             <ul className="uk-navbar-nav">
-              <li>
-                <a href="#stay">
-                  Stay <span uk-navbar-parent-icon="" />
-                </a>
-                <div className="uk-navbar-dropdown">
-                  <ul className="uk-nav uk-navbar-dropdown-nav">
-                    <li>
-                      <Link to="/stay">Free Accommodation</Link>
-                    </li>
-                    <li>
-                      <Link to="/stay">Paid Accommodation</Link>
-                    </li>
-                  </ul>
-                </div>
-              </li>
+              {signedIn && (
+                <li>
+                  <a href="#stay">
+                    Stay <span uk-navbar-parent-icon="" />
+                  </a>
+                  <div className="uk-navbar-dropdown">
+                    <ul className="uk-nav uk-navbar-dropdown-nav">
+                      <li>
+                        <Link to="/stay">Free Accommodation</Link>
+                      </li>
+                      <li>
+                        <Link to="/stay">Paid Accommodation</Link>
+                      </li>
+                    </ul>
+                  </div>
+                </li>
+              )}
               {!signedIn && (
                 <li>
                   <a href="#sangha">
@@ -151,28 +153,6 @@ export function AppShell() {
                       </li>
                       <li>
                         <NavLink to="/login">Login to My Space</NavLink>
-                      </li>
-                    </ul>
-                  </div>
-                </li>
-              )}
-              {!signedIn && (
-                <li>
-                  <a href="#account">
-                    Account <span uk-navbar-parent-icon="" />
-                  </a>
-                  <div className="uk-navbar-dropdown">
-                    <ul className="uk-nav uk-navbar-dropdown-nav">
-                      <li>
-                        <NavLink to="/login">Login to My Space</NavLink>
-                      </li>
-                      <li>
-                        <NavLink to="/" end>
-                          Home
-                        </NavLink>
-                      </li>
-                      <li>
-                        <NavLink to="/join">Join PSSM Buddha Sangha</NavLink>
                       </li>
                     </ul>
                   </div>
@@ -219,13 +199,17 @@ export function AppShell() {
             </button>
             <div uk-dropdown="mode: click; pos: bottom-right; offset: 0; flip: false; delay-hide: 0">
               <ul className="uk-nav uk-dropdown-nav">
-                <li className="uk-nav-header">Stay</li>
-                <li>
-                  <Link to="/stay">Free Accommodation</Link>
-                </li>
-                <li>
-                  <Link to="/stay">Paid Accommodation</Link>
-                </li>
+                {signedIn && (
+                  <>
+                    <li className="uk-nav-header">Stay</li>
+                    <li>
+                      <Link to="/stay">Free Accommodation</Link>
+                    </li>
+                    <li>
+                      <Link to="/stay">Paid Accommodation</Link>
+                    </li>
+                  </>
+                )}
                 {!signedIn && (
                   <>
                     <li className="uk-nav-header">Sangha</li>
@@ -237,48 +221,31 @@ export function AppShell() {
                     </li>
                   </>
                 )}
-                <li className="uk-nav-header">Account</li>
-                {signedIn && isPssmAdmin && (
-                  <li>
-                    <Link to="/admin">People &amp; roles</Link>
-                  </li>
-                )}
                 {signedIn && (
-                  <li>
-                    <Link to="/profile">My Profile</Link>
-                  </li>
-                )}
-                {signedIn && (
-                  <li>
-                    <Link to="/password">Change my password</Link>
-                  </li>
-                )}
-                {signedIn && isOrganizer && (
-                  <li>
-                    <Link to="/events">Create event</Link>
-                  </li>
-                )}
-                {!signedIn && (
-                  <li>
-                    <Link to="/login">Login to My Space</Link>
-                  </li>
-                )}
-                {!signedIn && (
-                  <li>
-                    <Link to="/">Home</Link>
-                  </li>
-                )}
-                {!signedIn && (
-                  <li>
-                    <Link to="/join">Join PSSM Buddha Sangha</Link>
-                  </li>
-                )}
-                {signedIn && (
-                  <li>
-                    <a href="#logout" onClick={onLogout}>
-                      Logout
-                    </a>
-                  </li>
+                  <>
+                    <li className="uk-nav-header">Account</li>
+                    {isPssmAdmin && (
+                      <li>
+                        <Link to="/admin">People &amp; roles</Link>
+                      </li>
+                    )}
+                    <li>
+                      <Link to="/profile">My Profile</Link>
+                    </li>
+                    <li>
+                      <Link to="/password">Change my password</Link>
+                    </li>
+                    {isOrganizer && (
+                      <li>
+                        <Link to="/events">Create event</Link>
+                      </li>
+                    )}
+                    <li>
+                      <a href="#logout" onClick={onLogout}>
+                        Logout
+                      </a>
+                    </li>
+                  </>
                 )}
               </ul>
             </div>

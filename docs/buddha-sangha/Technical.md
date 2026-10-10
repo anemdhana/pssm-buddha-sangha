@@ -97,25 +97,25 @@ Sangha register technical notes and event accommodation (allocation + REST API) 
 | Backend | **Java 21 + Spring Boot 3.x** |
 | Security | **Spring Security** |
 | Authentication | **Session-based** (HTTP session cookie; not JWT) |
-| Database | **MySQL 8** |
-| ORM | **Spring Data JPA + Hibernate** |
+| Database | **MongoDB 7** |
+| Persistence | **Spring Data MongoDB** |
 | Validation | **Jakarta Bean Validation** |
-| Migrations | **Flyway** |
+| Schema | **Document indexes (app startup + setup script)** |
 | Build | **Maven** (backend) · Vite (frontend) |
 | Real-time (accommodation desk) | **Spring WebSocket** (STOMP) for in-app pushes; **WhatsApp** for alerts |
 | Deployment | **Docker Compose** |
 
-**Architecture:** modular packages inside one Spring Boot app (register, supporting events, accommodation, notifications, auth). Same MySQL database; clear module boundaries in code.
+**Architecture:** modular packages inside one Spring Boot app (register, supporting events, accommodation, notifications, auth). Same MongoDB database; clear module boundaries in code.
 
 ## Production deployment
 
-**Target:** one VPS running **Nginx**, **Spring Boot**, and **MySQL** via **Docker Compose**, with **resource limits** on each service.
+**Target:** one VPS running **Nginx**, **Spring Boot**, and **MongoDB** via **Docker Compose**, with **resource limits** on each service.
 
 | Service | Role |
 | --- | --- |
 | Nginx | TLS termination, static React build, reverse proxy `/api` (and WebSocket) to Spring Boot |
 | Spring Boot | Single API + session auth + business modules |
-| MySQL 8 | Persistent data; Flyway runs on app start |
+| MongoDB 7 | Persistent data; indexes ensured on app start |
 
 Compose sets CPU/memory limits so one noisy service cannot starve the others. Dev can run the same three services locally with Compose.
 
@@ -124,7 +124,7 @@ Compose sets CPU/memory limits so one noisy service cannot starve the others. De
 **Location:** `docs/prototype/`  
 **Shared script:** `app-profile.js` · **Shared styles:** `app.css` · **UI kit:** UIkit 3.21.x  
 
-This layer is the look-and-feel and interaction draft for Join / My Space. It is not the React + Spring Boot app. Production will replace `localStorage` with **session auth + MySQL** while keeping the same flows.
+This layer is the look-and-feel and interaction draft for Join / My Space. It is not the React + Spring Boot app. Production will replace `localStorage` with **session auth + MongoDB** while keeping the same flows.
 
 ### Pages
 
@@ -171,7 +171,7 @@ Assignable by Admin UI: Event Organizer, Pyramid Sevadal, PMMA Member only. PSSM
 
 ### Next technical work (accommodation)
 
-Next: Accommodation module — wire Stay to events from `pssm_events` (then MySQL events), booking cutoff, smart allocation, receptionist desk, Spring WebSocket / WhatsApp — see Event accommodation sections below. Prefer people who already have a sangha join record.
+Next: Accommodation module — wire Stay to events from `pssm_events` (then MongoDB events), booking cutoff, smart allocation, receptionist desk, Spring WebSocket / WhatsApp — see Event accommodation sections below. Prefer people who already have a sangha join record.
 
 ## Sangha register
 
@@ -183,7 +183,7 @@ Uses the [Chosen technical stack](#chosen-technical-stack) for the whole project
 | --- | --- | --- |
 | Frontend | **React + Vite + UIKit 3** | React Router; Axios/Fetch to the API. |
 | Backend | **Java 21 + Spring Boot 3.x** | Modular monolith package for places, members, dashboard, active-events support. |
-| Database | **MySQL 8** + JPA + Flyway | Places table and members table. |
+| Database | **MongoDB 7** + Spring Data MongoDB | Places collection and embedded family members. |
 | Authentication | **Spring Security session** + roles **Admin** and **Sangha member** | Both can open the dashboard. Admin keeps the register. |
 
 **Architecture style:** modular monolith modules for places, members (add, edit, view, search), people dashboard, active-events support graph, and sign-in.
@@ -307,8 +307,8 @@ pssm-buddha-sangha/
 │   └── prototype/
 ├── frontend/                 # React + Vite + UIKit 3
 ├── backend/                  # Spring Boot 3 (Maven), modular packages
-│   └── src/main/resources/db/migration/   # Flyway
-├── docker-compose.yml        # Nginx + Spring Boot + MySQL
+│   └── src/main/java/.../domain/         # Mongo documents
+├── docker-compose.yml        # Nginx + Spring Boot + MongoDB
 ├── README.md
 └── .gitignore
 ```
@@ -406,7 +406,7 @@ Response `200`: `{ "data": { "ok": true } }`. New password must be at least 6 ch
 
 #### `POST /sangha/join`
 
-Create or upsert a sangha person by mobile. Returns the temporary composed password (≤5 name letters + DDMM).
+Create a sangha person by mobile. Returns the temporary composed password (≤5 name letters + DDMM). If the mobile is already registered, responds `409` `MOBILE_TAKEN` (login instead of joining again).
 
 Request body is the join profile (who / place / family fields used by the UI). Minimum required for a successful join: `fullName`, `mobile`, `birthDate`, `birthMonth`, and a place object.
 
@@ -570,10 +570,10 @@ Same as [Chosen technical stack](#chosen-technical-stack). Accommodation-specifi
 | Backend            | **Java 21 + Spring Boot 3.x**       | Accommodation packages inside the same modular monolith. |
 | Real-time          | **Spring WebSocket** (STOMP)        | Live notifications between Accommodation Admin and Hotel Receptionists. |
 | Notifications      | **WhatsApp** (primary for now)      | Alerts to Accommodation Admin / Receptionist / Visitors as needed. |
-| Database           | **MySQL 8** + JPA + Flyway          | Structured relational data. |
+| Database           | **MongoDB 7** + Spring Data MongoDB | Document model (embedded family/place). |
 | Authentication     | **Spring Security session** + RBAC  | Roles: Accommodation Admin, Hotel Receptionist, Visitor, Sangha member, plus **PSSM Admin** and pre-assigned member roles **Event Organizer**, **Pyramid Sevadal**, **PMMA Member** (one or more). PSSM Admin lands on People & roles to search by mobile, assign/remove those roles, and remove people. A family group signs in with mobile number + password. First password is up to 5 letters of the name + date + month (e.g. `Ramak1508`), created at join, and can be changed. After login, the UI shows Stay + Account only; My Profile edits the sangha record through a join-like wizard. Event Organizer may create events (name, start, end) used later for accommodation. |
 | File Storage       | Local disk or Cloud (S3/Cloudinary) | For live photos and ID proof images. |
-| Deploy             | **Docker Compose** on one VPS       | Nginx + Spring Boot + MySQL with resource limits — see [Production deployment](#production-deployment). |
+| Deploy             | **Docker Compose** on one VPS       | Nginx + Spring Boot + MongoDB with resource limits — see [Production deployment](#production-deployment). |
 
 **Architecture Style:** Single Spring Boot **modular monolith** (final choice — not microservices).
 
@@ -588,7 +588,7 @@ Same as [Chosen technical stack](#chosen-technical-stack). Accommodation-specifi
 **Reasons against Microservices + Kafka:**
 
 - Expected load is moderate (event-based, not continuous high traffic).
-- Team size is small; one VPS with Nginx + Spring Boot + MySQL is enough.
+- Team size is small; one VPS with Nginx + Spring Boot + MongoDB is enough.
 - Microservices and Kafka add hosting, debugging, and maintenance cost without matching benefit.
 - Spring WebSocket covers in-app real-time desk notifications; WhatsApp covers outbound alerts.
 - Faster delivery and easier debugging with clear packages inside one app.
@@ -754,7 +754,7 @@ Visitors must never take room keys with them. Keys must always be deposited with
 | Define notification channels | **Decision:** **WhatsApp** for now |
 | Database schema (tables, relationships, indexes) | TODO later via Agile user stories |
 | API endpoints | **Decision:** REST contract for the UI is in this document (Part C). Live updates stay on Spring WebSocket |
-| Application stack | **Decision:** React + Vite + UIKit 3 · Java 21 + Spring Boot 3 · Spring Security session · MySQL 8 + JPA + Flyway · Maven · Docker Compose (Nginx + app + MySQL on one VPS). Modular monolith — not microservices |
+| Application stack | **Decision:** React + Vite + UIKit 3 · Java 21 + Spring Boot 3 · Spring Security session · MongoDB 7 + Spring Data MongoDB · Maven · Docker Compose (Nginx + app + MongoDB on one VPS). Modular monolith — not microservices |
 | User roles and permissions (Accommodation Admin, Hotel Receptionist, Visitor) | TODO later via Agile user stories |
 | When booking closes | **Decision:** Booking closes **2 days before** the event start |
 | When rooms are allotted | **Decision:** Accommodation Admin runs a **smart allocation** flow after booking closes. Rules in Section 7 |
@@ -777,7 +777,7 @@ pssm-buddha-sangha/
 │   └── prototype/
 ├── frontend/                 # React + Vite + UIKit 3
 ├── backend/                  # Spring Boot 3 (Maven)
-├── docker-compose.yml        # Nginx + Spring Boot + MySQL
+├── docker-compose.yml        # Nginx + Spring Boot + MongoDB
 ├── README.md
 └── .gitignore
 ```

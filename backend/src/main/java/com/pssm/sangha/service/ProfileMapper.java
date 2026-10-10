@@ -2,6 +2,7 @@ package com.pssm.sangha.service;
 
 import com.pssm.sangha.domain.FamilyMember;
 import com.pssm.sangha.domain.Person;
+import com.pssm.sangha.domain.PlaceInfo;
 import com.pssm.sangha.web.dto.ProfileDtos.MemberDto;
 import com.pssm.sangha.web.dto.ProfileDtos.PlaceDto;
 import com.pssm.sangha.web.dto.ProfileDtos.ProfileDto;
@@ -32,7 +33,7 @@ public class ProfileMapper {
         dto.idType = person.getIdType();
         dto.livePhoto = person.getLivePhoto();
         dto.idProofPhoto = person.getIdProofPhoto();
-        dto.place = placeFromPerson(person);
+        dto.place = placeFromInfo(person.getPlace());
         dto.roles = new ArrayList<>(person.getRoles());
         dto.roles.sort(Comparator.naturalOrder());
         dto.members = new ArrayList<>();
@@ -57,8 +58,8 @@ public class ProfileMapper {
         person.setIdType(trim(dto.idType));
         person.setLivePhoto(dto.livePhoto);
         person.setIdProofPhoto(dto.idProofPhoto);
-        applyPlace(person, dto.place);
-        replaceMembers(person, dto.members);
+        person.setPlace(toPlaceInfo(dto.place));
+        person.setMembers(toMembers(dto.members));
         if (!preservePassword) {
             // caller sets password hash
         }
@@ -91,27 +92,18 @@ public class ProfileMapper {
         dto.idType = member.getIdType();
         dto.livePhoto = member.getLivePhoto();
         dto.idProofPhoto = member.getIdProofPhoto();
-        PlaceDto place = new PlaceDto();
-        place.kind = member.getPlaceKind();
-        place.village = member.getPlaceVillage();
-        place.town = member.getPlaceTown();
-        place.district = member.getPlaceDistrict();
-        place.city = member.getPlaceCity();
-        place.state = member.getPlaceState();
-        place.country = member.getPlaceCountry();
-        dto.place = place;
+        dto.place = placeFromInfo(member.getPlace());
         return dto;
     }
 
-    private void replaceMembers(Person person, List<MemberDto> members) {
-        person.getMembers().clear();
+    private List<FamilyMember> toMembers(List<MemberDto> members) {
+        List<FamilyMember> out = new ArrayList<>();
         if (members == null) {
-            return;
+            return out;
         }
         int order = 0;
         for (MemberDto dto : members) {
             FamilyMember member = new FamilyMember();
-            member.setPerson(person);
             member.setSortOrder(order++);
             member.setName(trim(dto.name));
             member.setRelation(trim(dto.relation));
@@ -123,42 +115,40 @@ public class ProfileMapper {
             member.setIdType(trim(dto.idType));
             member.setLivePhoto(dto.livePhoto);
             member.setIdProofPhoto(dto.idProofPhoto);
-            if (dto.place != null) {
-                member.setPlaceKind(trim(dto.place.kind));
-                member.setPlaceVillage(trim(dto.place.village));
-                member.setPlaceTown(trim(dto.place.town));
-                member.setPlaceDistrict(trim(dto.place.district));
-                member.setPlaceCity(trim(dto.place.city));
-                member.setPlaceState(trim(dto.place.state));
-                member.setPlaceCountry(trim(dto.place.country));
-            }
-            person.getMembers().add(member);
+            member.setPlace(toPlaceInfo(dto.place));
+            out.add(member);
         }
+        return out;
     }
 
-    private PlaceDto placeFromPerson(Person person) {
-        PlaceDto place = new PlaceDto();
-        place.kind = person.getPlaceKind();
-        place.village = person.getPlaceVillage();
-        place.town = person.getPlaceTown();
-        place.district = person.getPlaceDistrict();
-        place.city = person.getPlaceCity();
-        place.state = person.getPlaceState();
-        place.country = person.getPlaceCountry();
-        return place;
-    }
-
-    private void applyPlace(Person person, PlaceDto place) {
+    private PlaceDto placeFromInfo(PlaceInfo place) {
+        PlaceDto dto = new PlaceDto();
         if (place == null) {
-            return;
+            return dto;
         }
-        person.setPlaceKind(trim(place.kind));
-        person.setPlaceVillage(trim(place.village));
-        person.setPlaceTown(trim(place.town));
-        person.setPlaceDistrict(trim(place.district));
-        person.setPlaceCity(trim(place.city));
-        person.setPlaceState(trim(place.state));
-        person.setPlaceCountry(trim(place.country));
+        dto.kind = place.getKind();
+        dto.village = place.getVillage();
+        dto.town = place.getTown();
+        dto.district = place.getDistrict();
+        dto.city = place.getCity();
+        dto.state = place.getState();
+        dto.country = place.getCountry();
+        return dto;
+    }
+
+    private PlaceInfo toPlaceInfo(PlaceDto place) {
+        if (place == null) {
+            return null;
+        }
+        PlaceInfo info = new PlaceInfo();
+        info.setKind(trim(place.kind));
+        info.setVillage(trim(place.village));
+        info.setTown(trim(place.town));
+        info.setDistrict(trim(place.district));
+        info.setCity(trim(place.city));
+        info.setState(trim(place.state));
+        info.setCountry(trim(place.country));
+        return info;
     }
 
     private String trim(String value) {

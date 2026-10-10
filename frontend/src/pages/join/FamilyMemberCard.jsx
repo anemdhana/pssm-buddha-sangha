@@ -1,21 +1,80 @@
+import { normalizeMobile } from '../../utils/password.js';
 import { AGE_OPTS, ChipGroup, GENDER_OPTS, MEDITATION_OPTS } from './ChipGroup.jsx';
+import { FieldError } from './FieldError.jsx';
+import { PlaceAutocomplete } from './PlaceAutocomplete.jsx';
 import { PhotoSlot } from './PhotoSlot.jsx';
 
-export function FamilyMemberCard({ index, member, open, onToggle, onChange, onRemove, onPhoto }) {
+export function validateMemberFields(member) {
+  const errors = {};
+  if (!String(member.name || '').trim()) errors.name = 'Enter name.';
+  if (!String(member.relation || '').trim()) errors.relation = 'Enter relation.';
+  const mobile = normalizeMobile(member.mobile);
+  if (mobile && mobile.length < 10) errors.mobile = 'Mobile needs at least 10 digits.';
+  if (!member.gender) errors.gender = 'Choose gender.';
+  if (!member.meditation) errors.meditation = 'Choose how long into meditation.';
+  if (member.addrMode === 'new') {
+    if (member.place?.kind === 'urban') {
+      if (!String(member.place.city || '').trim()) errors.city = 'Enter city.';
+    } else if (!String(member.place?.village || '').trim()) {
+      errors.village = 'Enter village.';
+    }
+  }
+  return errors;
+}
+
+export function FamilyMemberCard({
+  index,
+  member,
+  open,
+  errors = {},
+  onToggle,
+  onChange,
+  onRemove,
+  onPhoto
+}) {
   const personNo = index + 2;
   const sub =
     [member.name, member.relation].filter(Boolean).join(' · ') || 'New family member';
+  const prefix = `member-${index}`;
 
   function set(field, value) {
-    onChange({ ...member, [field]: value });
+    onChange({ ...member, [field]: value }, field);
   }
 
   function setPlace(field, value) {
-    onChange({ ...member, place: { ...member.place, [field]: value } });
+    const place = { ...member.place, [field]: value };
+    if (field === 'kind' && value === 'rural') {
+      place.country = 'India';
+    }
+    onChange({ ...member, place }, field);
+  }
+
+  function applyPlaceSuggestion(item) {
+    const kind = member.place.kind === 'rural' ? 'rural' : 'urban';
+    const name = item.name || item.city || item.village || '';
+    const place = {
+      ...member.place,
+      kind,
+      town: item.town || member.place.town || '',
+      district: item.district || member.place.district || '',
+      state: item.state || member.place.state || '',
+      country: item.country || member.place.country || 'India'
+    };
+    if (kind === 'urban') {
+      place.city = name;
+      place.village = '';
+    } else {
+      place.village = name;
+      place.city = '';
+    }
+    onChange({ ...member, place }, kind === 'urban' ? 'city' : 'village');
   }
 
   return (
-    <article className={`member x-member${open ? ' is-open' : ''}`}>
+    <article
+      className={`member x-member${open ? ' is-open' : ''}${Object.keys(errors).length ? ' has-errors' : ''}`}
+      data-member-index={index}
+    >
       <header className="x-member-head">
         <button type="button" className="x-member-toggle" aria-expanded={open} onClick={onToggle}>
           <span className="x-member-badge">{personNo}</span>
@@ -29,6 +88,9 @@ export function FamilyMemberCard({ index, member, open, onToggle, onChange, onRe
           Remove
         </button>
       </header>
+      {!open && Object.keys(errors).length > 0 ? (
+        <p className="x-field-error x-member-collapsed-error">Fix the details for this person, then continue.</p>
+      ) : null}
       {open ? (
         <div className="x-member-body">
           <section className="x-group">
@@ -37,44 +99,60 @@ export function FamilyMemberCard({ index, member, open, onToggle, onChange, onRe
             </h4>
             <div className="uk-grid-small uk-child-width-1-1 uk-child-width-1-2@s" uk-grid="">
               <div className="x-field">
-                <label className="x-label">Name</label>
+                <label className="x-label" htmlFor={`${prefix}-name`}>
+                  Name
+                </label>
                 <div className="uk-inline uk-width-1-1">
                   <span className="uk-form-icon" uk-icon="icon: user" />
                   <input
-                    className="uk-input uk-form-small"
+                    className={`uk-input uk-form-small${errors.name ? ' uk-form-danger' : ''}`}
+                    id={`${prefix}-name`}
                     type="text"
+                    aria-invalid={errors.name ? 'true' : undefined}
+                    aria-describedby={errors.name ? `${prefix}-err-name` : undefined}
                     value={member.name}
                     onChange={(e) => set('name', e.target.value)}
                   />
                 </div>
+                <FieldError id={`${prefix}-err-name`} message={errors.name} />
               </div>
               <div className="x-field">
-                <label className="x-label">Relation</label>
+                <label className="x-label" htmlFor={`${prefix}-relation`}>
+                  Relation
+                </label>
                 <div className="uk-inline uk-width-1-1">
                   <span className="uk-form-icon" uk-icon="icon: users" />
                   <input
-                    className="uk-input uk-form-small"
+                    className={`uk-input uk-form-small${errors.relation ? ' uk-form-danger' : ''}`}
+                    id={`${prefix}-relation`}
                     type="text"
                     list="relation-list"
                     placeholder="Spouse, child, parent"
+                    aria-invalid={errors.relation ? 'true' : undefined}
+                    aria-describedby={errors.relation ? `${prefix}-err-relation` : undefined}
                     value={member.relation}
                     onChange={(e) => set('relation', e.target.value)}
                   />
                 </div>
+                <FieldError id={`${prefix}-err-relation`} message={errors.relation} />
               </div>
               <div className="x-field">
-                <label className="x-label">
+                <label className="x-label" htmlFor={`${prefix}-mobile`}>
                   Mobile <span className="uk-text-muted">(optional)</span>
                 </label>
                 <div className="uk-inline uk-width-1-1">
                   <span className="uk-form-icon" uk-icon="icon: receiver" />
                   <input
-                    className="uk-input uk-form-small"
+                    className={`uk-input uk-form-small${errors.mobile ? ' uk-form-danger' : ''}`}
+                    id={`${prefix}-mobile`}
                     type="tel"
+                    aria-invalid={errors.mobile ? 'true' : undefined}
+                    aria-describedby={errors.mobile ? `${prefix}-err-mobile` : undefined}
                     value={member.mobile}
                     onChange={(e) => set('mobile', e.target.value)}
                   />
                 </div>
+                <FieldError id={`${prefix}-err-mobile`} message={errors.mobile} />
               </div>
             </div>
           </section>
@@ -91,7 +169,9 @@ export function FamilyMemberCard({ index, member, open, onToggle, onChange, onRe
                   value={member.gender}
                   onChange={(v) => set('gender', v)}
                   options={GENDER_OPTS}
+                  invalid={Boolean(errors.gender)}
                 />
+                <FieldError id={`${prefix}-err-gender`} message={errors.gender} />
               </div>
               <div className="x-field">
                 <span className="x-label">Age group</span>
@@ -109,7 +189,9 @@ export function FamilyMemberCard({ index, member, open, onToggle, onChange, onRe
                   value={member.meditation}
                   onChange={(v) => set('meditation', v)}
                   options={MEDITATION_OPTS}
+                  invalid={Boolean(errors.meditation)}
                 />
+                <FieldError id={`${prefix}-err-meditation`} message={errors.meditation} />
               </div>
             </div>
           </section>
@@ -161,12 +243,21 @@ export function FamilyMemberCard({ index, member, open, onToggle, onChange, onRe
                 {member.place.kind === 'rural' ? (
                   <div className="uk-grid-small uk-child-width-1-1 uk-child-width-1-2@s uk-margin-small-top" uk-grid="">
                     <div className="x-field">
-                      <label className="x-label">Village</label>
-                      <input
-                        className="uk-input uk-form-small"
+                      <label className="x-label" htmlFor={`${prefix}-village`}>
+                        Village
+                      </label>
+                      <PlaceAutocomplete
+                        id={`${prefix}-village`}
+                        kind="rural"
+                        className={errors.village ? 'uk-form-danger' : ''}
+                        aria-invalid={errors.village ? 'true' : undefined}
+                        aria-describedby={errors.village ? `${prefix}-err-village` : undefined}
                         value={member.place.village}
-                        onChange={(e) => setPlace('village', e.target.value)}
+                        onChange={(v) => setPlace('village', v)}
+                        onSelect={applyPlaceSuggestion}
+                        placeholder="Start typing a village"
                       />
+                      <FieldError id={`${prefix}-err-village`} message={errors.village} />
                     </div>
                     <div className="x-field">
                       <label className="x-label">Town</label>
@@ -200,12 +291,21 @@ export function FamilyMemberCard({ index, member, open, onToggle, onChange, onRe
                 ) : (
                   <div className="uk-grid-small uk-child-width-1-1 uk-child-width-1-2@s uk-margin-small-top" uk-grid="">
                     <div className="x-field uk-width-1-1">
-                      <label className="x-label">City</label>
-                      <input
-                        className="uk-input uk-form-small"
+                      <label className="x-label" htmlFor={`${prefix}-city`}>
+                        City
+                      </label>
+                      <PlaceAutocomplete
+                        id={`${prefix}-city`}
+                        kind="urban"
+                        className={errors.city ? 'uk-form-danger' : ''}
+                        aria-invalid={errors.city ? 'true' : undefined}
+                        aria-describedby={errors.city ? `${prefix}-err-city` : undefined}
                         value={member.place.city}
-                        onChange={(e) => setPlace('city', e.target.value)}
+                        onChange={(v) => setPlace('city', v)}
+                        onSelect={applyPlaceSuggestion}
+                        placeholder="Start typing a city (India, US, UK)"
                       />
+                      <FieldError id={`${prefix}-err-city`} message={errors.city} />
                     </div>
                     <div className="x-field">
                       <label className="x-label">State</label>

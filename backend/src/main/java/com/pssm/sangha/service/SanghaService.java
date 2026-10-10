@@ -7,6 +7,7 @@ import com.pssm.sangha.repo.PersonRepository;
 import com.pssm.sangha.web.dto.ProfileDtos.ProfileDto;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -46,9 +47,14 @@ public class SanghaService {
         if (dto.birthDate == null || dto.birthDate.isBlank() || dto.birthMonth == null || dto.birthMonth.isBlank()) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "VALIDATION", "Enter birth date and month.");
         }
+        if (personRepository.existsByMobile(mobile)) {
+            throw new ApiException(
+                    HttpStatus.CONFLICT,
+                    "MOBILE_TAKEN",
+                    "This mobile is already registered. Login to My Space instead.");
+        }
 
-        Person person = personRepository.findByMobile(mobile).orElseGet(Person::new);
-        boolean isNew = person.getId() == null;
+        Person person = new Person();
         profileMapper.applyProfile(person, dto, true);
         person.setMobile(mobile);
         person.setFullName(fullName);
@@ -57,9 +63,7 @@ public class SanghaService {
         if (temporary.isBlank()) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "VALIDATION", "Enter birth date and month.");
         }
-        if (isNew || person.getPasswordHash() == null || person.getPasswordHash().isBlank()) {
-            person.setPasswordHash(passwordEncoder.encode(temporary));
-        }
+        person.setPasswordHash(passwordEncoder.encode(temporary));
         if (person.getRoles() == null) {
             person.setRoles(Set.of());
         }
@@ -86,6 +90,7 @@ public class SanghaService {
         Person person = authService.currentPerson();
         profileMapper.applyProfile(person, dto, true);
         person.setMobile(person.getMobile());
+        personRepository.save(person);
         return profileMapper.toDto(person);
     }
 
@@ -96,7 +101,7 @@ public class SanghaService {
         if (digits.isBlank()) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "VALIDATION", "Enter a mobile number.");
         }
-        List<Person> matches = personRepository.searchByMobile(digits);
+        List<Person> matches = personRepository.findByMobileContainingOrderByFullNameAsc(digits);
         if (matches.isEmpty()) {
             throw new ApiException(HttpStatus.NOT_FOUND, "NOT_FOUND", "No person found for that mobile.");
         }
@@ -121,6 +126,7 @@ public class SanghaService {
                         "No joined person found for that mobile."));
         boolean keepAdmin = person.getRoles().contains(SanghaRole.PSSM_ADMIN);
         person.setRoles(profileMapper.normalizeAssignable(roles, keepAdmin));
+        personRepository.save(person);
         Map<String, Object> data = new LinkedHashMap<>();
         data.put("mobile", person.getMobile());
         data.put("roles", new ArrayList<>(person.getRoles()));
@@ -146,10 +152,13 @@ public class SanghaService {
     @Transactional
     public Map<String, Object> claimAdmin() {
         Person person = authService.currentPerson();
-        if (personRepository.countPssmAdmins() > 0) {
+        if (personRepository.countByRolesContaining(SanghaRole.PSSM_ADMIN) > 0) {
             throw new ApiException(HttpStatus.CONFLICT, "CONFLICT", "A PSSM Admin is already assigned.");
         }
-        person.getRoles().add(SanghaRole.PSSM_ADMIN);
+        Set<String> roles = new LinkedHashSet<>(person.getRoles());
+        roles.add(SanghaRole.PSSM_ADMIN);
+        person.setRoles(roles);
+        personRepository.save(person);
         return Map.of("roles", new ArrayList<>(person.getRoles()));
     }
 }

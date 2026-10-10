@@ -33,4 +33,21 @@ describe('mock join', () => {
     });
     expect(res.data.temporaryPassword).toBe('TestU1005');
   });
+
+  it('rejects a mobile that is already registered', async () => {
+    const payload = {
+      fullName: 'Test User',
+      mobile: '9222333444',
+      birthDate: '10',
+      birthMonth: '05',
+      place: { kind: 'urban', city: 'Hyderabad', state: 'Telangana' }
+    };
+    await mockApi.join(payload);
+    await expect(
+      mockApi.join({ ...payload, fullName: 'Another User', birthDate: '01', birthMonth: '01' })
+    ).rejects.toMatchObject({
+      status: 409,
+      message: 'This mobile is already registered. Login to My Space instead.'
+    });
+  });
 });

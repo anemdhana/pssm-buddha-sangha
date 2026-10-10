@@ -10,9 +10,9 @@
 ## Stack (final)
 
 React + Vite + UIKit 3 · React Router · Fetch (`credentials: 'include'`)  
-Java 21 + Spring Boot 3 · Spring Security **session** · JPA + MySQL 8 / H2 local · Flyway · Maven  
+Java 21 + Spring Boot 3 · Spring Security **session** · Spring Data MongoDB + MongoDB 7 · Maven  
 **Modular monolith** (not microservices)  
-**Deploy:** Docker Compose — Nginx + Spring Boot + MySQL on one VPS (resource limits)
+**Deploy:** Docker Compose — Nginx + Spring Boot + MongoDB on one VPS (resource limits)
 
 ---
 
@@ -44,8 +44,8 @@ Also: `GET /auth/me`, `POST /auth/logout`
 
 **Sample PSSM Admin:** mobile `9000000001` · password `PssmA0101`  
 **Frontend:** `cd frontend && npm run dev` (`VITE_USE_MOCK=true` by default)  
-**Backend:** `cd backend && mvn spring-boot:run` (H2 `local` profile)  
-**MySQL sample data:** `python scripts/setup_sangha_db.py` (after `docker compose up -d mysql`)
+**Backend:** `docker compose up -d mongo` then `cd backend && mvn spring-boot:run`  
+**Mongo sample data:** `python scripts/setup_sangha_mongo.py`
 
 **Roles**
 

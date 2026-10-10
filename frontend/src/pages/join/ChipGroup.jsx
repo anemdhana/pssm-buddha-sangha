@@ -1,6 +1,11 @@
-export function ChipGroup({ name, value, onChange, options }) {
+export function ChipGroup({ name, value, onChange, options, invalid = false }) {
   return (
-    <div className="x-chips" data-choice={name}>
+    <div
+      className={`x-chips${invalid ? ' is-invalid' : ''}`}
+      data-choice={name}
+      data-field={name}
+      aria-invalid={invalid ? 'true' : undefined}
+    >
       {options.map((opt) => (
         <label className="x-chip" key={opt.value}>
           <input

@@ -3,19 +3,15 @@ package com.pssm.sangha.repo;
 import com.pssm.sangha.domain.Person;
 import java.util.List;
 import java.util.Optional;
-import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Query;
-import org.springframework.data.repository.query.Param;
+import org.springframework.data.mongodb.repository.MongoRepository;
 
-public interface PersonRepository extends JpaRepository<Person, Long> {
+public interface PersonRepository extends MongoRepository<Person, String> {
 
     Optional<Person> findByMobile(String mobile);
 
     boolean existsByMobile(String mobile);
 
-    @Query("select distinct p from Person p left join fetch p.roles where p.mobile like concat('%', :digits, '%') order by p.fullName")
-    List<Person> searchByMobile(@Param("digits") String digits);
+    List<Person> findByMobileContainingOrderByFullNameAsc(String digits);
 
-    @Query("select count(distinct p) from Person p join p.roles r where r = 'pssm_admin'")
-    long countPssmAdmins();
+    long countByRolesContaining(String role);
 }

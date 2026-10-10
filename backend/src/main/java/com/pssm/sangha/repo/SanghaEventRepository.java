@@ -2,9 +2,9 @@ package com.pssm.sangha.repo;
 
 import com.pssm.sangha.domain.SanghaEvent;
 import java.util.List;
-import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.mongodb.repository.MongoRepository;
 
-public interface SanghaEventRepository extends JpaRepository<SanghaEvent, String> {
+public interface SanghaEventRepository extends MongoRepository<SanghaEvent, String> {
 
     List<SanghaEvent> findAllByOrderByCreatedAtDesc();
 }

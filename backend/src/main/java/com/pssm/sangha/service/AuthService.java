@@ -124,6 +124,7 @@ public class AuthService {
                     "Choose a new password that is different from the current one.");
         }
         person.setPasswordHash(passwordEncoder.encode(next));
+        personRepository.save(person);
         return Map.of("ok", true);
     }
 

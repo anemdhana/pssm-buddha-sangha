@@ -294,7 +294,7 @@ Each box shall show the remaining contributions needed for that event, then who 
 The interface shall stay limited to sign-in, the active-events support graph, support, the place list, the people dashboard, add or edit, and person detail.
 
 **NFR-02: Shared Stack with Event Accommodation**  
-The application shall use the same stack as the rest of **pssm-buddha-sangha**: React + Vite + UIKit 3 on the frontend, Java 21 + Spring Boot 3 (modular monolith) on the backend, Spring Security session-based sign-in, MySQL 8 with Spring Data JPA and Flyway, and Docker Compose for deployment (Nginx + Spring Boot + MySQL on one VPS). Roles for the register are Admin and Sangha member.
+The application shall use the same stack as the rest of **pssm-buddha-sangha**: React + Vite + UIKit 3 on the frontend, Java 21 + Spring Boot 3 (modular monolith) on the backend, Spring Security session-based sign-in, MongoDB 7 with Spring Data MongoDB, and Docker Compose for deployment (Nginx + Spring Boot + MongoDB on one VPS). Roles for the register are Admin and Sangha member.
 
 ---
 

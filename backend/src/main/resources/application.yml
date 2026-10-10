@@ -1,18 +1,10 @@
 spring:
   application:
     name: pssm-buddha-sangha
-  profiles:
-    active: ${SPRING_PROFILES_ACTIVE:local}
-  jpa:
-    hibernate:
-      ddl-auto: validate
-    open-in-view: false
-    properties:
-      hibernate:
-        jdbc:
-          time_zone: UTC
-  flyway:
-    enabled: true
+  data:
+    mongodb:
+      uri: ${MONGODB_URI:mongodb://localhost:27017/pssm_sangha?replicaSet=rs0}
+      auto-index-creation: false
 
 server:
   port: ${SERVER_PORT:8080}
@@ -26,32 +18,3 @@ server:
 pssm:
   cors:
     allowed-origins: ${PSSM_CORS_ORIGINS:http://localhost:5173}
-
----
-spring:
-  config:
-    activate:
-      on-profile: local
-  datasource:
-    url: jdbc:h2:mem:pssm;MODE=MySQL;DB_CLOSE_DELAY=-1;DATABASE_TO_LOWER=TRUE
-    driver-class-name: org.h2.Driver
-    username: sa
-    password:
-  h2:
-    console:
-      enabled: true
-  flyway:
-    locations: classpath:db/migration
-
----
-spring:
-  config:
-    activate:
-      on-profile: mysql
-  datasource:
-    url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME:pssm_sangha}?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
-    username: ${DB_USER:pssm}
-    password: ${DB_PASSWORD:pssm}
-    driver-class-name: com.mysql.cj.jdbc.Driver
-  flyway:
-    locations: classpath:db/migration
