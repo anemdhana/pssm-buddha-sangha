@@ -1,22 +1,17 @@
 import { useEffect, useState } from 'react';
 import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom';
+import { useEventPick } from '../context/EventPickContext.jsx';
 import { useAuth } from '../hooks/useAuth.jsx';
 import { api } from '../services/api.js';
 import { formatEventSub } from '../utils/password.js';
 
-const DEMO_EVENTS = [
-  { id: 'demo_dhyana', name: 'Dhyana Maha Yagam - 5', sub: 'December 21 to 31 · Kailasapuri' },
-  { id: 'demo_dussehra', name: 'Dussehra Sangeetha Dhyana Maha Yagnam', sub: 'October 17 to 20 · Vishakhapatnam' }
-];
-
 export function AppShell() {
-  const { signedIn, isPssmAdmin, isOrganizer, logout, loading } = useAuth();
+  const { signedIn, isPssmAdmin, isOrganizer, hasRole, logout, loading } = useAuth();
+  const canViewStayRegistrations =
+    hasRole('accommodation_volunteer') || isPssmAdmin || isOrganizer;
+  const { picked, setPicked } = useEventPick();
   const navigate = useNavigate();
   const [events, setEvents] = useState([]);
-  const [picked, setPicked] = useState({
-    name: 'PSSM Buddha Sangha',
-    sub: 'Join the sangha · support events'
-  });
 
   useEffect(() => {
     if (!signedIn) {
@@ -25,7 +20,32 @@ export function AppShell() {
     }
     api
       .listEvents()
-      .then((res) => setEvents(res.data || []))
+      .then((res) => {
+        const list = res.data || [];
+        setEvents(list);
+        // Drop stale demo_* picks; remap by name when the seeded event exists.
+        if (!picked.id) return;
+        const stillThere = list.some((e) => e.id === picked.id);
+        if (stillThere) return;
+        const byName = list.find((e) => e.name === picked.name);
+        if (byName) {
+          setPicked({
+            id: byName.id,
+            name: byName.name,
+            sub: formatEventSub(byName),
+            startDate: byName.startDate || '',
+            endDate: byName.endDate || ''
+          });
+        } else if (String(picked.id).startsWith('demo_')) {
+          setPicked({
+            id: null,
+            name: 'PSSM Buddha Sangha',
+            sub: 'Join the sangha · support events',
+            startDate: '',
+            endDate: ''
+          });
+        }
+      })
       .catch(() => setEvents([]));
   }, [signedIn]);
 
@@ -41,9 +61,24 @@ export function AppShell() {
     navigate('/');
   }
 
-  function pickEvent(name, sub) {
-    setPicked({ name, sub: sub || '' });
-    document.title = name;
+  function pickHome() {
+    setPicked({
+      id: null,
+      name: 'PSSM Buddha Sangha',
+      sub: 'Join the sangha · support events',
+      startDate: '',
+      endDate: ''
+    });
+  }
+
+  function pickSaved(evt) {
+    setPicked({
+      id: evt.id,
+      name: evt.name,
+      sub: formatEventSub(evt),
+      startDate: evt.startDate || '',
+      endDate: evt.endDate || ''
+    });
   }
 
   if (loading) {
@@ -74,39 +109,25 @@ export function AppShell() {
             </button>
             <div uk-dropdown="mode: click; pos: bottom-left; offset: -1; delay-hide: 0">
               <ul className="uk-nav uk-dropdown-nav event-pick-menu">
-                <li className={picked.name === 'PSSM Buddha Sangha' ? 'uk-active' : undefined}>
+                <li className={!picked.id && picked.name === 'PSSM Buddha Sangha' ? 'uk-active' : undefined}>
                   <a
                     href="/"
                     onClick={(e) => {
                       e.preventDefault();
-                      pickEvent('PSSM Buddha Sangha', 'Join the sangha · support events');
+                      pickHome();
                     }}
                   >
                     <span className="event-name">PSSM Buddha Sangha</span>
                     <span className="event-sub">Join the sangha · support events</span>
                   </a>
                 </li>
-                {DEMO_EVENTS.map((evt) => (
-                  <li key={evt.id} className={picked.name === evt.name ? 'uk-active' : undefined}>
-                    <a
-                      href="#event"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        pickEvent(evt.name, evt.sub);
-                      }}
-                    >
-                      <span className="event-name">{evt.name}</span>
-                      <span className="event-sub">{evt.sub}</span>
-                    </a>
-                  </li>
-                ))}
                 {events.map((evt) => (
-                  <li key={evt.id} className={picked.name === evt.name ? 'uk-active' : undefined}>
+                  <li key={evt.id} className={picked.id === evt.id ? 'uk-active' : undefined}>
                     <a
                       href="#event"
                       onClick={(e) => {
                         e.preventDefault();
-                        pickEvent(evt.name, formatEventSub(evt));
+                        pickSaved(evt);
                       }}
                     >
                       <span className="event-name">{evt.name}</span>
@@ -132,11 +153,16 @@ export function AppShell() {
                   <div className="uk-navbar-dropdown">
                     <ul className="uk-nav uk-navbar-dropdown-nav">
                       <li>
-                        <Link to="/stay">Free Accommodation</Link>
+                        <Link to="/stay?plan=free">Free Accommodation</Link>
                       </li>
                       <li>
-                        <Link to="/stay">Paid Accommodation</Link>
+                        <Link to="/stay?plan=paid">Paid Accommodation</Link>
                       </li>
+                      {canViewStayRegistrations ? (
+                        <li>
+                          <Link to="/stay/registrations">Stay interest</Link>
+                        </li>
+                      ) : null}
                     </ul>
                   </div>
                 </li>
@@ -203,11 +229,16 @@ export function AppShell() {
                   <>
                     <li className="uk-nav-header">Stay</li>
                     <li>
-                      <Link to="/stay">Free Accommodation</Link>
+                      <Link to="/stay?plan=free">Free Accommodation</Link>
                     </li>
                     <li>
-                      <Link to="/stay">Paid Accommodation</Link>
+                      <Link to="/stay?plan=paid">Paid Accommodation</Link>
                     </li>
+                    {canViewStayRegistrations ? (
+                      <li>
+                        <Link to="/stay/registrations">Stay interest</Link>
+                      </li>
+                    ) : null}
                   </>
                 )}
                 {!signedIn && (

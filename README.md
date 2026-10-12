@@ -10,20 +10,18 @@ A club of Buddhas under the Pyramid Spiritual Societies Movement (PSSM). People 
 2. **Supporting events** — active events (Register Admin sets Active/Inactive anytime) and budget support  
 3. **Accommodation** — hotels, Free/Paid Stay, allotment, receptionist desk (**Accommodation Admin**)
 
-**PSSM Admin** (People & roles) assigns Event Organizer / Pyramid Sevadal / PMMA Member. That role is separate from **Accommodation Admin**.
+**PSSM Admin** (People & roles) assigns Event Organizer / Pyramid Sevadal / PMMA Member / Accommodation Volunteer. That role is separate from **Accommodation Admin** (hotels/allotment).
 
 ## What the system does
 
 ### Built (React app in `frontend/`)
-
-Sangha register Join → My Space migrated from the static prototype (mock API, session-shaped for Spring Security later):
 
 - **Join the sangha** — who / place / family / review; temporary password from name + birth
 - **Login to My Space** — mobile + password
 - **My Profile / Change password**
 - **PSSM Admin desk** — People & roles
 - **Create event** — Event Organizer
-- Stay links show a **Coming soon** stub (accommodation next)
+- **Stay** — Free/Paid interest for header event; Accommodation Volunteer list + edit
 
 ### Reference prototype
 
@@ -31,12 +29,11 @@ Static HTML under `docs/prototype/` remains for look-and-feel reference.
 
 ### Built (Spring Boot in `backend/`)
 
-Register REST for the Done pages only (`/auth/*`, `/sangha/*`, `/events`, `/places`) — session cookie auth, Spring Data MongoDB, seed admin + places.
+REST for register + events + stay bookings (`/auth/*`, `/sangha/*`, `/events`, `/places`, `/pyramid-centers`, `/bookings`) — session cookie auth, Spring Data MongoDB.
 
 ### Next
 
-- Point React at live API (`VITE_USE_MOCK=false`) and harden CSRF/CORS for production
-- **Accommodation module** — Free / Paid Stay, allotment, receptionist desk
+- Hotels master, booking cutoff, smart allotment, receptionist desk
 
 ## Stack
 
@@ -88,7 +85,7 @@ npm install
 npm run dev
 ```
 
-Open http://localhost:5173 — mock API is on by default (`VITE_USE_MOCK=true`). Sample PSSM Admin: mobile `9000000001`, password `PssmA0101`.
+Open http://localhost:5173 — mock API is on by default (`VITE_USE_MOCK=true`). Sample PSSM Admin: mobile `9000000001`, password `PssmA0101`. Accommodation Volunteer: `9876511111` / `Meena1005`.
 
 ```bash
 npm test
@@ -100,13 +97,14 @@ npm run build
 ```bash
 docker compose up -d mongo
 pip install -r scripts/requirements-db.txt
-python scripts/setup_sangha_mongo.py
+python scripts/setup_sangha_db.py          # indexes + places/centers only
+python scripts/seed_sangha_samples.py --clear --all   # optional demo people/events/bookings
 
 cd backend
 mvn spring-boot:run
 ```
 
-Default URI: `mongodb://localhost:27017/pssm_sangha?replicaSet=rs0` (override with `MONGODB_URI`). Sample admin: `9000000001` / `PssmA0101`.
+Default URI: `mongodb://localhost:27017/pssm_sangha?replicaSet=rs0` (override with `MONGODB_URI`). Sample admin (after seed): `9000000001` / `PssmA0101`.
 
 Wire React to the live API:
 
@@ -125,5 +123,5 @@ docs/prototype/       static look-and-feel reference (UIKit)
 frontend/             React + Vite + UIKit 3 (Done register pages)
 backend/              Spring Boot 3 + Maven (register REST)
 docker-compose.yml    MongoDB 7 replica set (rs0)
-scripts/              Mongo seed + cleanup helpers
+scripts/              Mongo bootstrap + sample seed + cleanup helpers
 ```

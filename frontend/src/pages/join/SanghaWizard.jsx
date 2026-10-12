@@ -14,6 +14,7 @@ import { ChipGroup, GENDER_OPTS, AGE_OPTS, MEDITATION_OPTS } from './ChipGroup.j
 import { FamilyMemberCard, validateMemberFields } from './FamilyMemberCard.jsx';
 import { FieldError } from './FieldError.jsx';
 import { PlaceAutocomplete, rememberPlacePayload } from './PlaceAutocomplete.jsx';
+import { PyramidCenterAutocomplete, rememberPyramidCenter } from './PyramidCenterAutocomplete.jsx';
 import { PhotoSlot } from './PhotoSlot.jsx';
 
 const JOIN_STEPS = [
@@ -295,6 +296,7 @@ export function SanghaWizard({
         requestAnimationFrame(() => focusField(first));
         return;
       }
+      rememberPyramidCenter(form.pyramidCenter);
     }
     if (STEPS[step].id === 'place') {
       const errors = validatePlaceFields();
@@ -706,22 +708,12 @@ export function SanghaWizard({
                       <label className="x-label" htmlFor="center">
                         Pyramid center / group
                       </label>
-                      <div className="uk-inline uk-width-1-1">
-                        <span className="uk-form-icon" uk-icon="icon: location" />
-                        <input
-                          className="uk-input uk-form-small"
-                          id="center"
-                          list="center-list"
-                          placeholder="Optional"
-                          value={form.pyramidCenter}
-                          onChange={(e) => update('pyramidCenter', e.target.value)}
-                        />
-                      </div>
-                      <datalist id="center-list">
-                        <option value="Pyramid Meditation Center, Vijayawada" />
-                        <option value="Indiranagar Pyramid Group" />
-                        <option value="Pyramid Meditation Center, Hyderabad" />
-                      </datalist>
+                      <PyramidCenterAutocomplete
+                        id="center"
+                        placeholder="Start typing a center or group"
+                        value={form.pyramidCenter}
+                        onChange={(v) => update('pyramidCenter', v)}
+                      />
                     </div>
                     <div className="x-field">
                       <label className="x-label" htmlFor="since">

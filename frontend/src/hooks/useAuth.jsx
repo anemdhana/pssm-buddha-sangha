@@ -53,6 +53,7 @@ export function AuthProvider({ children }) {
       signedIn: Boolean(user),
       isPssmAdmin: hasRole('pssm_admin'),
       isOrganizer: hasRole('event_organizer'),
+      isAccommodationVolunteer: hasRole('accommodation_volunteer'),
       hasRole,
       login,
       logout,

@@ -54,11 +54,13 @@ export function HomePage() {
           <>
             <header className="form-head uk-margin-medium-top">
               <h2 className="form-title">Accommodation</h2>
-              <p className="form-summary">Choose free or paid stay for the event.</p>
+              <p className="form-summary">
+                Register interest to attend the selected event (free or paid). Booking date is recorded; rooms are allocated later.
+              </p>
             </header>
             <div className="uk-grid-small uk-child-width-1-1 uk-child-width-1-2@s" uk-grid="">
-              <Tile to="/stay" icon="home" title="Free Accommodation" meta="Event stay at no charge" />
-              <Tile to="/stay" icon="credit-card" title="Paid Accommodation" meta="Self-booked stay" />
+              <Tile to="/stay?plan=free" icon="home" title="Free Accommodation" meta="Event stay at no charge" />
+              <Tile to="/stay?plan=paid" icon="credit-card" title="Paid Accommodation" meta="Self-booked stay" />
             </div>
           </>
         )}

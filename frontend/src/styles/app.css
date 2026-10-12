@@ -1235,6 +1235,29 @@ input.uk-checkbox.uk-form-large:not([size]) {
     font-weight: 650;
 }
 
+button.x-role-chip {
+    border: 1px solid transparent;
+    cursor: pointer;
+}
+
+.x-role-chip.is-active {
+    background: #2f3a5f;
+    color: #fff;
+}
+
+.x-reg-table-wrap {
+    margin-top: 0.75rem;
+}
+
+.x-reg-table-head {
+    max-width: 16rem;
+    margin-bottom: 0.5rem;
+}
+
+.x-reg-table .uk-text-bold {
+    font-weight: 600;
+}
+
 .x-role-empty {
     color: #7a8294;
     font-size: 0.84rem;

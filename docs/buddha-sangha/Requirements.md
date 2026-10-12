@@ -87,7 +87,7 @@ Sangha register and event accommodation requirements and user stories in one pla
 | 2 | **Supporting events** | Active events (Register Admin can set Active/Inactive anytime), budgets, host-first support, equal share | Register Admin / Sangha member |
 | 3 | **Accommodation** | Hotels, rooms, Free/Paid Stay for an event, booking window, smart allotment, receptionist check-in/out | **Accommodation Admin**, Hotel Receptionist, Visitor |
 
-**Role note:** **PSSM Admin** (People & roles on My Space) assigns Event Organizer / Pyramid Sevadal / PMMA Member. That is not the same as **Accommodation Admin**, who runs hotels and room allotment for Stay.
+**Role note:** **PSSM Admin** (People & roles on My Space) assigns Event Organizer / Pyramid Sevadal / PMMA Member / **Accommodation Volunteer**. Accommodation Volunteer books Free/Paid stay for an event (including new visitors, who are added to the sangha register together with the booking). That is not the same as **Accommodation Admin**, who runs hotels and room allotment for Stay.
 
 ## Delivery status (prototype)
 
@@ -104,7 +104,8 @@ Self-serve **Join → Login → My Space**, roles, PSSM Admin desk, and Event Or
 | PSSM Admin People & roles | FR-29b1, US-26b1 | `admin.html` | Prototype done |
 | Event Organizer create event | FR-29c, US-26c | `events.html` | Prototype done |
 | Landing + chrome | — | `index.html`, shared header | Prototype done |
-| Stay wizard shell (prefill copy) | FR-03, US-03/04 | `visitor.html` | Shell only |
+| Stay booking (event + per-person dates) | FR-03, US-03/04/05, FR-29d | React `/stay`, `visitor.html` | Done (wizard); allotment later |
+| Accommodation Volunteer | FR-29d, US-26d | Admin roles + Stay | Done |
 
 ### Next module
 
@@ -860,15 +861,48 @@ A joined person with the **PSSM Admin** role lands on a different home after log
 - Action buttons on the person card (Save roles / Remove person) are equal width and aligned on the card.
 
 **FR-29c: Event Organizer Creates Events**  
-A signed-in person with the **Event Organizer** role can create an event with **name**, **start date**, and **end date**.
+A signed-in person with the **Event Organizer** role can create spiritual events that the sangha uses for **support** and for **Free / Paid Stay**.
 
-- Created events appear in the header event picker and are available for Stay / accommodation later.  
+**Required fields**
+
+| Field | Rule |
+| --- | --- |
+| Event name | Non-empty text |
+| Start date | Calendar date |
+| End date | On or after start date |
+| Location | Single free-text line (city, venue, or as-spoken place — e.g. `Pyramid Meditation Center, Hyderabad`) |
+| Expected budget | Positive amount in **INR** |
+
+**Optional fields**
+
+| Field | Rule |
+| --- | --- |
+| Meditation hours per day | Number ≥ 0 (e.g. `3` or `3.5`). For planning and communication; not used for room allotment |
+
+**Behaviour**
+
+- Only Event Organizer may open Create event and save. Others see a gate message (PSSM Admin assigns the role).  
+- The organizer can list events and **edit** an existing event (same fields as create).  
+- Saved events appear in the **header event picker**.  
+- **Free accommodation** and **Paid (self) accommodation** always run against the **currently selected event** (dates, location, booking cutoff = start − 2 days, allotment, hotels). Stay is not offered without an event selected.  
+- Expected budget is stored for later **supporting-events** allotment (equal share / host-first). Register Admin may still mark Active/Inactive and review allotment as already specified.  
 - A person without Event Organizer cannot create events.
 
-**FR-04: Stay Duration for Each Person**  
-The system shall capture the **number of days** each individual (primary visitor + every family member) wishes to stay.
+**FR-29d: Accommodation Volunteer Books Stay**  
+A signed-in person with the **Accommodation Volunteer** role can book **Free** or **Paid** accommodation for the event selected in the header.
 
-- Stay duration can be different for different family members.
+- Volunteer may book for **themselves** (profile prefill) or for a **new visitor**.  
+- New visitor: all entered people details are saved to the **sangha register** and the **stay booking** together (`registerFamily`).  
+- Stay booking for an existing member does **not** rewrite their sangha join profile.  
+- Wizard steps match join look: who → place → family → how long → review. When the booker already has a sangha profile, people details are prefilled and the flow opens at **how long**.  
+- Each submission stores **bookedAt** (when interest was recorded). Status is **registered**; **room allocation is a later step** — this pass only collects who plans to attend.
+
+**FR-04: Stay Duration for Each Person**  
+The system shall capture **stay start and end dates** for each individual (primary visitor + every family member).
+
+- Stay dates can be different for different family members.  
+- Check-in and check-out are at **11:00 AM**.  
+- Dates default from the selected event window when available.
 
 **FR-05: Special Needs & Health Information**  
 The system shall ask and record the following additional information:
@@ -1080,13 +1114,14 @@ Visitors submit accommodation requests until **2 days before the event**. After 
 
 ### US-05: Visitor – Capture Stay Duration
 **As a** Visitor  
-**I want** to specify how many days each person in my party wishes to stay  
+**I want** to choose stay start and end dates for each person in my party  
 **So that** rooms are allotted for the correct duration
 
 **Acceptance Criteria:**
-- Stay duration can be different for each family member
-- System calculates the overall check-in and check-out dates based on the longest stay (or individual stays)
-- Minimum stay is 1 day
+- Stay dates can be different for each family member
+- Each person has a start date and end date (end ≥ start); check-in/out shown at 11:00 AM
+- Dates default from the selected event window and must fall within it when the event has dates
+- Minimum stay is 1 day (same calendar day allowed as overnight to next check-out)
 
 ---
 
@@ -1408,14 +1443,30 @@ Visitors submit accommodation requests until **2 days before the event**. After 
 
 ### US-26c: Event Organizer – Create Event
 **As an** Event Organizer  
-**I want** to create an event with name, start date, and end date  
-**So that** Stay / accommodation can use that event later
+**I want** to create an event with name, dates, location, expected budget (INR), and optional daily meditation hours  
+**So that** members can support that event and book Free or Paid Stay against it
 
 **Acceptance Criteria:**
 - Only a signed-in person with Event Organizer can open Create event and save
-- Required fields: event name, start date, end date (end on or after start)
-- Saved events appear in the header event picker
-- Events are stored for later accommodation use
+- Required: event name, start date, end date (end ≥ start), location (one line), expected budget (INR, > 0)
+- Optional: meditation hours per day (≥ 0)
+- After save, the event appears in the organizer’s list and in the header event picker
+- Choosing that event in the picker is what Free Stay and Paid Stay use (booking window, allotment, receptionist flows)
+- Non-organizers cannot save; UI points them to PSSM Admin → People & roles
+- Edit loads the event into the same form; Update saves changes; Cancel returns to create mode
+
+### US-26d: Accommodation Volunteer – Book Stay for New Visitors
+**As an** Accommodation Volunteer  
+**I want** to book Free or Paid accommodation for a new visitor  
+**So that** their details enter the sangha register and the stay booking in one flow
+
+**Acceptance Criteria:**
+- PSSM Admin can assign `accommodation_volunteer`
+- Volunteer can choose Myself (prefill from their profile) or New visitor (empty join-like form)
+- New visitor submit creates the sangha person (if mobile is free) and the stay booking together
+- Stay edits for an existing member do not rewrite their sangha join profile
+- Booking requires an event selected in the header (not the sangha home item)
+- Steps match join look: who → place → family → how long → review; logged-in members with a profile open at how long with people prefilled
 
 ### US-23: Accommodation Admin – Run Smart Room Allocation
 **As an** Accommodation Admin  

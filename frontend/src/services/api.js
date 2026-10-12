@@ -43,6 +43,8 @@ const liveApi = {
   claimAdmin: () => request('/sangha/admin/claim', { method: 'POST', body: '{}' }),
   listEvents: () => request('/events'),
   createEvent: (payload) => request('/events', { method: 'POST', body: JSON.stringify(payload) }),
+  updateEvent: (id, payload) =>
+    request(`/events/${encodeURIComponent(id)}`, { method: 'PUT', body: JSON.stringify(payload) }),
   searchPlaces: ({ kind = 'urban', q = '', limit = 25 } = {}) => {
     const params = new URLSearchParams({
       kind,
@@ -52,6 +54,19 @@ const liveApi = {
     return request(`/places?${params.toString()}`);
   },
   rememberPlace: (payload) => request('/places', { method: 'POST', body: JSON.stringify(payload) }),
+  searchPyramidCenters: ({ q = '', limit = 25 } = {}) => {
+    const params = new URLSearchParams({ limit: String(limit) });
+    if (q) params.set('q', q);
+    return request(`/pyramid-centers?${params.toString()}`);
+  },
+  rememberPyramidCenter: (payload) =>
+    request('/pyramid-centers', { method: 'POST', body: JSON.stringify(payload) }),
+  createStayBooking: (payload) => request('/bookings', { method: 'POST', body: JSON.stringify(payload) }),
+  listStayBookings: (eventId) =>
+    request(`/bookings?eventId=${encodeURIComponent(eventId)}`),
+  getStayBooking: (id) => request(`/bookings/${encodeURIComponent(id)}`),
+  updateStayBooking: (id, payload) =>
+    request(`/bookings/${encodeURIComponent(id)}`, { method: 'PUT', body: JSON.stringify(payload) }),
   countPssmAdmins: async () => 0
 };
 

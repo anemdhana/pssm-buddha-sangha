@@ -14,6 +14,9 @@ public class SanghaEvent {
     private String name;
     private LocalDate startDate;
     private LocalDate endDate;
+    private String location;
+    private double expectedBudgetInr;
+    private Double meditationHoursPerDay;
     private String createdBy;
     private Instant createdAt;
 
@@ -47,6 +50,30 @@ public class SanghaEvent {
 
     public void setEndDate(LocalDate endDate) {
         this.endDate = endDate;
+    }
+
+    public String getLocation() {
+        return location;
+    }
+
+    public void setLocation(String location) {
+        this.location = location;
+    }
+
+    public double getExpectedBudgetInr() {
+        return expectedBudgetInr;
+    }
+
+    public void setExpectedBudgetInr(double expectedBudgetInr) {
+        this.expectedBudgetInr = expectedBudgetInr;
+    }
+
+    public Double getMeditationHoursPerDay() {
+        return meditationHoursPerDay;
+    }
+
+    public void setMeditationHoursPerDay(Double meditationHoursPerDay) {
+        this.meditationHoursPerDay = meditationHoursPerDay;
     }
 
     public String getCreatedBy() {

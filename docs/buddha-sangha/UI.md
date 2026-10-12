@@ -45,7 +45,7 @@ Visitor screens live in `docs/prototype/`. This document covers sangha Admin/das
 | 2 | **Supporting events** | Active events (Register Admin can set Active/Inactive anytime), budgets, host-first support, equal share | Register Admin / Sangha member |
 | 3 | **Accommodation** | Hotels, rooms, Free/Paid Stay for an event, booking window, smart allotment, receptionist check-in/out | **Accommodation Admin**, Hotel Receptionist, Visitor |
 
-**Role note:** **PSSM Admin** (People & roles on My Space) assigns Event Organizer / Pyramid Sevadal / PMMA Member. That is not the same as **Accommodation Admin**, who runs hotels and room allotment for Stay.
+**Role note:** **PSSM Admin** (People & roles on My Space) assigns Event Organizer / Pyramid Sevadal / PMMA Member / Accommodation Volunteer. Accommodation Volunteer books stay (including new visitors). That is not the same as **Accommodation Admin**, who runs hotels and room allotment.
 
 ## Prototype track status
 
@@ -81,7 +81,7 @@ Visitor screens live in `docs/prototype/`. This document covers sangha Admin/das
 | 3 | `docs/prototype/login.html` | Login to My Space | Visitor | form (mobile + password), compact groups | Prototype done |
 | 3a | `docs/prototype/profile.html` | My Profile | Visitor (signed in) | switcher wizard like join; roles display | Prototype done |
 | 3b | `docs/prototype/password.html` | Change my password | Visitor (signed in) | compact x-group form | Prototype done |
-| 3c | `docs/prototype/events.html` | Create event | Event Organizer | name, start, end; list | Prototype done |
+| 3c | `docs/prototype/events.html` | Create event | Event Organizer | name, dates, location, budget INR, optional meditation hrs; list | Spec updated — app form mirrors this |
 | 3d | `docs/prototype/admin.html` | People & roles | PSSM Admin | search mobile, roles, remove | Prototype done |
 | 4 | `docs/prototype/visitor.html` | Accommodation (prefill from join) | Visitor | same as accommodation UI notes | Draft |
 | | | Admin / sangha dashboard screens below | Admin, Sangha member | | Waiting for sketches |
@@ -369,7 +369,7 @@ Copy this block for each new sketch.
 | 3 | `docs/prototype/login.html` | Login to My Space | Visitor | form (mobile + password), compact groups | Prototype done |
 | 3a | `docs/prototype/profile.html` | My Profile | Visitor (signed in) | switcher wizard like join; roles display | Prototype done |
 | 3b | `docs/prototype/password.html` | Change my password | Visitor (signed in) | compact x-group form | Prototype done |
-| 3c | `docs/prototype/events.html` | Create event | Event Organizer | name, start, end; list | Prototype done |
+| 3c | `docs/prototype/events.html` | Create event | Event Organizer | name, dates, location, budget INR, optional meditation hrs; list | Spec updated — app form mirrors this |
 | 3d | `docs/prototype/admin.html` | People & roles | PSSM Admin | search mobile, roles, remove | Prototype done |
 | 4 | `docs/prototype/visitor.html` | Accommodation wizard | Visitor | switcher, progress, form, grid, subnav, modal, description list | Draft |
 
@@ -383,7 +383,7 @@ The landing is **PSSM Buddha Sangha**: Join, Login to My Space, and Free / Paid 
 
 Login is `docs/prototype/login.html`. The person signs in with **mobile number** and **password**. The first password is created at join: up to the first 5 letters of the name, then the date and month of birth. Example: Ramakrishna, 15 August → `Ramak1508`.
 
-Join is `docs/prototype/join.html` (who → place → family → review → done). Optional passport-size live photo and ID proof sit on who and on each family member (advised, not required). Family members use collapsible person cards. Accommodation is `docs/prototype/visitor.html`, opened from Stay as Free or Paid. When a sangha join exists, visitor and family fields are prefilled from a copy of that profile. UIkit pieces in use: form, switcher, progress, grid, tab, chips, and camera capture.
+Join is `docs/prototype/join.html` (who → place → family → review → done). Optional passport-size live photo and ID proof sit on who and on each family member (advised, not required). Family members use collapsible person cards. Accommodation in the React app is `/stay?plan=free|paid` (prototype `visitor.html`): who → place → family → how long (start/end per person) → review. When a sangha join exists, people details are prefilled and the wizard opens at how long. Accommodation Volunteers get Myself / New visitor. Stay uses the header-selected event. UIkit pieces in use: form, progress, grid, tab, chips, and camera capture.
 
 Paper screenshots will be added here when they are shared.
 
@@ -459,7 +459,7 @@ The first password is created at join: up to the first 5 letters of the name + d
 - PSSM Admin joins and logs in like any member, then lands on People & roles (`admin.html`).
 - PSSM Admin pre-assigns one or more of Event Organizer, Pyramid Sevadal, PMMA Member.
 - My Profile shows assigned roles (read-only).
-- Event Organizer opens Create event (name, start date, end date). Saved events feed the header event picker for later Stay.
+- Event Organizer opens Create event (name, dates, location, expected budget INR, optional meditation hours/day). Saved events feed the header event picker; Free and Paid Stay use the selected event.
 
 **My Profile (`profile.html`)**
 
@@ -487,9 +487,18 @@ PSSM Admin landing after login. Compact join-step-1 style:
 - Selected person card: role chips, assign checkboxes (Event Organizer / Pyramid Sevadal / PMMA Member), equal **Save roles** / **Remove person** buttons.
 - Remove uses UIkit confirm. Prototype sample admin on login (`9000000001` / `PssmA0101`); claim-admin remains if none exists.
 
-**Create event (`events.html`)**
+**Create event (`events.html` / `/events`)**
 
-Signed-in Event Organizer only. Form: event name, start date, end date. Saves into `localStorage` and lists the organizer’s events. Non-organizers see a short gate message pointing to PSSM Admin People & roles.
+Signed-in Event Organizer only. Form fields, in order:
+
+1. Event name (required)  
+2. Start date · End date (required; end on or after start)  
+3. Location — one line (required; city / venue / center)  
+4. Expected budget — INR (required, > 0)  
+5. Meditation hours per day (optional)  
+6. Save → list of events  
+
+Helper under the form: *Free and Paid Stay use the event selected in the header.* Non-organizers see a short gate message pointing to PSSM Admin People & roles. Each listed event has **Edit**, which fills the form for update. Header event picker shows name and dates only (not budget).
 
 
 **Join PSSM Buddha Sangha (`join.html`)**

@@ -1,6 +1,7 @@
 package com.pssm.sangha.config;
 
 import com.pssm.sangha.domain.Person;
+import com.pssm.sangha.domain.PyramidCenter;
 import com.pssm.sangha.domain.SanghaEvent;
 import com.pssm.sangha.domain.SanghaPlace;
 import org.slf4j.Logger;
@@ -56,6 +57,13 @@ public class MongoIndexInitializer implements ApplicationRunner {
         events.ensureIndex(new Index().on("createdBy", Sort.Direction.ASC).named("idx_events_created_by"));
         events.ensureIndex(new Index().on("createdAt", Sort.Direction.DESC).named("idx_events_created_at"));
 
-        log.info("MongoDB indexes ensured for people, places, events");
+        IndexOperations centers = mongoTemplate.indexOps(PyramidCenter.class);
+        centers.ensureIndex(new Index().on("name", Sort.Direction.ASC).unique().named("uk_pyramid_centers_name"));
+        centers.ensureIndex(new Index()
+                .on("usageCount", Sort.Direction.DESC)
+                .on("name", Sort.Direction.ASC)
+                .named("idx_pyramid_centers_usage_name"));
+
+        log.info("MongoDB indexes ensured for people, places, events, pyramid_centers");
     }
 }

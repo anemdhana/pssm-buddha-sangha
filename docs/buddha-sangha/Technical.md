@@ -82,7 +82,7 @@ Sangha register technical notes and event accommodation (allocation + REST API) 
 | 2 | **Supporting events** | Active events (Register Admin can set Active/Inactive anytime), budgets, host-first support, equal share | Register Admin / Sangha member |
 | 3 | **Accommodation** | Hotels, rooms, Free/Paid Stay for an event, booking window, smart allotment, receptionist check-in/out | **Accommodation Admin**, Hotel Receptionist, Visitor |
 
-**Role note:** **PSSM Admin** (People & roles on My Space) assigns Event Organizer / Pyramid Sevadal / PMMA Member. That is not the same as **Accommodation Admin**, who runs hotels and room allotment for Stay.
+**Role note:** **PSSM Admin** (People & roles on My Space) assigns Event Organizer / Pyramid Sevadal / PMMA Member / Accommodation Volunteer. **Accommodation Volunteer** books Free/Paid stay (including for new visitors, who are added to the sangha register). That is not the same as **Accommodation Admin**, who runs hotels and room allotment for Stay.
 
 ## Chosen technical stack
 
@@ -137,7 +137,7 @@ This layer is the look-and-feel and interaction draft for Join / My Space. It is
 | Change password | `password.html` | Signed-in |
 | People & roles | `admin.html` | PSSM Admin |
 | Create event | `events.html` | Event Organizer |
-| Stay (shell) | `visitor.html` | Guest / signed-in — prefills from join copy |
+| Stay booking | React `/stay?plan=free\|paid` (+ `visitor.html` prototype) | Signed-in; header event; join-like wizard + per-person stay dates; Accommodation Volunteer can register new visitors |
 
 ### Browser storage keys
 
@@ -147,7 +147,7 @@ This layer is the look-and-feel and interaction draft for Join / My Space. It is
 | `pssm_sangha_profile` | Last-touched profile (legacy / unsigned prefill) |
 | `pssm_sangha_session` | Signed-in mobile, name, roles |
 | `pssm_role_assignments` | Mobile → role id list |
-| `pssm_events` | Events created by organizers (name, start, end) |
+| `pssm_events` / Mongo `events` | Events created by organizers (name, start, end, location, expectedBudgetInr, optional meditationHoursPerDay) |
 
 ### Roles
 
@@ -157,6 +157,7 @@ This layer is the look-and-feel and interaction draft for Join / My Space. It is
 | `event_organizer` | Event Organizer | PSSM Admin | `events.html` |
 | `pyramid_sevadal` | Pyramid Sevadal | PSSM Admin | Later Stay priority |
 | `pmma_member` | PMMA Member | PSSM Admin | Later Stay / PMMA flows |
+| `accommodation_volunteer` | Accommodation Volunteer | PSSM Admin | Book stay for new visitors (join + booking together) |
 
 Assignable by Admin UI: Event Organizer, Pyramid Sevadal, PMMA Member only. PSSM Admin is preserved when member roles are saved.
 
@@ -333,7 +334,7 @@ These endpoints back Join → Login → My Space, PSSM Admin People & roles, and
 | List success | `{ "data": [ ... ] }` |
 | Error | `{ "error": { "code": "UNAUTHORIZED", "message": "..." } }` |
 | Mobile | Digits only in storage and path params |
-| Roles | `pssm_admin`, `event_organizer`, `pyramid_sevadal`, `pmma_member` |
+| Roles | `pssm_admin`, `event_organizer`, `pyramid_sevadal`, `pmma_member`, `accommodation_volunteer` |
 
 | HTTP | When |
 | --- | --- |
@@ -472,6 +473,9 @@ Response `200`
       "name": "Dhyana Maha Yagam - 5",
       "startDate": "2026-12-21",
       "endDate": "2026-12-31",
+      "location": "Pyramid Meditation Center, Hyderabad",
+      "expectedBudgetInr": 500000,
+      "meditationHoursPerDay": 3,
       "createdBy": "9876543210"
     }
   ]
@@ -483,10 +487,32 @@ Response `200`
 Event Organizer only.
 
 ```json
-{ "name": "Dhyana Maha Yagam - 5", "startDate": "2026-12-21", "endDate": "2026-12-31" }
+{
+  "name": "Dhyana Maha Yagam - 5",
+  "startDate": "2026-12-21",
+  "endDate": "2026-12-31",
+  "location": "Pyramid Meditation Center, Hyderabad",
+  "expectedBudgetInr": 500000,
+  "meditationHoursPerDay": 3
+}
 ```
 
-Response `201`: `{ "data": { ...event } }`. End date must be on or after start date.
+| Field | Required | Notes |
+| --- | --- | --- |
+| `name` | Yes | Non-empty |
+| `startDate` | Yes | ISO date `YYYY-MM-DD` |
+| `endDate` | Yes | On or after `startDate` |
+| `location` | Yes | One-line free text |
+| `expectedBudgetInr` | Yes | Number > 0 (INR) |
+| `meditationHoursPerDay` | No | Number ≥ 0 when present |
+
+Response `201`: `{ "data": { ...event } }`.
+
+#### `PUT /events/{id}`
+
+Event Organizer only. Same body as `POST /events`. Response `200`: `{ "data": { ...event } }`. `404` if id unknown.
+
+**Stay link:** Free and Paid accommodation always use the event selected in the header picker (booking cutoff = start − 2 days, allotment, hotels). Header picker subtitle shows dates only (not budget).
 
 ### Endpoint index
 
@@ -505,6 +531,7 @@ Response `201`: `{ "data": { ...event } }`. End date must be on or after start d
 | POST | `/sangha/admin/claim` | Signed-in (bootstrap) |
 | GET | `/events` | Signed-in |
 | POST | `/events` | Event Organizer |
+| PUT | `/events/{id}` | Event Organizer |
 
 ---
 
@@ -571,7 +598,7 @@ Same as [Chosen technical stack](#chosen-technical-stack). Accommodation-specifi
 | Real-time          | **Spring WebSocket** (STOMP)        | Live notifications between Accommodation Admin and Hotel Receptionists. |
 | Notifications      | **WhatsApp** (primary for now)      | Alerts to Accommodation Admin / Receptionist / Visitors as needed. |
 | Database           | **MongoDB 7** + Spring Data MongoDB | Document model (embedded family/place). |
-| Authentication     | **Spring Security session** + RBAC  | Roles: Accommodation Admin, Hotel Receptionist, Visitor, Sangha member, plus **PSSM Admin** and pre-assigned member roles **Event Organizer**, **Pyramid Sevadal**, **PMMA Member** (one or more). PSSM Admin lands on People & roles to search by mobile, assign/remove those roles, and remove people. A family group signs in with mobile number + password. First password is up to 5 letters of the name + date + month (e.g. `Ramak1508`), created at join, and can be changed. After login, the UI shows Stay + Account only; My Profile edits the sangha record through a join-like wizard. Event Organizer may create events (name, start, end) used later for accommodation. |
+| Authentication     | **Spring Security session** + RBAC  | Roles: Accommodation Admin, Hotel Receptionist, Visitor, Sangha member, plus **PSSM Admin** and pre-assigned member roles **Event Organizer**, **Pyramid Sevadal**, **PMMA Member** (one or more). PSSM Admin lands on People & roles to search by mobile, assign/remove those roles, and remove people. A family group signs in with mobile number + password. First password is up to 5 letters of the name + date + month (e.g. `Ramak1508`), created at join, and can be changed. After login, the UI shows Stay + Account only; My Profile edits the sangha record through a join-like wizard. Event Organizer may create events (name, dates, location, expected budget INR, optional meditation hours/day); Free and Paid Stay use the selected event. |
 | File Storage       | Local disk or Cloud (S3/Cloudinary) | For live photos and ID proof images. |
 | Deploy             | **Docker Compose** on one VPS       | Nginx + Spring Boot + MongoDB with resource limits — see [Production deployment](#production-deployment). |
 
@@ -763,7 +790,7 @@ Visitors must never take room keys with them. Keys must always be deposited with
 | Reserved hotels | **Decision:** A Reserved switch on the hotel list (and on the hotel form) keeps that hotel out of smart allocation. Accommodation Admin assigns it manually |
 | Visitor password | **Decision:** Login uses **mobile + password**. Temporary password is up to the first 5 letters of the main person's name, then date and month of birth (two digits each). No event code. Example: `Ramak1508`. The visitor may change it |
 | Member roles | **Decision:** PSSM Admin assigns zero or more of **Event Organizer**, **Pyramid Sevadal**, **PMMA Member** to a mobile. Prototype stores people in `localStorage` (`pssm_sangha_people`), assignments in `pssm_role_assignments`, and syncs onto the person at login. PSSM Admin uses `admin.html` to search, assign/remove roles, and remove people (UIkit confirm). Prototype bootstrap: claim PSSM Admin when none exists yet |
-| Event create | **Decision:** Event Organizer creates events with name, start date, end date. Prototype stores them in `localStorage` (`pssm_events`) and lists them in the header event picker for later Stay / accommodation |
+| Event create / edit | **Decision:** Event Organizer creates and updates events (name, dates, location, expected budget INR, optional meditation hours/day). Mongo `events` (mock: `pssm_events`). Header picker shows name + dates only; budget stays on Create/Edit and the events list |
 | Event location priority | **Decision:** Smart allocation places parties from the event's city or town first. Anyone still without a room is assigned manually |
 
 ---
@@ -1303,55 +1330,72 @@ Response `200`: Room. `409` on a duplicate room number.
 Calls in this section use the visitor token, except create. Accommodation Admin may `GET` a booking.
 
 #### `POST /bookings`  
-Public while the window is open. Starts V1 and V2.
+**Authenticated.** Creates a stay booking for the header-selected event. Accommodation Volunteer may set `registerFamily: true` to join a new mobile into the sangha register in the same call.
 
-Request
+Request (current React Stay wizard)
 
 ```json
 {
-  "accommodation": "free",
-  "visitorName": "Lakshmi",
-  "mobile": "9848011111",
-  "gender": "ladies",
-  "area": "rural",
-  "place": {
-    "village": "Pamarru",
-    "town": "Pamarru",
-    "district": "Krishna",
-    "state": "Andhra Pradesh",
-    "country": "India"
-  },
-  "pyramidSevadal": false,
-  "roomTypePreference": "ac"
+  "plan": "free",
+  "eventId": "evt_…",
+  "eventName": "Dhyana Maha Yagam - 5",
+  "registerFamily": false,
+  "family": {
+    "fullName": "Lakshmi",
+    "mobile": "9848011111",
+    "gender": "female",
+    "age": "adult",
+    "meditation": "3",
+    "birthDate": "22",
+    "birthMonth": "03",
+    "place": { "kind": "urban", "city": "Hyderabad", "state": "Telangana", "country": "India" },
+    "members": [],
+    "stayStartDate": "2026-12-21",
+    "stayEndDate": "2026-12-25"
+  }
 }
 ```
 
-Urban `place` is `{ "city", "state", "country" }`.  
-`roomTypePreference` is required when `accommodation` is `free`, and omitted when it is `self`.  
-`mobile` must be a valid phone number.
+`plan` is `free` or `paid`. Each person (primary + members) carries `stayStartDate` / `stayEndDate` (ISO dates, end ≥ start; within event window when known).  
+`registerFamily: true` requires Accommodation Volunteer (or PSSM Admin); creates the person if the mobile is free (`409` `MOBILE_TAKEN` otherwise).  
+Self booking does not update the sangha profile.
 
 Response `201`
 
 ```json
 {
   "data": {
-    "booking": { "id": "pty_2", "status": "waiting", "personCount": 1 }
+    "booking": {
+      "id": "…",
+      "status": "registered",
+      "bookedAt": "2026-10-12T06:00:00Z",
+      "personCount": 1,
+      "plan": "free",
+      "familyMobile": "9848011111",
+      "familyFullName": "Lakshmi",
+      "family": {},
+      "guests": []
+    }
   }
 }
 ```
 
-If the caller was a guest, the server may establish a visitor session cookie so later steps stay authenticated. `self` is stored as `self_booked` and is skipped by allocation. `409` `BOOKING_CLOSED` after the cutoff.
+`bookedAt` is set server-side when the interest is submitted (same instant as `createdAt`). Status is `registered` until a later room-allocation pass assigns hotels (`allotted`, etc.).  
+`GET /bookings?eventId=` — Accommodation Volunteer, Event Organizer, or PSSM Admin: list stay interest (families) for that event, newest first.
+
+Stored fields: `familyMobile`, `familyFullName`, `registeredFamily`, `familyDetail` (Mongo). Response embeds `family` (profile shape) plus `guests`.
+
+Full stepwise visitor booking (family PATCH, couple consent, identity) remains specified below for later allotment work. `409` `BOOKING_CLOSED` after the cutoff (not yet enforced in this pass).
 
 #### `GET /bookings/:bookingId`  
 Visitor (own booking), admin.
 
-Response `200`: party, family members, stay rows, special needs, couple consent, id card if issued, allotment if confirmed.
+Response `200`: family, family members, stay rows, special needs, couple consent, id card if issued, allotment if confirmed.
 
 #### `PATCH /bookings/:bookingId`  
-Visitor, while the window is open. Same fields as create. `409` after close.
+Visitor, while the window is open. Body uses `family` (same shape as create). Optional `updateSanghaProfile`. `409` after close.
 
-Response `200`: updated party.
-
+Response `200`: updated family.
 #### `POST /bookings/:bookingId/family-members`  
 Visitor.
 

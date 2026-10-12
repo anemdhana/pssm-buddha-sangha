@@ -8,12 +8,15 @@ import {
   normalizeRoles
 } from '../../utils/password.js';
 import seedPlaces from '../../data/sangha_places.json';
+import seedCenters from '../../data/sangha_pyramid_centers.json';
 
 const PEOPLE_KEY = 'pssm_sangha_people';
 const SESSION_KEY = 'pssm_sangha_session';
 const EVENTS_KEY = 'pssm_events';
 const ROLE_ASSIGN_KEY = 'pssm_role_assignments';
 const PLACES_KEY = 'pssm_sangha_places';
+const CENTERS_KEY = 'pssm_sangha_pyramid_centers';
+const STAY_BOOKINGS_KEY = 'pssm_stay_bookings';
 
 const SAMPLE_ADMIN = {
   fullName: 'Pssm Admin',
@@ -62,6 +65,21 @@ const SAMPLE_PEOPLE = [
     place: { kind: 'urban', city: 'Bengaluru', state: 'Karnataka', country: 'India' },
     members: [],
     roles: ['pyramid_sevadal']
+  },
+  {
+    fullName: 'Meena Shah',
+    mobile: '9876511111',
+    gender: 'female',
+    age: 'adult',
+    meditation: '2',
+    birthDate: '10',
+    birthMonth: '05',
+    language: 'Hindi',
+    pyramidCenter: 'Pyramid Meditation Center, Hyderabad',
+    sinceYear: '2020',
+    place: { kind: 'urban', city: 'Hyderabad', state: 'Telangana', country: 'India' },
+    members: [],
+    roles: ['accommodation_volunteer']
   }
 ];
 
@@ -139,6 +157,47 @@ function readPlaces() {
 
 function savePlaces(list) {
   writeJson(PLACES_KEY, list);
+}
+
+function toCenterRow(raw, index) {
+  const name = String(raw.name || '').trim();
+  return {
+    id: raw.id || `seed_center_${index}`,
+    name,
+    usageCount: Number(raw.usageCount) || 0,
+    label: name
+  };
+}
+
+function ensureCenters() {
+  const seeded = (Array.isArray(seedCenters) ? seedCenters : []).map((row, i) => toCenterRow(row, i));
+  const existing = readJson(CENTERS_KEY, null);
+  if (!Array.isArray(existing) || existing.length === 0) {
+    writeJson(CENTERS_KEY, seeded);
+    return seeded;
+  }
+  if (existing.length >= seeded.length) {
+    return existing;
+  }
+  const merged = [...seeded];
+  existing
+    .filter((c) => String(c.id || '').startsWith('user_'))
+    .forEach((userCenter) => {
+      const dup = merged.some(
+        (c) => c.name.toLowerCase() === String(userCenter.name || '').toLowerCase()
+      );
+      if (!dup) merged.push(userCenter);
+    });
+  writeJson(CENTERS_KEY, merged);
+  return merged;
+}
+
+function readCenters() {
+  return ensureCenters();
+}
+
+function saveCenters(list) {
+  writeJson(CENTERS_KEY, list);
 }
 
 function readPeople() {
@@ -258,6 +317,89 @@ function ensureSampleAdmin() {
     password: composedPassword(SAMPLE_ADMIN),
     name: SAMPLE_ADMIN.fullName
   };
+}
+
+function familySnapshotFromForm(form, digits, fullName) {
+  const snap = JSON.parse(JSON.stringify(form || {}));
+  snap.fullName = fullName;
+  snap.mobile = digits;
+  delete snap.password;
+  return snap;
+}
+
+function enrichStayBookingRow(booking) {
+  if (!booking) return booking;
+  const guests = Array.isArray(booking.guests) ? booking.guests : [];
+  const personCount = guests.length;
+  const family = booking.family || {
+    fullName: booking.familyFullName,
+    mobile: booking.familyMobile,
+    place: booking.place || {},
+    members: []
+  };
+  const place = booking.place || family.place || {};
+  return {
+    ...booking,
+    guests,
+    family,
+    place,
+    personCount,
+    familyCount: Math.max(0, personCount - 1)
+  };
+}
+
+function readStayBookings() {
+  const list = readJson(STAY_BOOKINGS_KEY, []);
+  return Array.isArray(list) ? list : [];
+}
+
+function writeStayBookings(list) {
+  writeJson(STAY_BOOKINGS_KEY, Array.isArray(list) ? list : []);
+}
+
+function buildStayGuestsFromFamily(form, eventStart, eventEnd) {
+  const fullName = String(form.fullName || '').trim();
+  const digits = normalizeMobile(form.mobile);
+  function validateStay(startRaw, endRaw, who) {
+    const start = String(startRaw || '').trim();
+    const end = String(endRaw || '').trim();
+    if (!start) throw apiError(400, 'VALIDATION', `Enter stay start date for ${who}.`);
+    if (!end) throw apiError(400, 'VALIDATION', `Enter stay end date for ${who}.`);
+    if (end < start) {
+      throw apiError(400, 'VALIDATION', `Stay end must be on or after stay start for ${who}.`);
+    }
+    if (eventStart && start < eventStart) {
+      throw apiError(400, 'VALIDATION', `Stay start is before the event for ${who}.`);
+    }
+    if (eventEnd && end > eventEnd) {
+      throw apiError(400, 'VALIDATION', `Stay end is after the event for ${who}.`);
+    }
+    return { stayStartDate: start, stayEndDate: end };
+  }
+  const guests = [
+    {
+      name: fullName,
+      relation: '',
+      mobile: digits,
+      gender: form.gender || '',
+      age: form.age || '',
+      primary: true,
+      ...validateStay(form.stayStartDate, form.stayEndDate, 'your')
+    }
+  ];
+  (Array.isArray(form.members) ? form.members : []).forEach((member, index) => {
+    const name = String((member && member.name) || '').trim() || `Family member ${index + 1}`;
+    guests.push({
+      name,
+      relation: (member && member.relation) || '',
+      mobile: normalizeMobile(member && member.mobile),
+      gender: (member && member.gender) || '',
+      age: (member && member.age) || '',
+      primary: false,
+      ...validateStay(member && member.stayStartDate, member && member.stayEndDate, name)
+    });
+  });
+  return { guests, fullName, digits };
 }
 
 function apiError(status, code, message) {
@@ -546,7 +688,51 @@ export const mockApi = {
     return { data: created };
   },
 
-  async createEvent({ name, startDate, endDate }) {
+  async searchPyramidCenters({ q = '', limit = 25 } = {}) {
+    const query = String(q || '')
+      .trim()
+      .toLowerCase();
+    const size = Math.min(Math.max(Number(limit) || 25, 1), 50);
+    const rows = readCenters()
+      .filter((c) => {
+        if (!query) return true;
+        return String(c.name || '')
+          .toLowerCase()
+          .includes(query);
+      })
+      .sort((a, b) => (b.usageCount || 0) - (a.usageCount || 0) || a.name.localeCompare(b.name))
+      .slice(0, size);
+    return { data: rows };
+  },
+
+  async rememberPyramidCenter(body) {
+    const name = String(body?.name || body?.pyramidCenter || '').trim();
+    if (!name) throw apiError(400, 'VALIDATION', 'Enter a pyramid center or group.');
+    const list = readCenters();
+    const idx = list.findIndex((c) => c.name.toLowerCase() === name.toLowerCase());
+    if (idx >= 0) {
+      const next = {
+        ...list[idx],
+        usageCount: (list[idx].usageCount || 0) + 1
+      };
+      list[idx] = next;
+      saveCenters(list);
+      return { data: next };
+    }
+    const created = toCenterRow(
+      {
+        id: `user_center_${Date.now()}`,
+        name,
+        usageCount: 1
+      },
+      list.length
+    );
+    list.push(created);
+    saveCenters(list);
+    return { data: created };
+  },
+
+  async createEvent({ name, startDate, endDate, location, expectedBudgetInr, meditationHoursPerDay }) {
     if (!isSignedIn()) throw apiError(401, 'UNAUTHORIZED', 'Please login again.');
     const session = readSession();
     if (rolesForMobile(session.mobile).indexOf('event_organizer') < 0) {
@@ -555,15 +741,31 @@ export const mockApi = {
     const eventName = String(name || '').trim();
     const start = String(startDate || '').trim();
     const end = String(endDate || '').trim();
+    const place = String(location || '').trim();
+    const budget = Number(expectedBudgetInr);
     if (!eventName) throw apiError(400, 'VALIDATION', 'Enter the event name.');
     if (!start) throw apiError(400, 'VALIDATION', 'Enter the start date.');
     if (!end) throw apiError(400, 'VALIDATION', 'Enter the end date.');
     if (end < start) throw apiError(400, 'VALIDATION', 'End date must be on or after the start date.');
+    if (!place) throw apiError(400, 'VALIDATION', 'Enter the event location.');
+    if (!(budget > 0)) {
+      throw apiError(400, 'VALIDATION', 'Enter an expected budget greater than zero (INR).');
+    }
+    let hours = null;
+    if (meditationHoursPerDay !== undefined && meditationHoursPerDay !== null && String(meditationHoursPerDay).trim() !== '') {
+      hours = Number(meditationHoursPerDay);
+      if (!(hours >= 0)) {
+        throw apiError(400, 'VALIDATION', 'Meditation hours per day cannot be negative.');
+      }
+    }
     const event = {
       id: `evt_${Date.now()}`,
       name: eventName,
       startDate: start,
       endDate: end,
+      location: place,
+      expectedBudgetInr: budget,
+      meditationHoursPerDay: hours,
       createdBy: session.mobile,
       createdAt: Date.now()
     };
@@ -572,6 +774,220 @@ export const mockApi = {
     next.unshift(event);
     writeJson(EVENTS_KEY, next);
     return { data: event };
+  },
+
+  async createStayBooking({ plan, eventId, eventName, registerFamily, family }) {
+    if (!isSignedIn()) throw apiError(401, 'UNAUTHORIZED', 'Please login again.');
+    const session = readSession();
+    const roles = rolesForMobile(session.mobile);
+    const isVolunteer =
+      roles.indexOf('accommodation_volunteer') >= 0 || roles.indexOf('pssm_admin') >= 0;
+    const wantRegister = Boolean(registerFamily);
+    if (wantRegister && !isVolunteer) {
+      throw apiError(403, 'FORBIDDEN', 'Only an Accommodation Volunteer can register a new visitor while booking.');
+    }
+    const eventKey = String(eventId || '').trim();
+    if (!eventKey) throw apiError(400, 'VALIDATION', 'Select an event before booking.');
+    const events = readJson(EVENTS_KEY, []);
+    const known = Array.isArray(events) ? events.find((e) => e.id === eventKey) : null;
+    const resolvedName =
+      (known && known.name) || String(eventName || '').trim() || 'Event';
+    const eventStart = known ? String(known.startDate || '').trim() : '';
+    const eventEnd = known ? String(known.endDate || '').trim() : '';
+
+    const form = family || {};
+    const fullName = String(form.fullName || '').trim();
+    const digits = normalizeMobile(form.mobile);
+    if (!fullName) throw apiError(400, 'VALIDATION', 'Enter the visitor full name.');
+    if (!digits) throw apiError(400, 'VALIDATION', 'Enter the visitor mobile number.');
+
+    let temporaryPassword = null;
+    let newlyRegistered = false;
+    if (wantRegister) {
+      if (findPerson(digits)) {
+        throw apiError(
+          409,
+          'MOBILE_TAKEN',
+          'This mobile is already registered. Book for them as an existing member, or use another mobile.'
+        );
+      }
+      if (!form.birthDate || !form.birthMonth) {
+        throw apiError(400, 'VALIDATION', 'Enter birth date and month.');
+      }
+      const profile = {
+        ...form,
+        fullName,
+        mobile: digits,
+        roles: []
+      };
+      delete profile.password;
+      delete profile.stayStartDate;
+      delete profile.stayEndDate;
+      upsertPerson(profile);
+      temporaryPassword = composedPassword(profile);
+      newlyRegistered = true;
+    } else if (digits !== normalizeMobile(session.mobile) && !isVolunteer) {
+      throw apiError(403, 'FORBIDDEN', 'You can only book accommodation for your own family.');
+    }
+
+    const { guests, fullName: nameLine, digits: mobileDigits } = buildStayGuestsFromFamily(
+      { ...form, fullName, mobile: digits },
+      eventStart,
+      eventEnd
+    );
+
+    const booking = enrichStayBookingRow({
+      id: `stay_${Date.now()}`,
+      eventId: eventKey,
+      eventName: resolvedName,
+      plan: plan === 'paid' ? 'paid' : 'free',
+      status: 'registered',
+      familyMobile: mobileDigits,
+      familyFullName: nameLine,
+      registeredFamily: newlyRegistered,
+      createdByMobile: session.mobile,
+      bookedAt: new Date().toISOString(),
+      createdAt: new Date().toISOString(),
+      place: form.place || { kind: 'urban', country: 'India' },
+      family: familySnapshotFromForm(form, mobileDigits, nameLine),
+      guests
+    });
+    const next = readStayBookings();
+    next.unshift(booking);
+    writeStayBookings(next);
+
+    const data = { booking };
+    if (temporaryPassword) {
+      data.temporaryPassword = temporaryPassword;
+      data.registeredFamily = true;
+    }
+    return { data };
+  },
+
+  async listStayBookings(eventId) {
+    if (!isSignedIn()) throw apiError(401, 'UNAUTHORIZED', 'Please login again.');
+    const session = readSession();
+    const roles = rolesForMobile(session.mobile);
+    const allowed =
+      roles.indexOf('accommodation_volunteer') >= 0 ||
+      roles.indexOf('pssm_admin') >= 0 ||
+      roles.indexOf('event_organizer') >= 0;
+    if (!allowed) {
+      throw apiError(403, 'FORBIDDEN', 'Not allowed to view event registrations.');
+    }
+    const id = String(eventId || '').trim();
+    if (!id) throw apiError(400, 'VALIDATION', 'Event id is required.');
+    const rows = readStayBookings()
+      .filter((b) => b && b.eventId === id)
+      .sort((a, b) => String(b.bookedAt || b.createdAt || '').localeCompare(String(a.bookedAt || a.createdAt || '')))
+      .map(enrichStayBookingRow);
+    return { data: rows };
+  },
+
+  async getStayBooking(id) {
+    if (!isSignedIn()) throw apiError(401, 'UNAUTHORIZED', 'Please login again.');
+    const session = readSession();
+    const roles = rolesForMobile(session.mobile);
+    const allowed =
+      roles.indexOf('accommodation_volunteer') >= 0 ||
+      roles.indexOf('pssm_admin') >= 0 ||
+      roles.indexOf('event_organizer') >= 0;
+    if (!allowed) throw apiError(403, 'FORBIDDEN', 'Not allowed to view event registrations.');
+    const key = String(id || '').trim();
+    const row = readStayBookings().find((b) => b && b.id === key);
+    if (!row) throw apiError(404, 'NOT_FOUND', 'Registration not found.');
+    return { data: { booking: enrichStayBookingRow(row) } };
+  },
+
+  async updateStayBooking(id, { plan, family, updateSanghaProfile }) {
+    if (!isSignedIn()) throw apiError(401, 'UNAUTHORIZED', 'Please login again.');
+    const session = readSession();
+    const roles = rolesForMobile(session.mobile);
+    const allowed =
+      roles.indexOf('accommodation_volunteer') >= 0 ||
+      roles.indexOf('pssm_admin') >= 0 ||
+      roles.indexOf('event_organizer') >= 0;
+    if (!allowed) throw apiError(403, 'FORBIDDEN', 'Not allowed to update registrations.');
+    const key = String(id || '').trim();
+    const list = readStayBookings();
+    const idx = list.findIndex((b) => b && b.id === key);
+    if (idx < 0) throw apiError(404, 'NOT_FOUND', 'Registration not found.');
+    const existing = list[idx];
+    const form = family || {};
+    const events = readJson(EVENTS_KEY, []);
+    const known = Array.isArray(events) ? events.find((e) => e.id === existing.eventId) : null;
+    const eventStart = known ? String(known.startDate || '').trim() : '';
+    const eventEnd = known ? String(known.endDate || '').trim() : '';
+    const { guests, fullName, digits } = buildStayGuestsFromFamily(form, eventStart, eventEnd);
+    if (!fullName) throw apiError(400, 'VALIDATION', 'Enter the visitor full name.');
+    if (!digits) throw apiError(400, 'VALIDATION', 'Enter the visitor mobile number.');
+    if (normalizeMobile(existing.familyMobile) !== digits) {
+      throw apiError(403, 'FORBIDDEN', 'You cannot change the primary mobile on this registration.');
+    }
+    if (updateSanghaProfile && findPerson(digits)) {
+      const profile = { ...form, fullName, mobile: digits, roles: rolesForMobile(digits) };
+      delete profile.password;
+      upsertPerson(profile);
+    }
+    const updated = enrichStayBookingRow({
+      ...existing,
+      plan: plan === 'paid' ? 'paid' : plan === 'free' ? 'free' : existing.plan,
+      familyFullName: fullName,
+      familyMobile: digits,
+      place: form.place || existing.place,
+      family: familySnapshotFromForm(form, digits, fullName),
+      guests
+    });
+    list[idx] = updated;
+    writeStayBookings(list);
+    return { data: { booking: updated } };
+  },
+
+  async updateEvent(id, { name, startDate, endDate, location, expectedBudgetInr, meditationHoursPerDay }) {
+    if (!isSignedIn()) throw apiError(401, 'UNAUTHORIZED', 'Please login again.');
+    const session = readSession();
+    if (rolesForMobile(session.mobile).indexOf('event_organizer') < 0) {
+      throw apiError(403, 'FORBIDDEN', 'Only an Event Organizer can update an event.');
+    }
+    const eventId = String(id || '').trim();
+    if (!eventId) throw apiError(400, 'VALIDATION', 'Event id is required.');
+    const list = readJson(EVENTS_KEY, []);
+    const next = Array.isArray(list) ? list : [];
+    const idx = next.findIndex((e) => e.id === eventId);
+    if (idx < 0) throw apiError(404, 'NOT_FOUND', 'Event not found.');
+
+    const eventName = String(name || '').trim();
+    const start = String(startDate || '').trim();
+    const end = String(endDate || '').trim();
+    const place = String(location || '').trim();
+    const budget = Number(expectedBudgetInr);
+    if (!eventName) throw apiError(400, 'VALIDATION', 'Enter the event name.');
+    if (!start) throw apiError(400, 'VALIDATION', 'Enter the start date.');
+    if (!end) throw apiError(400, 'VALIDATION', 'Enter the end date.');
+    if (end < start) throw apiError(400, 'VALIDATION', 'End date must be on or after the start date.');
+    if (!place) throw apiError(400, 'VALIDATION', 'Enter the event location.');
+    if (!(budget > 0)) {
+      throw apiError(400, 'VALIDATION', 'Enter an expected budget greater than zero (INR).');
+    }
+    let hours = null;
+    if (meditationHoursPerDay !== undefined && meditationHoursPerDay !== null && String(meditationHoursPerDay).trim() !== '') {
+      hours = Number(meditationHoursPerDay);
+      if (!(hours >= 0)) {
+        throw apiError(400, 'VALIDATION', 'Meditation hours per day cannot be negative.');
+      }
+    }
+    const updated = {
+      ...next[idx],
+      name: eventName,
+      startDate: start,
+      endDate: end,
+      location: place,
+      expectedBudgetInr: budget,
+      meditationHoursPerDay: hours
+    };
+    next[idx] = updated;
+    writeJson(EVENTS_KEY, next);
+    return { data: updated };
   },
 
   countPssmAdmins,

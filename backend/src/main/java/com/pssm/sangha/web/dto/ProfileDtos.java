@@ -31,6 +31,8 @@ public final class ProfileDtos {
         public String livePhoto;
         public String idProofPhoto;
         public PlaceDto place;
+        public String stayStartDate;
+        public String stayEndDate;
     }
 
     public static class ProfileDto {
@@ -52,6 +54,8 @@ public final class ProfileDtos {
         public PlaceDto place;
         public List<MemberDto> members = new ArrayList<>();
         public List<String> roles = new ArrayList<>();
+        public String stayStartDate;
+        public String stayEndDate;
     }
 
     public static class LoginRequest {
@@ -73,6 +77,9 @@ public final class ProfileDtos {
         public String name;
         public String startDate;
         public String endDate;
+        public String location;
+        public Double expectedBudgetInr;
+        public Double meditationHoursPerDay;
     }
 
     public static Map<String, Object> ok() {

@@ -53,6 +53,10 @@ public class SampleDataLoader {
                     "Lakshmi Devi", "9876501234", "22", "03",
                     "Indiranagar Pyramid Group", "Bengaluru", "Karnataka",
                     Set.of(SanghaRole.PYRAMID_SEVADAL));
+            seedPerson(personRepository, passwordEncoder,
+                    "Meena Shah", "9876511111", "10", "05",
+                    "Pyramid Meditation Center, Hyderabad", "Hyderabad", "Telangana",
+                    Set.of(SanghaRole.ACCOMMODATION_VOLUNTEER));
 
             log.info("Seeded sample PSSM Admin {} / {}", mobile, password);
         };

@@ -81,6 +81,8 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/v1/sangha/join").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/places").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/v1/places").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/pyramid-centers").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/v1/pyramid-centers").permitAll()
                         .requestMatchers("/api/v1/**").authenticated()
                         .anyRequest().permitAll()
                 )

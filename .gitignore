@@ -2,13 +2,17 @@ node_modules/
 .env
 uploads/
 *.log
+backend-run.out
+backend-run.err
 .DS_Store
 Thumbs.db
 frontend/dist/
 frontend/node_modules/
+frontend/%TEMP%/
 backend/target/
 **/__pycache__/
 *.pyc
 *.pyo
+scripts/.cache/
 .idea/
 .vscode/

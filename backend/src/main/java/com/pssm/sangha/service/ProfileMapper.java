@@ -3,18 +3,93 @@ package com.pssm.sangha.service;
 import com.pssm.sangha.domain.FamilyMember;
 import com.pssm.sangha.domain.Person;
 import com.pssm.sangha.domain.PlaceInfo;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pssm.sangha.web.dto.ProfileDtos.MemberDto;
 import com.pssm.sangha.web.dto.ProfileDtos.PlaceDto;
 import com.pssm.sangha.web.dto.ProfileDtos.ProfileDto;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import org.springframework.stereotype.Component;
 
 @Component
 public class ProfileMapper {
+
+    private static final ObjectMapper MAPPER = new ObjectMapper()
+            .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+
+    public Map<String, Object> profileToMap(ProfileDto dto) {
+        if (dto == null) {
+            return new LinkedHashMap<>();
+        }
+        return MAPPER.convertValue(dto, new TypeReference<LinkedHashMap<String, Object>>() {
+        });
+    }
+
+    public ProfileDto profileFromMap(Map<String, Object> map) {
+        if (map == null || map.isEmpty()) {
+            return new ProfileDto();
+        }
+        try {
+            // Mongo may return org.bson.Document values — normalize via Jackson first.
+            Object normalized = MAPPER.convertValue(sanitizeMap(map), Object.class);
+            return MAPPER.convertValue(normalized, ProfileDto.class);
+        } catch (IllegalArgumentException ex) {
+            return new ProfileDto();
+        }
+    }
+
+    public Map<String, Object> placeToMap(PlaceInfo place) {
+        PlaceDto dto = placeFromInfo(place);
+        Map<String, Object> out = new LinkedHashMap<>();
+        out.put("kind", dto.kind);
+        out.put("village", dto.village);
+        out.put("town", dto.town);
+        out.put("district", dto.district);
+        out.put("city", dto.city);
+        out.put("state", dto.state);
+        out.put("country", dto.country);
+        return out;
+    }
+
+    @SuppressWarnings("unchecked")
+    private Map<String, Object> sanitizeMap(Map<?, ?> raw) {
+        Map<String, Object> clean = new LinkedHashMap<>();
+        if (raw == null) {
+            return clean;
+        }
+        for (Map.Entry<?, ?> entry : raw.entrySet()) {
+            if (entry.getKey() == null) {
+                continue;
+            }
+            clean.put(String.valueOf(entry.getKey()), sanitizeValue(entry.getValue()));
+        }
+        return clean;
+    }
+
+    @SuppressWarnings("unchecked")
+    private Object sanitizeValue(Object value) {
+        if (value == null) {
+            return null;
+        }
+        if (value instanceof Map<?, ?> nested) {
+            return sanitizeMap(nested);
+        }
+        if (value instanceof List<?> list) {
+            List<Object> next = new ArrayList<>(list.size());
+            for (Object item : list) {
+                next.add(sanitizeValue(item));
+            }
+            return next;
+        }
+        return value;
+    }
 
     public ProfileDto toDto(Person person) {
         ProfileDto dto = new ProfileDto();
@@ -136,7 +211,7 @@ public class ProfileMapper {
         return dto;
     }
 
-    private PlaceInfo toPlaceInfo(PlaceDto place) {
+    public PlaceInfo toPlaceInfo(PlaceDto place) {
         if (place == null) {
             return null;
         }

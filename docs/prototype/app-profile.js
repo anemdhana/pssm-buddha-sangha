@@ -9,7 +9,12 @@
         pssm_admin: { id: 'pssm_admin', label: 'PSSM Admin', assignable: false },
         event_organizer: { id: 'event_organizer', label: 'Event Organizer', assignable: true },
         pyramid_sevadal: { id: 'pyramid_sevadal', label: 'Pyramid Sevadal', assignable: true },
-        pmma_member: { id: 'pmma_member', label: 'PMMA Member', assignable: true }
+        pmma_member: { id: 'pmma_member', label: 'PMMA Member', assignable: true },
+        accommodation_volunteer: {
+            id: 'accommodation_volunteer',
+            label: 'Accommodation Volunteer',
+            assignable: true
+        }
     };
 
     const ASSIGNABLE_ROLE_IDS = Object.keys(ROLES).filter((id) => ROLES[id].assignable);
