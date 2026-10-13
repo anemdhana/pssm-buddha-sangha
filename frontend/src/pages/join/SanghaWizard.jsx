@@ -613,6 +613,22 @@ export function SanghaWizard({
                       />
                       <FieldError id="err-meditation" message={fieldErrors.meditation} />
                     </div>
+                    <div className="x-field uk-width-1-1">
+                      <label className="x-label" htmlFor="profession">
+                        Work / profession
+                      </label>
+                      <div className="uk-inline uk-width-1-1">
+                        <span className="uk-form-icon" uk-icon="icon: pencil" />
+                        <input
+                          className="uk-input uk-form-small"
+                          id="profession"
+                          type="text"
+                          placeholder="Teacher, farmer, student…"
+                          value={form.profession || ''}
+                          onChange={(e) => update('profession', e.target.value)}
+                        />
+                      </div>
+                    </div>
                   </div>
                 </section>
 
@@ -1025,6 +1041,7 @@ export function SanghaWizard({
                       form.meditation
                     )}
                   />
+                  <SummaryRow label="Profession" value={form.profession || '—'} />
                   <SummaryRow
                     label="Birth"
                     value={`${form.birthDate || '—'} / ${form.birthMonth || '—'}`}
@@ -1052,6 +1069,7 @@ export function SanghaWizard({
                       const bits = [
                         m.name || `Person ${i + 2}`,
                         m.relation,
+                        m.profession,
                         labelMap(
                           { child: 'Child · under 12', adult: 'Adult · 12–59', senior: 'Senior · 60+' },
                           m.age

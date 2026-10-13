@@ -6,6 +6,7 @@ import com.pssm.sangha.web.dto.StayBookingDtos.CreateStayBookingRequest;
 import com.pssm.sangha.web.dto.StayBookingDtos.UpdateStayBookingRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -14,6 +15,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/bookings")
@@ -43,5 +45,11 @@ public class StayBookingController {
     @PutMapping("/{id}")
     public ResponseEntity<?> update(@PathVariable("id") String id, @RequestBody UpdateStayBookingRequest body) {
         return ResponseEntity.ok(ApiResponses.data(stayBookingService.update(id, body)));
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<?> delete(@PathVariable("id") String id) {
+        stayBookingService.delete(id);
+        return ResponseEntity.ok(ApiResponses.data(Map.of("deleted", true, "id", id)));
     }
 }

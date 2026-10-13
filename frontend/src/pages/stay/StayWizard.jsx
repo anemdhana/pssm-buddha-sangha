@@ -245,9 +245,15 @@ export function StayWizard({
   bookingMode = 'self',
   initialForm = null,
   skipToDays = false,
+  initialStep = null,
+  initialOpenMember = 0,
   bookingId = null,
   updateSanghaProfile = false,
-  cancelTo = null
+  cancelTo = null,
+  cancelLabel = null,
+  cancelIcon = 'reply',
+  showBookingModePicker = false,
+  onBookingModeChange = null
 }) {
   const navigate = useNavigate();
   const isEdit = Boolean(bookingId);
@@ -255,7 +261,12 @@ export function StayWizard({
   const eventName = (event && event.name) || 'the event';
   const lockMobile =
     isEdit || (bookingMode === 'self' && Boolean(initialForm && initialForm.mobile));
-  const [step, setStep] = useState(skipToDays ? STEP_DAYS : 0);
+  const [step, setStep] = useState(() => {
+    if (Number.isFinite(initialStep) && initialStep >= 0 && initialStep < FORM_STEP_COUNT) {
+      return initialStep;
+    }
+    return skipToDays ? STEP_DAYS : 0;
+  });
   const [form, setForm] = useState(() => {
     const base = initialForm
       ? {
@@ -267,7 +278,9 @@ export function StayWizard({
       : emptyProfile();
     return skipToDays ? withStayDefaults(base, event) : base;
   });
-  const [openMember, setOpenMember] = useState(0);
+  const [openMember, setOpenMember] = useState(
+    Number.isFinite(initialOpenMember) ? initialOpenMember : 0
+  );
   const [fieldErrors, setFieldErrors] = useState({});
   const [memberErrors, setMemberErrors] = useState({});
   const [stayErrors, setStayErrors] = useState({});
@@ -596,20 +609,54 @@ export function StayWizard({
   return (
     <main className="uk-section uk-section-small uk-padding-remove-top">
       <div className="uk-container app-column">
-        <div className="step-bar">
-          <button
-            className="uk-button uk-button-text chrome-back"
-            type="button"
-            aria-label="Back"
-            hidden={STEPS[step].id === 'done' || (step === 0 && !cancelTo)}
-            onClick={goBack}
-          >
-            <span uk-icon="icon: chevron-left; ratio: 0.85" />
-          </button>
-          <p className="step-label">
-            Step {Math.min(step + 1, FORM_STEP_COUNT)} of {FORM_STEP_COUNT}
-            {STEPS[step].id === 'done' ? ' · Registered' : ` · ${stepMeta.label}`}
-          </p>
+        <div
+          className={`step-bar${cancelTo || showBookingModePicker ? ' step-bar-split' : ''}`}
+        >
+          {cancelTo ? (
+            <Link className="step-bar-exit" to={cancelTo}>
+              <span
+                className="step-bar-exit-icon"
+                uk-icon={`icon: ${cancelIcon || 'reply'}; ratio: 0.85`}
+                aria-hidden="true"
+              />
+              <span className="step-bar-exit-text">{cancelLabel || 'Back'}</span>
+            </Link>
+          ) : null}
+          {showBookingModePicker && typeof onBookingModeChange === 'function' ? (
+            <div className="stay-entry-modes" role="group" aria-label="Book accommodation for">
+              <button
+                type="button"
+                className={`x-role-chip stay-entry-mode${bookingMode === 'self' ? ' is-active' : ''}`}
+                aria-pressed={bookingMode === 'self'}
+                onClick={() => onBookingModeChange('self')}
+              >
+                Myself
+              </button>
+              <button
+                type="button"
+                className={`x-role-chip stay-entry-mode${bookingMode === 'guest' ? ' is-active' : ''}`}
+                aria-pressed={bookingMode === 'guest'}
+                onClick={() => onBookingModeChange('guest')}
+              >
+                New visitor
+              </button>
+            </div>
+          ) : null}
+          <div className="step-bar-current">
+            <button
+              className="uk-button uk-button-text chrome-back"
+              type="button"
+              aria-label="Previous step"
+              hidden={STEPS[step].id === 'done' || (step === 0 && Boolean(cancelTo))}
+              onClick={goBack}
+            >
+              <span uk-icon="icon: chevron-left; ratio: 0.85" />
+            </button>
+            <p className="step-label">
+              Step {Math.min(step + 1, FORM_STEP_COUNT)} of {FORM_STEP_COUNT}
+              {STEPS[step].id === 'done' ? ' · Registered' : ` · ${stepMeta.label}`}
+            </p>
+          </div>
         </div>
         <div className="app-progress">
           <progress
@@ -753,6 +800,22 @@ export function StayWizard({
                         invalid={Boolean(fieldErrors.meditation)}
                       />
                       <FieldError id="err-meditation" message={fieldErrors.meditation} />
+                    </div>
+                    <div className="x-field uk-width-1-1">
+                      <label className="x-label" htmlFor="profession">
+                        Work / profession
+                      </label>
+                      <div className="uk-inline uk-width-1-1">
+                        <span className="uk-form-icon" uk-icon="icon: pencil" />
+                        <input
+                          className="uk-input uk-form-small"
+                          id="profession"
+                          type="text"
+                          placeholder="Teacher, farmer, student…"
+                          value={form.profession || ''}
+                          onChange={(e) => update('profession', e.target.value)}
+                        />
+                      </div>
                     </div>
                   </div>
                 </section>
@@ -1197,6 +1260,7 @@ export function StayWizard({
                       form.meditation
                     )}
                   />
+                  <SummaryRow label="Profession" value={form.profession || '—'} />
                   <SummaryRow
                     label="Birth"
                     value={`${form.birthDate || '—'} / ${form.birthMonth || '—'}`}
@@ -1224,6 +1288,7 @@ export function StayWizard({
                       const bits = [
                         m.name || `Person ${i + 2}`,
                         m.relation,
+                        m.profession,
                         labelMap(
                           { child: 'Child · under 12', adult: 'Adult · 12–59', senior: 'Senior · 60+' },
                           m.age

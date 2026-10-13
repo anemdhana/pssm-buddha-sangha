@@ -26,6 +26,7 @@ public final class ProfileDtos {
         public String gender;
         public String age;
         public String meditation;
+        public String profession;
         public String addrMode;
         public String idType;
         public String livePhoto;
@@ -43,6 +44,7 @@ public final class ProfileDtos {
         public String gender;
         public String age;
         public String meditation;
+        public String profession;
         public String birthDate;
         public String birthMonth;
         public String language;

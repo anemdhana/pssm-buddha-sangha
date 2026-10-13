@@ -1381,7 +1381,7 @@ Response `201`
 ```
 
 `bookedAt` is set server-side when the interest is submitted (same instant as `createdAt`). Status is `registered` until a later room-allocation pass assigns hotels (`allotted`, etc.).  
-`GET /bookings?eventId=` — Accommodation Volunteer, Event Organizer, or PSSM Admin: list stay interest (families) for that event, newest first.
+`GET /bookings?eventId=` — Accommodation Volunteer, Event Organizer, or PSSM Admin: list Interested Friends and Masters (families) for that event, newest first.
 
 Stored fields: `familyMobile`, `familyFullName`, `registeredFamily`, `familyDetail` (Mongo). Response embeds `family` (profile shape) plus `guests`.
 

@@ -67,6 +67,8 @@ const liveApi = {
   getStayBooking: (id) => request(`/bookings/${encodeURIComponent(id)}`),
   updateStayBooking: (id, payload) =>
     request(`/bookings/${encodeURIComponent(id)}`, { method: 'PUT', body: JSON.stringify(payload) }),
+  deleteStayBooking: (id) =>
+    request(`/bookings/${encodeURIComponent(id)}`, { method: 'DELETE' }),
   countPssmAdmins: async () => 0
 };
 

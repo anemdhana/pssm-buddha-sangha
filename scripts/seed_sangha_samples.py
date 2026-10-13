@@ -43,21 +43,25 @@ EVT_ANANDOTSAVAM = "evt_sample_anandotsavam"
 # Free demo portraits (not social media). Cached under scripts/.cache/sample_photos/
 PHOTO_CACHE = SCRIPTS / ".cache" / "sample_photos"
 
+# Mobiles are real centre contact numbers from centres.pssmovement.org (our CSV list).
 # Stable portrait indices from randomuser.me (men/women 0–99)
 PHOTO_BY_KEY: dict[str, tuple[str, int]] = {
-    "9000000001": ("male", 12),
-    "9876543210": ("male", 32),
-    "9876543212": ("female", 44),
+    "7093405071": ("male", 12),  # Srinivasa Rao — PSSM Admin
+    "9246470416": ("male", 32),  # Chaitanya Krishna — Event Organizer
+    "7396354698": ("female", 44),  # Sita Devi
     "ananya": ("female", 68),
-    "9876501234": ("female", 21),
-    "9876501235": ("male", 45),
-    "9876511111": ("female", 33),
-    "9876522222": ("male", 75),
-    "9876522223": ("female", 65),
-    "9876522224": ("male", 22),
-    "9876533333": ("female", 47),
-    "9876544444": ("male", 55),
-    "9876544445": ("female", 28),
+    "9845055103": ("female", 21),  # Sowjanya Lakshmi — Pyramid Sevadal
+    "9379060510": ("male", 45),  # Venkat Rao
+    "9966362691": ("female", 33),  # Meenakshi Devi — Accommodation Volunteer
+    "9959129737": ("male", 75),  # Veeraiah
+    "7382463452": ("female", 65),  # Padma
+    "9542495504": ("male", 22),  # Karthik
+    "9395324465": ("female", 47),  # Anitha Reddy
+    "9985762845": ("male", 55),  # Ranga Naidu
+    "9246183996": ("female", 28),  # Jyothi
+    "9032123366": ("female", 51),  # Vasavi Kumari
+    "8667684104": ("female", 19),  # Uma Maheshwari — PMMA
+    "7780254680": ("male", 41),  # Subhash Reddy — Accommodation Volunteer
 }
 
 
@@ -146,21 +150,23 @@ def clear_sample_data(db) -> None:
 
 
 def sample_people() -> list[dict]:
+    """Demo sangha people: centre contact mobiles + roles covering every assignable path."""
     return attach_sample_photos(
         [
             {
                 "person": {
-                    "mobile": "9000000001",
-                    "fullName": "Pssm Admin",
-                    "email": "admin@pssm.example",
-                    "altMobile": "9000000002",
+                    "mobile": "7093405071",
+                    "fullName": "Srinivasa Rao",
+                    "email": "srinivasa@pssm.example",
+                    "altMobile": "7396429337",
                     "gender": "male",
                     "ageGroup": "adult",
                     "meditation": "6",
+                    "profession": "Administrator",
                     "birthDate": "01",
                     "birthMonth": "01",
-                    "language": "English",
-                    "pyramidCenter": "Pyramid Meditation Center, Hyderabad",
+                    "language": "Telugu",
+                    "pyramidCenter": "Santh Kabir Das Pyramid Centre",
                     "sinceYear": "2010",
                     "idType": "aadhaar",
                     "place": {
@@ -175,18 +181,19 @@ def sample_people() -> list[dict]:
             },
             {
                 "person": {
-                    "mobile": "9876543210",
-                    "fullName": "Ramakrishna",
-                    "email": "rama@pssm.example",
-                    "altMobile": "9876543211",
+                    "mobile": "9246470416",
+                    "fullName": "Chaitanya Krishna",
+                    "email": "chaitanya@pssm.example",
+                    "altMobile": "8074831439",
                     "gender": "male",
                     "ageGroup": "adult",
                     "meditation": "5",
+                    "profession": "Teacher",
                     "birthDate": "15",
                     "birthMonth": "08",
                     "language": "Telugu",
-                    "pyramidCenter": "Pyramid Meditation Center, Vijayawada",
-                    "sinceYear": "2019",
+                    "pyramidCenter": "Himalaya Pyramid Meditation Centre",
+                    "sinceYear": "2016",
                     "idType": "aadhaar",
                     "place": {
                         "kind": "urban",
@@ -198,24 +205,24 @@ def sample_people() -> list[dict]:
                 "roles": ["event_organizer"],
                 "members": [
                     {
-                        "sortOrder": 0,
                         "name": "Sita Devi",
                         "relation": "Spouse",
-                        "mobile": "9876543212",
+                        "mobile": "7396354698",
                         "gender": "female",
                         "ageGroup": "adult",
                         "meditation": "4",
+                        "profession": "Homemaker",
                         "addrMode": "same",
                         "idType": "aadhaar",
                     },
                     {
-                        "sortOrder": 1,
                         "name": "Ananya",
                         "relation": "Child",
                         "mobile": "",
                         "gender": "female",
                         "ageGroup": "child",
                         "meditation": "new",
+                        "profession": "Student",
                         "addrMode": "same",
                         "idType": "",
                     },
@@ -223,56 +230,20 @@ def sample_people() -> list[dict]:
             },
             {
                 "person": {
-                    "mobile": "9876501234",
-                    "fullName": "Lakshmi Devi",
-                    "email": "lakshmi@pssm.example",
-                    "altMobile": "",
+                    "mobile": "9966362691",
+                    "fullName": "Meenakshi Devi",
+                    "email": "meenakshi@pssm.example",
+                    "altMobile": "9010557629",
                     "gender": "female",
                     "ageGroup": "adult",
                     "meditation": "3",
-                    "birthDate": "22",
-                    "birthMonth": "03",
-                    "language": "Telugu",
-                    "pyramidCenter": "Indiranagar Pyramid Group",
-                    "sinceYear": "2021",
-                    "idType": "voter",
-                    "place": {
-                        "kind": "urban",
-                        "city": "Bengaluru",
-                        "state": "Karnataka",
-                        "country": "India",
-                    },
-                },
-                "roles": ["pyramid_sevadal"],
-                "members": [
-                    {
-                        "sortOrder": 0,
-                        "name": "Venkat Rao",
-                        "relation": "Spouse",
-                        "mobile": "9876501235",
-                        "gender": "male",
-                        "ageGroup": "adult",
-                        "meditation": "2",
-                        "addrMode": "same",
-                        "idType": "pan",
-                    }
-                ],
-            },
-            {
-                "person": {
-                    "mobile": "9876511111",
-                    "fullName": "Meena Shah",
-                    "email": "meena@pssm.example",
-                    "altMobile": "9876511112",
-                    "gender": "female",
-                    "ageGroup": "adult",
-                    "meditation": "2",
+                    "profession": "Accountant",
                     "birthDate": "10",
                     "birthMonth": "05",
-                    "language": "Hindi",
-                    "pyramidCenter": "Pyramid Meditation Center, Hyderabad",
-                    "sinceYear": "2020",
-                    "idType": "passport",
+                    "language": "Telugu",
+                    "pyramidCenter": "Atma Ganga Pyramid Dhyana Kendram",
+                    "sinceYear": "2019",
+                    "idType": "aadhaar",
                     "place": {
                         "kind": "urban",
                         "city": "Hyderabad",
@@ -285,73 +256,108 @@ def sample_people() -> list[dict]:
             },
             {
                 "person": {
-                    "mobile": "9876522222",
-                    "fullName": "Ravi Kumar",
-                    "email": "ravi@pssm.example",
-                    "altMobile": "",
-                    "gender": "male",
-                    "ageGroup": "senior",
-                    "meditation": "6",
-                    "birthDate": "05",
-                    "birthMonth": "11",
-                    "language": "Telugu",
-                    "pyramidCenter": "Village Pyramid Group, Kadthal",
-                    "sinceYear": "2012",
-                    "idType": "aadhaar",
-                    "place": {
-                        "kind": "rural",
-                        "village": "Kadthal",
-                        "town": "Amangal",
-                        "district": "Ranga Reddy",
-                        "state": "Telangana",
-                        "country": "India",
-                    },
-                },
-                "roles": [],
-                "members": [
-                    {
-                        "sortOrder": 0,
-                        "name": "Padma",
-                        "relation": "Spouse",
-                        "mobile": "9876522223",
-                        "gender": "female",
-                        "ageGroup": "senior",
-                        "meditation": "5",
-                        "addrMode": "same",
-                        "idType": "aadhaar",
-                    },
-                    {
-                        "sortOrder": 1,
-                        "name": "Karthik",
-                        "relation": "Child",
-                        "mobile": "9876522224",
-                        "gender": "male",
-                        "ageGroup": "adult",
-                        "meditation": "1",
-                        "addrMode": "new",
-                        "idType": "driving",
-                        "place": {
-                            "kind": "urban",
-                            "city": "Hyderabad",
-                            "state": "Telangana",
-                            "country": "India",
-                        },
-                    },
-                ],
-            },
-            {
-                "person": {
-                    "mobile": "9876533333",
-                    "fullName": "Anita Reddy",
-                    "email": "anita@pssm.example",
+                    "mobile": "9845055103",
+                    "fullName": "Sowjanya Lakshmi",
+                    "email": "sowjanya@pssm.example",
                     "altMobile": "",
                     "gender": "female",
                     "ageGroup": "adult",
                     "meditation": "4",
+                    "profession": "Nurse",
+                    "birthDate": "22",
+                    "birthMonth": "03",
+                    "language": "Kannada",
+                    "pyramidCenter": "Jayanagar Pyramid Care Centre",
+                    "sinceYear": "2020",
+                    "idType": "voter",
+                    "place": {
+                        "kind": "urban",
+                        "city": "Bengaluru",
+                        "state": "Karnataka",
+                        "country": "India",
+                    },
+                },
+                "roles": ["pyramid_sevadal"],
+                "members": [
+                    {
+                        "name": "Venkat Rao",
+                        "relation": "Spouse",
+                        "mobile": "9379060510",
+                        "gender": "male",
+                        "ageGroup": "adult",
+                        "meditation": "2",
+                        "profession": "Engineer",
+                        "addrMode": "same",
+                        "idType": "pan",
+                    }
+                ],
+            },
+            {
+                "person": {
+                    "mobile": "7780254680",
+                    "fullName": "Subhash Reddy",
+                    "email": "subhash@pssm.example",
+                    "altMobile": "",
+                    "gender": "male",
+                    "ageGroup": "adult",
+                    "meditation": "5",
+                    "profession": "Volunteer coordinator",
+                    "birthDate": "14",
+                    "birthMonth": "02",
+                    "language": "Telugu",
+                    "pyramidCenter": "Brahmarshi Patriji Pyramid Care Centre",
+                    "sinceYear": "2015",
+                    "idType": "aadhaar",
+                    "place": {
+                        "kind": "urban",
+                        "city": "Guntur",
+                        "state": "Andhra Pradesh",
+                        "country": "India",
+                    },
+                },
+                "roles": ["accommodation_volunteer"],
+                "members": [],
+            },
+            {
+                "person": {
+                    "mobile": "8667684104",
+                    "fullName": "Uma Maheshwari",
+                    "email": "uma@pssm.example",
+                    "altMobile": "",
+                    "gender": "female",
+                    "ageGroup": "adult",
+                    "meditation": "6",
+                    "profession": "Counsellor",
+                    "birthDate": "08",
+                    "birthMonth": "06",
+                    "language": "Tamil",
+                    "pyramidCenter": "Uma Maheshwari Pyramid Care Centre",
+                    "sinceYear": "2014",
+                    "idType": "aadhaar",
+                    "place": {
+                        "kind": "urban",
+                        "city": "Chennai",
+                        "state": "Tamil Nadu",
+                        "country": "India",
+                    },
+                },
+                "roles": ["pmma_member"],
+                "members": [],
+            },
+            {
+                "person": {
+                    "mobile": "9395324465",
+                    "fullName": "Anitha Reddy",
+                    "email": "anitha@pssm.example",
+                    "altMobile": "",
+                    "gender": "female",
+                    "ageGroup": "adult",
+                    "meditation": "4",
+                    "profession": "Doctor",
                     "birthDate": "18",
                     "birthMonth": "07",
                     "language": "Telugu",
-                    "pyramidCenter": "Pyramid Meditation Center, Hyderabad",
+                    "pyramidCenter": "Maha Shakthi Pyramid",
                     "sinceYear": "2017",
                     "idType": "aadhaar",
                     "place": {
@@ -366,24 +372,108 @@ def sample_people() -> list[dict]:
             },
             {
                 "person": {
-                    "mobile": "9876544444",
-                    "fullName": "Suresh Naidu",
-                    "email": "suresh@pssm.example",
+                    "mobile": "9032123366",
+                    "fullName": "Vasavi Kumari",
+                    "email": "vasavi@pssm.example",
+                    "altMobile": "",
+                    "gender": "female",
+                    "ageGroup": "adult",
+                    "meditation": "3",
+                    "profession": "Shopkeeper",
+                    "birthDate": "12",
+                    "birthMonth": "04",
+                    "language": "Telugu",
+                    "pyramidCenter": "Sri Vasavi Pyramid Meditation Centre",
+                    "sinceYear": "2021",
+                    "idType": "voter",
+                    "place": {
+                        "kind": "urban",
+                        "city": "Vijayawada",
+                        "state": "Andhra Pradesh",
+                        "country": "India",
+                    },
+                },
+                "roles": [],
+                "members": [],
+            },
+            {
+                "person": {
+                    "mobile": "9959129737",
+                    "fullName": "Veeraiah",
+                    "email": "veeraiah@pssm.example",
+                    "altMobile": "",
+                    "gender": "male",
+                    "ageGroup": "senior",
+                    "meditation": "6",
+                    "profession": "Farmer",
+                    "birthDate": "05",
+                    "birthMonth": "11",
+                    "language": "Telugu",
+                    "pyramidCenter": "Alivelu Manga Dhyana Kendram",
+                    "sinceYear": "2012",
+                    "idType": "aadhaar",
+                    "place": {
+                        "kind": "rural",
+                        "village": "Kadthal",
+                        "town": "Amangal",
+                        "district": "Ranga Reddy",
+                        "state": "Telangana",
+                        "country": "India",
+                    },
+                },
+                "roles": [],
+                "members": [
+                    {
+                        "name": "Padma",
+                        "relation": "Spouse",
+                        "mobile": "7382463452",
+                        "gender": "female",
+                        "ageGroup": "senior",
+                        "meditation": "5",
+                        "profession": "Homemaker",
+                        "addrMode": "same",
+                        "idType": "aadhaar",
+                    },
+                    {
+                        "name": "Karthik",
+                        "relation": "Child",
+                        "mobile": "9542495504",
+                        "gender": "male",
+                        "ageGroup": "adult",
+                        "meditation": "1",
+                        "profession": "Software engineer",
+                        "addrMode": "new",
+                        "idType": "driving",
+                        "place": {
+                            "kind": "urban",
+                            "city": "Hyderabad",
+                            "state": "Telangana",
+                            "country": "India",
+                        },
+                    },
+                ],
+            },
+            {
+                "person": {
+                    "mobile": "9985762845",
+                    "fullName": "Ranga Naidu",
+                    "email": "ranga@pssm.example",
                     "altMobile": "",
                     "gender": "male",
                     "ageGroup": "adult",
                     "meditation": "new",
+                    "profession": "Farmer",
                     "birthDate": "03",
                     "birthMonth": "09",
                     "language": "Telugu",
-                    "pyramidCenter": "Village Pyramid Group, Pamarru",
+                    "pyramidCenter": "Bala Tripura Sundari Pyramid Meditation Centre",
                     "sinceYear": "2024",
                     "idType": "voter",
                     "place": {
                         "kind": "rural",
                         "village": "Pamarru",
                         "town": "Pamarru",
-                        "district": "Krishna",
+                        "district": "Ananthapur",
                         "state": "Andhra Pradesh",
                         "country": "India",
                     },
@@ -391,13 +481,13 @@ def sample_people() -> list[dict]:
                 "roles": [],
                 "members": [
                     {
-                        "sortOrder": 0,
                         "name": "Jyothi",
                         "relation": "Spouse",
-                        "mobile": "9876544445",
+                        "mobile": "9246183996",
                         "gender": "female",
                         "ageGroup": "adult",
                         "meditation": "new",
+                        "profession": "Teacher",
                         "addrMode": "same",
                         "idType": "voter",
                     }
@@ -431,10 +521,10 @@ def sample_events() -> list[dict]:
             "name": "Dhyana Maha Yagam - 5",
             "startDate": datetime(2026, 12, 21, tzinfo=timezone.utc),
             "endDate": datetime(2026, 12, 31, tzinfo=timezone.utc),
-            "location": "Pyramid Meditation Center, Hyderabad",
+            "location": "Santh Kabir Das Pyramid Centre, Hyderabad",
             "expectedBudgetInr": 500000,
             "meditationHoursPerDay": 3.0,
-            "createdBy": "9876543210",
+            "createdBy": "9246470416",
             "createdAt": now,
         },
         {
@@ -442,10 +532,10 @@ def sample_events() -> list[dict]:
             "name": "Dussehra Sangeetha Dhyana Maha Yagnam",
             "startDate": datetime(2026, 10, 17, tzinfo=timezone.utc),
             "endDate": datetime(2026, 10, 20, tzinfo=timezone.utc),
-            "location": "Pyramid Meditation Center, Vijayawada",
+            "location": "Himalaya Pyramid Meditation Centre, Vijayawada",
             "expectedBudgetInr": 250000,
             "meditationHoursPerDay": 2.5,
-            "createdBy": "9876543210",
+            "createdBy": "9246470416",
             "createdAt": now,
         },
         {
@@ -453,10 +543,10 @@ def sample_events() -> list[dict]:
             "name": "Dhyana Dussera Anandotsavam - 2026",
             "startDate": datetime(2026, 10, 28, tzinfo=timezone.utc),
             "endDate": datetime(2026, 10, 31, tzinfo=timezone.utc),
-            "location": "Pyramid Meditation Center, Hyderabad",
+            "location": "Santh Kabir Das Pyramid Centre, Hyderabad",
             "expectedBudgetInr": 1000000,
             "meditationHoursPerDay": 6.0,
-            "createdBy": "9876543210",
+            "createdBy": "9246470416",
             "createdAt": now,
         },
     ]
@@ -525,6 +615,7 @@ def _booking(
         "gender": person.get("gender") or "",
         "age": person.get("ageGroup") or "adult",
         "meditation": person.get("meditation") or "",
+        "profession": person.get("profession") or "",
         "birthDate": person.get("birthDate") or "",
         "birthMonth": person.get("birthMonth") or "",
         "language": person.get("language") or "",
@@ -549,6 +640,7 @@ def _booking(
                 "gender": member.get("gender") or guest.get("gender") or "",
                 "age": member.get("ageGroup") or member.get("age") or guest.get("age") or "adult",
                 "meditation": member.get("meditation") or "",
+                "profession": member.get("profession") or "",
                 "addrMode": member.get("addrMode") or "same",
                 "idType": member.get("idType") or "",
                 "livePhoto": member.get("livePhoto") or "",
@@ -581,14 +673,15 @@ def sample_bookings() -> list[dict]:
     events_by_id = {e["_id"]: e for e in sample_events()}
     now = utc_now()
     rows = []
+    vol = "9966362691"  # Meenakshi — accommodation volunteer books many of these
 
-    # 1) Meena alone — free — full Anandotsavam
-    meena = people_by_mobile["9876511111"]
+    # 1) Meenakshi alone — free — full Anandotsavam
+    meena = people_by_mobile["9966362691"]
     evt = events_by_id[EVT_ANANDOTSAVAM]
     start, end = evt["startDate"].date(), evt["endDate"].date()
     rows.append(
         _booking(
-            booking_id="stay_sample_meena_alone",
+            booking_id="stay_sample_meenakshi_alone",
             event_id=EVT_ANANDOTSAVAM,
             event_name=evt["name"],
             plan="free",
@@ -596,8 +689,8 @@ def sample_bookings() -> list[dict]:
             members=[],
             guests=[
                 _guest(
-                    name="Meena Shah",
-                    mobile="9876511111",
+                    name="Meenakshi Devi",
+                    mobile="9966362691",
                     gender="female",
                     age="adult",
                     start=start,
@@ -605,25 +698,25 @@ def sample_bookings() -> list[dict]:
                     primary=True,
                 )
             ],
-            created_by="9876511111",
+            created_by=vol,
             booked_at=now,
         )
     )
 
-    # 2) Anita alone — paid — shorter stay
-    anita = people_by_mobile["9876533333"]
+    # 2) Anitha alone — paid — shorter stay
+    anitha = people_by_mobile["9395324465"]
     rows.append(
         _booking(
-            booking_id="stay_sample_anita_paid",
+            booking_id="stay_sample_anitha_paid",
             event_id=EVT_ANANDOTSAVAM,
             event_name=evt["name"],
             plan="paid",
-            person=anita["person"],
+            person=anitha["person"],
             members=[],
             guests=[
                 _guest(
-                    name="Anita Reddy",
-                    mobile="9876533333",
+                    name="Anitha Reddy",
+                    mobile="9395324465",
                     gender="female",
                     age="adult",
                     start=date(2026, 10, 29),
@@ -631,27 +724,27 @@ def sample_bookings() -> list[dict]:
                     primary=True,
                 )
             ],
-            created_by="9876511111",
+            created_by=vol,
             booked_at=now,
         )
     )
 
-    # 3) Lakshmi + spouse — free — Dussehra
-    lakshmi = people_by_mobile["9876501234"]
+    # 3) Sowjanya + spouse — free — Dussehra
+    sowjanya = people_by_mobile["9845055103"]
     dus = events_by_id[EVT_DUSSEHRA]
     d_start, d_end = dus["startDate"].date(), dus["endDate"].date()
     rows.append(
         _booking(
-            booking_id="stay_sample_lakshmi_couple",
+            booking_id="stay_sample_sowjanya_couple",
             event_id=EVT_DUSSEHRA,
             event_name=dus["name"],
             plan="free",
-            person=lakshmi["person"],
-            members=lakshmi["members"],
+            person=sowjanya["person"],
+            members=sowjanya["members"],
             guests=[
                 _guest(
-                    name="Lakshmi Devi",
-                    mobile="9876501234",
+                    name="Sowjanya Lakshmi",
+                    mobile="9845055103",
                     gender="female",
                     age="adult",
                     start=d_start,
@@ -660,7 +753,7 @@ def sample_bookings() -> list[dict]:
                 ),
                 _guest(
                     name="Venkat Rao",
-                    mobile="9876501235",
+                    mobile="9379060510",
                     gender="male",
                     age="adult",
                     start=d_start,
@@ -668,27 +761,27 @@ def sample_bookings() -> list[dict]:
                     relation="Spouse",
                 ),
             ],
-            created_by="9876511111",
+            created_by=vol,
             booked_at=now,
         )
     )
 
-    # 4) Ramakrishna family (spouse + child) — free — Dhyana, staggered child dates
-    rama = people_by_mobile["9876543210"]
+    # 4) Chaitanya family (spouse + child) — free — Dhyana, staggered child dates
+    chaitanya = people_by_mobile["9246470416"]
     dhy = events_by_id[EVT_DHYANA]
     y_start, y_end = dhy["startDate"].date(), dhy["endDate"].date()
     rows.append(
         _booking(
-            booking_id="stay_sample_rama_family",
+            booking_id="stay_sample_chaitanya_family",
             event_id=EVT_DHYANA,
             event_name=dhy["name"],
             plan="free",
-            person=rama["person"],
-            members=rama["members"],
+            person=chaitanya["person"],
+            members=chaitanya["members"],
             guests=[
                 _guest(
-                    name="Ramakrishna",
-                    mobile="9876543210",
+                    name="Chaitanya Krishna",
+                    mobile="9246470416",
                     gender="male",
                     age="adult",
                     start=y_start,
@@ -697,7 +790,7 @@ def sample_bookings() -> list[dict]:
                 ),
                 _guest(
                     name="Sita Devi",
-                    mobile="9876543212",
+                    mobile="7396354698",
                     gender="female",
                     age="adult",
                     start=y_start,
@@ -714,25 +807,25 @@ def sample_bookings() -> list[dict]:
                     relation="Child",
                 ),
             ],
-            created_by="9876543210",
+            created_by="9246470416",
             booked_at=now,
         )
     )
 
-    # 5) Ravi rural seniors + adult child — free — Anandotsavam
-    ravi = people_by_mobile["9876522222"]
+    # 5) Veeraiah rural seniors + adult child — free — Anandotsavam
+    veeraiah = people_by_mobile["9959129737"]
     rows.append(
         _booking(
-            booking_id="stay_sample_ravi_rural_family",
+            booking_id="stay_sample_veeraiah_rural_family",
             event_id=EVT_ANANDOTSAVAM,
             event_name=evt["name"],
             plan="free",
-            person=ravi["person"],
-            members=ravi["members"],
+            person=veeraiah["person"],
+            members=veeraiah["members"],
             guests=[
                 _guest(
-                    name="Ravi Kumar",
-                    mobile="9876522222",
+                    name="Veeraiah",
+                    mobile="9959129737",
                     gender="male",
                     age="senior",
                     start=start,
@@ -741,7 +834,7 @@ def sample_bookings() -> list[dict]:
                 ),
                 _guest(
                     name="Padma",
-                    mobile="9876522223",
+                    mobile="7382463452",
                     gender="female",
                     age="senior",
                     start=start,
@@ -750,7 +843,7 @@ def sample_bookings() -> list[dict]:
                 ),
                 _guest(
                     name="Karthik",
-                    mobile="9876522224",
+                    mobile="9542495504",
                     gender="male",
                     age="adult",
                     start=date(2026, 10, 28),
@@ -758,25 +851,25 @@ def sample_bookings() -> list[dict]:
                     relation="Child",
                 ),
             ],
-            created_by="9876511111",
+            created_by=vol,
             booked_at=now,
         )
     )
 
-    # 6) Suresh + spouse rural — paid — Dussehra
-    suresh = people_by_mobile["9876544444"]
+    # 6) Ranga + spouse rural — paid — Dussehra
+    ranga = people_by_mobile["9985762845"]
     rows.append(
         _booking(
-            booking_id="stay_sample_suresh_couple_paid",
+            booking_id="stay_sample_ranga_couple_paid",
             event_id=EVT_DUSSEHRA,
             event_name=dus["name"],
             plan="paid",
-            person=suresh["person"],
-            members=suresh["members"],
+            person=ranga["person"],
+            members=ranga["members"],
             guests=[
                 _guest(
-                    name="Suresh Naidu",
-                    mobile="9876544444",
+                    name="Ranga Naidu",
+                    mobile="9985762845",
                     gender="male",
                     age="adult",
                     start=d_start,
@@ -785,7 +878,7 @@ def sample_bookings() -> list[dict]:
                 ),
                 _guest(
                     name="Jyothi",
-                    mobile="9876544445",
+                    mobile="9246183996",
                     gender="female",
                     age="adult",
                     start=d_start,
@@ -793,7 +886,59 @@ def sample_bookings() -> list[dict]:
                     relation="Spouse",
                 ),
             ],
-            created_by="9876511111",
+            created_by=vol,
+            booked_at=now,
+        )
+    )
+
+    # 7) Vasavi alone — free — Anandotsavam mid-stay
+    vasavi = people_by_mobile["9032123366"]
+    rows.append(
+        _booking(
+            booking_id="stay_sample_vasavi_alone",
+            event_id=EVT_ANANDOTSAVAM,
+            event_name=evt["name"],
+            plan="free",
+            person=vasavi["person"],
+            members=[],
+            guests=[
+                _guest(
+                    name="Vasavi Kumari",
+                    mobile="9032123366",
+                    gender="female",
+                    age="adult",
+                    start=date(2026, 10, 28),
+                    end=date(2026, 10, 30),
+                    primary=True,
+                )
+            ],
+            created_by="7780254680",
+            booked_at=now,
+        )
+    )
+
+    # 8) Uma alone — paid — Dussehra
+    uma = people_by_mobile["8667684104"]
+    rows.append(
+        _booking(
+            booking_id="stay_sample_uma_paid",
+            event_id=EVT_DUSSEHRA,
+            event_name=dus["name"],
+            plan="paid",
+            person=uma["person"],
+            members=[],
+            guests=[
+                _guest(
+                    name="Uma Maheshwari",
+                    mobile="8667684104",
+                    gender="female",
+                    age="adult",
+                    start=d_start,
+                    end=d_end,
+                    primary=True,
+                )
+            ],
+            created_by=vol,
             booked_at=now,
         )
     )
@@ -891,13 +1036,15 @@ def main() -> int:
 
     print(
         """
-Handy logins:
-  9000000001 / PssmA0101     PSSM Admin
-  9876543210 / Ramak1508     Event Organizer
-  9876511111 / Meena1005     Accommodation Volunteer
-  9876501234 / Laksh2203     Pyramid Sevadal
+Handy logins (centre contact mobiles from centres.pssmovement.org):
+  7093405071 / Srini0101     PSSM Admin
+  9246470416 / Chait1508     Event Organizer
+  9966362691 / Meena1005     Accommodation Volunteer + PMMA
+  9845055103 / Sowja2203     Pyramid Sevadal
+  7780254680 / Subha1402     Accommodation Volunteer
+  8667684104 / UmaMa0806     PMMA Member
 
-Pick an event in the header, then Stay -> Stay interest
+Pick an event in the header, then Stay -> Interested Friends and Masters
 """
     )
     return 0

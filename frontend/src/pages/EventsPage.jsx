@@ -170,7 +170,7 @@ export function EventsPage() {
                       id="event-location"
                       value={form.location}
                       onChange={(e) => update('location', e.target.value)}
-                      placeholder="Pyramid Meditation Center, Hyderabad"
+                      placeholder="Santh Kabir Das Pyramid Centre, Hyderabad"
                       required
                     />
                   </div>

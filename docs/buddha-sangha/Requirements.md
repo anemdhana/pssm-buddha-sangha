@@ -870,7 +870,7 @@ A signed-in person with the **Event Organizer** role can create spiritual events
 | Event name | Non-empty text |
 | Start date | Calendar date |
 | End date | On or after start date |
-| Location | Single free-text line (city, venue, or as-spoken place — e.g. `Pyramid Meditation Center, Hyderabad`) |
+| Location | Single free-text line (city, venue, or as-spoken place — e.g. `Santh Kabir Das Pyramid Centre, Hyderabad`) |
 | Expected budget | Positive amount in **INR** |
 
 **Optional fields**

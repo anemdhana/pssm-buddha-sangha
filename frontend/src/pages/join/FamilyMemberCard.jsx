@@ -193,6 +193,22 @@ export function FamilyMemberCard({
                 />
                 <FieldError id={`${prefix}-err-meditation`} message={errors.meditation} />
               </div>
+              <div className="x-field uk-width-1-1">
+                <label className="x-label" htmlFor={`${prefix}-profession`}>
+                  Work / profession
+                </label>
+                <div className="uk-inline uk-width-1-1">
+                  <span className="uk-form-icon" uk-icon="icon: pencil" />
+                  <input
+                    className="uk-input uk-form-small"
+                    id={`${prefix}-profession`}
+                    type="text"
+                    placeholder="Teacher, farmer, student…"
+                    value={member.profession || ''}
+                    onChange={(e) => set('profession', e.target.value)}
+                  />
+                </div>
+              </div>
             </div>
           </section>
 

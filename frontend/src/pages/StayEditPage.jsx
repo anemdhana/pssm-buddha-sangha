@@ -6,6 +6,14 @@ import { api } from '../services/api.js';
 import { bookingToProfileForm } from '../utils/stayRegistrations.js';
 import { StayWizard } from './stay/StayWizard.jsx';
 
+const STEP_BY_ID = {
+  who: 0,
+  place: 1,
+  family: 2,
+  days: 3,
+  review: 4
+};
+
 function Gate({ title, message, children }) {
   return (
     <main className="uk-section uk-section-small uk-padding-remove-top">
@@ -24,6 +32,14 @@ export function StayEditPage() {
   const { bookingId } = useParams();
   const [params] = useSearchParams();
   const plan = params.get('plan') === 'paid' ? 'paid' : 'free';
+  const stepParam = String(params.get('step') || '').trim().toLowerCase();
+  const memberParam = Number(params.get('member'));
+  const initialStep = Object.prototype.hasOwnProperty.call(STEP_BY_ID, stepParam)
+    ? STEP_BY_ID[stepParam]
+    : null;
+  const initialOpenMember =
+    Number.isFinite(memberParam) && memberParam >= 0 ? memberParam : 0;
+
   const { signedIn, hasRole, loading: authLoading } = useAuth();
   const { picked } = useEventPick();
   const canEdit =
@@ -105,23 +121,19 @@ export function StayEditPage() {
   };
 
   return (
-    <>
-      <div className="uk-container app-column">
-        <p className="uk-text-meta uk-margin-small-bottom">
-          <Link to="/stay/registrations">← Back to stay interest</Link>
-        </p>
-      </div>
-      <StayWizard
-        key={bookingId}
-        plan={bookingPlan}
-        event={event}
-        bookingMode="guest"
-        initialForm={initialForm}
-        skipToDays={false}
-        bookingId={bookingId}
-        updateSanghaProfile
-        cancelTo="/stay/registrations"
-      />
-    </>
+    <StayWizard
+      key={`${bookingId}:${stepParam}:${initialOpenMember}`}
+      plan={bookingPlan}
+      event={event}
+      bookingMode="guest"
+      initialForm={initialForm}
+      skipToDays={false}
+      initialStep={initialStep}
+      initialOpenMember={initialOpenMember}
+      bookingId={bookingId}
+      updateSanghaProfile
+      cancelTo="/stay/registrations"
+      cancelLabel="Interested Friends and Masters"
+    />
   );
 }

@@ -160,7 +160,7 @@ export function AppShell() {
                       </li>
                       {canViewStayRegistrations ? (
                         <li>
-                          <Link to="/stay/registrations">Stay interest</Link>
+                          <Link to="/stay/registrations">Interested Friends and Masters</Link>
                         </li>
                       ) : null}
                     </ul>
@@ -236,7 +236,7 @@ export function AppShell() {
                     </li>
                     {canViewStayRegistrations ? (
                       <li>
-                        <Link to="/stay/registrations">Stay interest</Link>
+                        <Link to="/stay/registrations">Interested Friends and Masters</Link>
                       </li>
                     ) : null}
                   </>

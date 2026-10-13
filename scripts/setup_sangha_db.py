@@ -142,7 +142,7 @@ def import_places(db) -> None:
     print(f"Places: {len(rows)} CSV rows ({upserted} inserted, total {places.count_documents({})}).")
 
 
-def import_pyramid_centers(db) -> None:
+def import_pyramid_centers(db, *, replace: bool = False) -> None:
     if not CENTERS_CSV.exists():
         print(f"Pyramid center seed CSV missing: {CENTERS_CSV}", file=sys.stderr)
         return
@@ -159,6 +159,9 @@ def import_pyramid_centers(db) -> None:
                 rows.append(name)
 
     centers = db["pyramid_centers"]
+    if replace:
+        removed = centers.delete_many({}).deleted_count
+        print(f"Pyramid centers: cleared {removed} existing row(s).")
     upserted = 0
     for name in rows:
         result = centers.update_one(
@@ -190,6 +193,11 @@ def parse_args():
     p.add_argument("--skip-indexes", action="store_true")
     p.add_argument("--skip-places", action="store_true")
     p.add_argument("--skip-centers", action="store_true")
+    p.add_argument(
+        "--replace-centers",
+        action="store_true",
+        help="Delete existing pyramid_centers before importing the CSV (real PSSM list)",
+    )
     return p.parse_args()
 
 
@@ -204,7 +212,7 @@ def main() -> int:
         if not args.skip_places:
             import_places(db)
         if not args.skip_centers:
-            import_pyramid_centers(db)
+            import_pyramid_centers(db, replace=args.replace_centers)
     except PyMongoError as exc:
         print(f"MongoDB error: {exc}", file=sys.stderr)
         print("Is Mongo running? Try: docker compose up -d mongo", file=sys.stderr)

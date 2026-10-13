@@ -1,17 +1,17 @@
-export function RegistrationMobileSearch({ value, onChange, onClear }) {
+export function RegistrationNameSearch({ value, onChange, onClear }) {
   return (
     <div className="x-field uk-margin-remove">
-      <label className="x-label uk-text-meta" htmlFor="reg-mobile-search">
-        Search by mobile
+      <label className="x-label uk-text-meta" htmlFor="reg-name-search">
+        Search by name
       </label>
       <div className="uk-inline uk-width-1-1">
-        <span className="uk-form-icon" uk-icon="icon: receiver" />
+        <span className="uk-form-icon" uk-icon="icon: search" />
         <input
           className="uk-input uk-form-small"
-          id="reg-mobile-search"
-          type="tel"
-          inputMode="tel"
-          placeholder="Digits anywhere in family mobile"
+          id="reg-name-search"
+          type="search"
+          autoComplete="off"
+          placeholder="Letters anywhere in the name"
           value={value}
           onChange={(e) => onChange(e.target.value)}
         />

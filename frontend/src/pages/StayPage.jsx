@@ -34,6 +34,7 @@ function Notice({ title, message, children }) {
 export function StayPage() {
   const [params] = useSearchParams();
   const plan = params.get('plan') === 'paid' ? 'paid' : 'free';
+  const fromInterest = params.get('from') === 'interest';
   const { signedIn, hasRole, loading } = useAuth();
   const { picked } = useEventPick();
   const isAccommodationVolunteer = hasRole('accommodation_volunteer');
@@ -44,6 +45,12 @@ export function StayPage() {
   const [profileLoaded, setProfileLoaded] = useState(false);
   const [error, setError] = useState('');
   const [mode, setMode] = useState(MODE_SELF);
+
+  useEffect(() => {
+    if (fromInterest) {
+      setMode(MODE_GUEST);
+    }
+  }, [fromInterest]);
 
   useEffect(() => {
     if (!signedIn) {
@@ -132,7 +139,12 @@ export function StayPage() {
     );
   }
 
-  const bookingMode = isAccommodationVolunteer ? mode : MODE_SELF;
+  // From the interest list: always book a new visitor (someone else).
+  const bookingMode = fromInterest
+    ? MODE_GUEST
+    : isAccommodationVolunteer
+      ? mode
+      : MODE_SELF;
   const hasProfile = Boolean(profile && String(profile.fullName || '').trim());
   const forSelf = bookingMode === MODE_SELF;
   const event = {
@@ -143,45 +155,21 @@ export function StayPage() {
     sub: picked.sub
   };
 
+  const linkToInterest = fromInterest || canViewRegistrations;
+
   return (
-    <>
-      {canViewRegistrations ? (
-        <div className="uk-container app-column">
-          <p className="uk-text-meta uk-margin-small-bottom">
-            <Link to="/stay/registrations">View stay interest for {picked.name}</Link>
-          </p>
-        </div>
-      ) : null}
-      {isAccommodationVolunteer ? (
-        <div className="uk-container app-column">
-          <div className="x-role-chips uk-margin-small-bottom" role="group" aria-label="Book accommodation for">
-            <button
-              type="button"
-              className={`x-role-chip${forSelf ? ' is-active' : ''}`}
-              aria-pressed={forSelf}
-              onClick={() => setMode(MODE_SELF)}
-            >
-              Myself
-            </button>
-            <button
-              type="button"
-              className={`x-role-chip${!forSelf ? ' is-active' : ''}`}
-              aria-pressed={!forSelf}
-              onClick={() => setMode(MODE_GUEST)}
-            >
-              New visitor
-            </button>
-          </div>
-        </div>
-      ) : null}
-      <StayWizard
-        key={`${plan}-${picked.id}-${bookingMode}`}
-        plan={plan}
-        event={event}
-        bookingMode={bookingMode}
-        initialForm={forSelf ? profile : null}
-        skipToDays={forSelf && hasProfile}
-      />
-    </>
+    <StayWizard
+      key={`${plan}-${picked.id}-${bookingMode}-${fromInterest ? 'interest' : 'direct'}`}
+      plan={plan}
+      event={event}
+      bookingMode={bookingMode}
+      initialForm={forSelf ? profile : null}
+      skipToDays={forSelf && hasProfile}
+      cancelTo={linkToInterest ? '/stay/registrations' : null}
+      cancelLabel={linkToInterest ? 'Interested Friends and Masters' : null}
+      cancelIcon={fromInterest ? 'reply' : 'users'}
+      showBookingModePicker={isAccommodationVolunteer && !fromInterest}
+      onBookingModeChange={setMode}
+    />
   );
 }

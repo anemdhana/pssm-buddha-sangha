@@ -9,6 +9,7 @@ public class FamilyMember {
     private String gender;
     private String ageGroup;
     private String meditation;
+    private String profession;
     private String addrMode;
     private String idType;
     private String livePhoto;
@@ -69,6 +70,14 @@ public class FamilyMember {
 
     public void setMeditation(String meditation) {
         this.meditation = meditation;
+    }
+
+    public String getProfession() {
+        return profession;
+    }
+
+    public void setProfession(String profession) {
+        this.profession = profession;
     }
 
     public String getAddrMode() {

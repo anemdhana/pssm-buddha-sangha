@@ -26,6 +26,7 @@ public class Person {
     private String gender;
     private String ageGroup;
     private String meditation;
+    private String profession;
     private String birthDate;
     private String birthMonth;
     private String language;
@@ -107,6 +108,14 @@ public class Person {
 
     public void setMeditation(String meditation) {
         this.meditation = meditation;
+    }
+
+    public String getProfession() {
+        return profession;
+    }
+
+    public void setProfession(String profession) {
+        this.profession = profession;
     }
 
     public String getBirthDate() {

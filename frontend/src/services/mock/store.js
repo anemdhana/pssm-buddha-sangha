@@ -19,16 +19,17 @@ const CENTERS_KEY = 'pssm_sangha_pyramid_centers';
 const STAY_BOOKINGS_KEY = 'pssm_stay_bookings';
 
 const SAMPLE_ADMIN = {
-  fullName: 'Pssm Admin',
-  mobile: '9000000001',
-  email: 'admin@pssm.example',
+  fullName: 'Srinivasa Rao',
+  mobile: '7093405071',
+  email: 'srinivasa@pssm.example',
   gender: 'male',
   age: 'adult',
   meditation: '6',
+  profession: 'Administrator',
   birthDate: '01',
   birthMonth: '01',
-  language: 'English',
-  pyramidCenter: 'Pyramid Meditation Center, Hyderabad',
+  language: 'Telugu',
+  pyramidCenter: 'Santh Kabir Das Pyramid Centre',
   sinceYear: '2010',
   place: { kind: 'urban', city: 'Hyderabad', state: 'Telangana', country: 'India' },
   members: [],
@@ -37,49 +38,52 @@ const SAMPLE_ADMIN = {
 
 const SAMPLE_PEOPLE = [
   {
-    fullName: 'Ramakrishna',
-    mobile: '9876543210',
+    fullName: 'Chaitanya Krishna',
+    mobile: '9246470416',
     gender: 'male',
     age: 'adult',
     meditation: '5',
+    profession: 'Teacher',
     birthDate: '15',
     birthMonth: '08',
     language: 'Telugu',
-    pyramidCenter: 'Pyramid Meditation Center, Vijayawada',
-    sinceYear: '2019',
+    pyramidCenter: 'Himalaya Pyramid Meditation Centre',
+    sinceYear: '2016',
     place: { kind: 'urban', city: 'Vijayawada', state: 'Andhra Pradesh', country: 'India' },
     members: [],
-    roles: []
+    roles: ['event_organizer']
   },
   {
-    fullName: 'Lakshmi Devi',
-    mobile: '9876501234',
+    fullName: 'Sowjanya Lakshmi',
+    mobile: '9845055103',
     gender: 'female',
     age: 'adult',
-    meditation: '3',
+    meditation: '4',
+    profession: 'Nurse',
     birthDate: '22',
     birthMonth: '03',
-    language: 'Telugu',
-    pyramidCenter: 'Indiranagar Pyramid Group',
-    sinceYear: '2021',
+    language: 'Kannada',
+    pyramidCenter: 'Jayanagar Pyramid Care Centre',
+    sinceYear: '2020',
     place: { kind: 'urban', city: 'Bengaluru', state: 'Karnataka', country: 'India' },
     members: [],
     roles: ['pyramid_sevadal']
   },
   {
-    fullName: 'Meena Shah',
-    mobile: '9876511111',
+    fullName: 'Meenakshi Devi',
+    mobile: '9966362691',
     gender: 'female',
     age: 'adult',
-    meditation: '2',
+    meditation: '3',
+    profession: 'Accountant',
     birthDate: '10',
     birthMonth: '05',
-    language: 'Hindi',
-    pyramidCenter: 'Pyramid Meditation Center, Hyderabad',
-    sinceYear: '2020',
+    language: 'Telugu',
+    pyramidCenter: 'Atma Ganga Pyramid Dhyana Kendram',
+    sinceYear: '2019',
     place: { kind: 'urban', city: 'Hyderabad', state: 'Telangana', country: 'India' },
     members: [],
-    roles: ['accommodation_volunteer']
+    roles: ['accommodation_volunteer', 'pmma_member']
   }
 ];
 
@@ -921,9 +925,6 @@ export const mockApi = {
     const { guests, fullName, digits } = buildStayGuestsFromFamily(form, eventStart, eventEnd);
     if (!fullName) throw apiError(400, 'VALIDATION', 'Enter the visitor full name.');
     if (!digits) throw apiError(400, 'VALIDATION', 'Enter the visitor mobile number.');
-    if (normalizeMobile(existing.familyMobile) !== digits) {
-      throw apiError(403, 'FORBIDDEN', 'You cannot change the primary mobile on this registration.');
-    }
     if (updateSanghaProfile && findPerson(digits)) {
       const profile = { ...form, fullName, mobile: digits, roles: rolesForMobile(digits) };
       delete profile.password;
@@ -941,6 +942,23 @@ export const mockApi = {
     list[idx] = updated;
     writeStayBookings(list);
     return { data: { booking: updated } };
+  },
+
+  async deleteStayBooking(id) {
+    if (!isSignedIn()) throw apiError(401, 'UNAUTHORIZED', 'Please login again.');
+    const session = readSession();
+    const roles = rolesForMobile(session.mobile);
+    const allowed =
+      roles.indexOf('accommodation_volunteer') >= 0 ||
+      roles.indexOf('pssm_admin') >= 0 ||
+      roles.indexOf('event_organizer') >= 0;
+    if (!allowed) throw apiError(403, 'FORBIDDEN', 'Not allowed to remove registrations.');
+    const key = String(id || '').trim();
+    const list = readStayBookings();
+    const next = list.filter((b) => b && b.id !== key);
+    if (next.length === list.length) throw apiError(404, 'NOT_FOUND', 'Registration not found.');
+    writeStayBookings(next);
+    return { data: { deleted: true, id: key } };
   },
 
   async updateEvent(id, { name, startDate, endDate, location, expectedBudgetInr, meditationHoursPerDay }) {

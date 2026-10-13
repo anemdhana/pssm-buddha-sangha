@@ -100,6 +100,7 @@ public class ProfileMapper {
         dto.gender = person.getGender();
         dto.age = person.getAgeGroup();
         dto.meditation = person.getMeditation();
+        dto.profession = person.getProfession();
         dto.birthDate = person.getBirthDate();
         dto.birthMonth = person.getBirthMonth();
         dto.language = person.getLanguage();
@@ -125,6 +126,7 @@ public class ProfileMapper {
         person.setGender(trim(dto.gender));
         person.setAgeGroup(trim(dto.age));
         person.setMeditation(trim(dto.meditation));
+        person.setProfession(trim(dto.profession));
         person.setBirthDate(trim(dto.birthDate));
         person.setBirthMonth(trim(dto.birthMonth));
         person.setLanguage(trim(dto.language));
@@ -163,6 +165,7 @@ public class ProfileMapper {
         dto.gender = member.getGender();
         dto.age = member.getAgeGroup();
         dto.meditation = member.getMeditation();
+        dto.profession = member.getProfession();
         dto.addrMode = member.getAddrMode();
         dto.idType = member.getIdType();
         dto.livePhoto = member.getLivePhoto();
@@ -186,6 +189,7 @@ public class ProfileMapper {
             member.setGender(trim(dto.gender));
             member.setAgeGroup(trim(dto.age));
             member.setMeditation(trim(dto.meditation));
+            member.setProfession(trim(dto.profession));
             member.setAddrMode(trim(dto.addrMode));
             member.setIdType(trim(dto.idType));
             member.setLivePhoto(dto.livePhoto);

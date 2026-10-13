@@ -161,6 +161,14 @@ public class StayBookingService {
     }
 
     @Transactional
+    public void delete(String bookingId) {
+        Person actor = authService.currentPerson();
+        requireRegistrationViewer(actor);
+        StayBooking booking = findBookingOrThrow(bookingId);
+        stayBookingRepository.delete(booking);
+    }
+
+    @Transactional
     public Map<String, Object> update(String bookingId, UpdateStayBookingRequest body) {
         Person actor = authService.currentPerson();
         requireRegistrationViewer(actor);
