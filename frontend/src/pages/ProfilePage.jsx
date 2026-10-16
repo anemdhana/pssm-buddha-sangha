@@ -57,6 +57,7 @@ export function ProfilePage() {
         const next = {
           ...emptyProfile(),
           ...res.data,
+          meditation: res.data.meditation || 'new',
           place: { ...emptyProfile().place, ...(res.data.place || {}) },
           members: Array.isArray(res.data.members) ? res.data.members : []
         };
@@ -88,6 +89,7 @@ export function ProfilePage() {
       setForm({
         ...emptyProfile(),
         ...updatedForm,
+        meditation: updatedForm.meditation || 'new',
         place: { ...emptyProfile().place, ...(updatedForm.place || {}) },
         members: Array.isArray(updatedForm.members) ? updatedForm.members : []
       });

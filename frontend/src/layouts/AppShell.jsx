@@ -9,6 +9,12 @@ export function AppShell() {
   const { signedIn, isPssmAdmin, isOrganizer, hasRole, logout, loading } = useAuth();
   const canViewStayRegistrations =
     hasRole('accommodation_volunteer') || isPssmAdmin || isOrganizer;
+  const canViewStayAllotments =
+    hasRole('accommodation_volunteer') ||
+    hasRole('accommodation_admin') ||
+    isPssmAdmin ||
+    isOrganizer;
+  const canManageHotels = hasRole('accommodation_admin') || isPssmAdmin;
   const { picked, setPicked } = useEventPick();
   const navigate = useNavigate();
   const [events, setEvents] = useState([]);
@@ -160,7 +166,17 @@ export function AppShell() {
                       </li>
                       {canViewStayRegistrations ? (
                         <li>
-                          <Link to="/stay/registrations">Interested Friends and Masters</Link>
+                          <Link to="/stay/registrations">Friends and Masters List</Link>
+                        </li>
+                      ) : null}
+                      {canViewStayAllotments ? (
+                        <li>
+                          <Link to="/stay/allotments">Who is staying where</Link>
+                        </li>
+                      ) : null}
+                      {canManageHotels ? (
+                        <li>
+                          <Link to="/stay/hotels">Hotels &amp; rooms</Link>
                         </li>
                       ) : null}
                     </ul>
@@ -236,7 +252,17 @@ export function AppShell() {
                     </li>
                     {canViewStayRegistrations ? (
                       <li>
-                        <Link to="/stay/registrations">Interested Friends and Masters</Link>
+                        <Link to="/stay/registrations">Friends and Masters List</Link>
+                      </li>
+                    ) : null}
+                    {canViewStayAllotments ? (
+                      <li>
+                        <Link to="/stay/allotments">Who is staying where</Link>
+                      </li>
+                    ) : null}
+                    {canManageHotels ? (
+                      <li>
+                        <Link to="/stay/hotels">Hotels &amp; rooms</Link>
                       </li>
                     ) : null}
                   </>

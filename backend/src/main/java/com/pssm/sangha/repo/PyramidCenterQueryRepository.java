@@ -23,7 +23,13 @@ public class PyramidCenterQueryRepository {
         if (query != null && !query.isBlank()) {
             String escaped = Pattern.quote(query.trim());
             Pattern pattern = Pattern.compile(escaped, Pattern.CASE_INSENSITIVE);
-            criteria = Criteria.where("name").regex(pattern);
+            criteria = new Criteria().orOperator(
+                    Criteria.where("name").regex(pattern),
+                    Criteria.where("locality").regex(pattern),
+                    Criteria.where("city").regex(pattern),
+                    Criteria.where("state").regex(pattern),
+                    Criteria.where("address").regex(pattern)
+            );
         }
         Query mongoQuery = Query.query(criteria)
                 .with(Sort.by(Sort.Order.desc("usageCount"), Sort.Order.asc("name")))

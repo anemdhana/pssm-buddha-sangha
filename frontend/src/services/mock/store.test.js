@@ -51,3 +51,48 @@ describe('mock join', () => {
     });
   });
 });
+
+describe('mock stay allotments', () => {
+  it('replaces prior room assignment so a person is not duplicated', async () => {
+    const sample = mockApi.ensureSampleAdmin();
+    await mockApi.login({ mobile: sample.mobile, password: sample.password });
+
+    const first = await mockApi.createStayAllotments({
+      eventId: 'evt_sample_anandotsavam',
+      eventName: 'Dhyana Dussera Anandotsavam - 2026',
+      placements: [
+        {
+          bookingId: 'stay_test_dup',
+          hotelId: 'htl_sample_sai_prakash',
+          roomNumber: '231',
+          roomType: 'ac',
+          roomKind: 'regular',
+          members: [{ name: 'Dup Guest', mobile: '9000111222', gender: 'male', age: 'adult', primary: true }]
+        }
+      ]
+    });
+    expect(first.data.created).toBe(1);
+
+    await mockApi.createStayAllotments({
+      eventId: 'evt_sample_anandotsavam',
+      eventName: 'Dhyana Dussera Anandotsavam - 2026',
+      placements: [
+        {
+          bookingId: 'stay_test_dup',
+          hotelId: 'htl_sample_sai_prakash',
+          roomNumber: '232',
+          roomType: 'ac',
+          roomKind: 'regular',
+          members: [{ name: 'Dup Guest', mobile: '9000111222', gender: 'male', age: 'adult', primary: true }]
+        }
+      ]
+    });
+
+    const listed = await mockApi.listStayAllotments('evt_sample_anandotsavam', { size: 200 });
+    const matches = (listed.data.items || []).filter((row) =>
+      (row.guests || []).some((g) => String(g.mobile) === '9000111222')
+    );
+    expect(matches).toHaveLength(1);
+    expect(matches[0].roomNumber).toBe('232');
+  });
+});

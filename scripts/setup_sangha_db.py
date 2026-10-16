@@ -147,28 +147,44 @@ def import_pyramid_centers(db, *, replace: bool = False) -> None:
         print(f"Pyramid center seed CSV missing: {CENTERS_CSV}", file=sys.stderr)
         return
 
+    import csv
+
     now = utc_now()
     rows = []
-    with CENTERS_CSV.open(encoding="utf-8") as fh:
-        header = fh.readline()
-        if not header:
-            return
-        for line in fh:
-            name = line.strip()
-            if name:
-                rows.append(name)
+    with CENTERS_CSV.open(encoding="utf-8", newline="") as fh:
+        for row in csv.DictReader(fh):
+            name = (row.get("name") or "").strip()
+            if not name:
+                continue
+            rows.append(
+                {
+                    "name": name,
+                    "locality": (row.get("locality") or "").strip(),
+                    "city": (row.get("city") or "").strip(),
+                    "state": (row.get("state") or "").strip(),
+                    "country": (row.get("country") or "India").strip() or "India",
+                    "address": (row.get("address") or "").strip(),
+                }
+            )
 
     centers = db["pyramid_centers"]
     if replace:
         removed = centers.delete_many({}).deleted_count
         print(f"Pyramid centers: cleared {removed} existing row(s).")
     upserted = 0
-    for name in rows:
+    for row in rows:
         result = centers.update_one(
-            {"name": name},
+            {"name": row["name"]},
             {
-                "$setOnInsert": {"name": name, "usageCount": 0, "createdAt": now},
-                "$set": {"updatedAt": now},
+                "$setOnInsert": {"name": row["name"], "usageCount": 0, "createdAt": now},
+                "$set": {
+                    "locality": row["locality"] or None,
+                    "city": row["city"] or None,
+                    "state": row["state"] or None,
+                    "country": row["country"] or None,
+                    "address": row["address"] or None,
+                    "updatedAt": now,
+                },
             },
             upsert=True,
         )

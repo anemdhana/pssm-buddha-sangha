@@ -10,7 +10,11 @@ function escapeHtml(text) {
  * UIkit modal with custom footer buttons. Resolves choice id, or null if dismissed.
  * @see https://getuikit.com/docs/modal — UIkit.modal.dialog
  */
-export function uikitDialogChoice(messageHtml, choices, { cancelLabel = 'Cancel' } = {}) {
+export function uikitDialogChoice(
+  messageHtml,
+  choices,
+  { cancelLabel = 'Cancel', bodyClass = '' } = {}
+) {
   if (typeof window === 'undefined') return Promise.resolve(null);
 
   const UIkit = window.UIkit;
@@ -29,8 +33,9 @@ export function uikitDialogChoice(messageHtml, choices, { cancelLabel = 'Cancel'
     )
     .join('');
 
+  const bodyCls = ['uk-modal-body', bodyClass].filter(Boolean).join(' ');
   const html =
-    `<div class="uk-modal-body">${messageHtml}</div>` +
+    `<div class="${bodyCls}">${messageHtml}</div>` +
     `<div class="uk-modal-footer uk-text-right">` +
     `<button type="button" class="uk-button uk-button-default uk-modal-close">${escapeHtml(cancelLabel)}</button>` +
     buttons +
@@ -39,6 +44,17 @@ export function uikitDialogChoice(messageHtml, choices, { cancelLabel = 'Cancel'
   return new Promise((resolve) => {
     const modal = UIkit.modal.dialog(html, { stack: true });
     const el = modal.$el;
+    if (bodyClass) {
+      const dialog = el.querySelector('.uk-modal-dialog');
+      if (dialog) dialog.classList.add('x-allot-confirm-dialog');
+    }
+    if (typeof UIkit.update === 'function') {
+      try {
+        UIkit.update(el);
+      } catch {
+        /* ignore */
+      }
+    }
     let settled = false;
     const finish = (value) => {
       if (settled) return;

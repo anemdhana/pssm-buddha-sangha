@@ -62,9 +62,23 @@ public class PyramidCenterService {
         Map<String, Object> row = new LinkedHashMap<>();
         row.put("id", center.getId());
         row.put("name", center.getName());
+        row.put("locality", blankToNull(center.getLocality()));
+        row.put("city", blankToNull(center.getCity()));
+        row.put("state", blankToNull(center.getState()));
+        row.put("country", blankToNull(center.getCountry()));
+        row.put("address", blankToNull(center.getAddress()));
         row.put("usageCount", center.getUsageCount());
-        row.put("label", center.getName());
+        String locality = center.getLocality() == null ? "" : center.getLocality().trim();
+        row.put("label", locality.isBlank() ? center.getName() : center.getName() + " — " + locality);
         return row;
+    }
+
+    private static String blankToNull(String value) {
+        if (value == null) {
+            return null;
+        }
+        String trimmed = value.trim();
+        return trimmed.isEmpty() ? null : trimmed;
     }
 
     private static String asString(Object value) {

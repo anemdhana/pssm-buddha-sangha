@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { api } from '../../services/api.js';
 import {
@@ -26,9 +26,50 @@ const STAY_STEPS = [
   { id: 'done', label: 'Registered' }
 ];
 
+const STEP_PLACE = STAY_STEPS.findIndex((s) => s.id === 'place');
 const STEP_DAYS = STAY_STEPS.findIndex((s) => s.id === 'days');
 const STEP_DONE = STAY_STEPS.findIndex((s) => s.id === 'done');
 const FORM_STEP_COUNT = STEP_DONE; // who … review
+
+function formFromProfile(profile, mobileFallback = '') {
+  const base = emptyProfile();
+  const raw = profile && typeof profile === 'object' ? { ...profile } : {};
+  delete raw.password;
+  return {
+    ...base,
+    ...raw,
+    mobile: normalizeMobile(raw.mobile || mobileFallback),
+    meditation: raw.meditation || 'new',
+    age: raw.age || 'adult',
+    place: { ...base.place, ...(raw.place || {}) },
+    members: Array.isArray(raw.members) ? raw.members : []
+  };
+}
+
+function whoFieldErrors(form) {
+  const errors = {};
+  if (!String(form.fullName || '').trim()) errors.fullName = 'Enter your full name.';
+  const mobile = normalizeMobile(form.mobile);
+  if (!mobile) errors.mobile = 'Enter your mobile number.';
+  else if (mobile.length < 10) errors.mobile = 'Mobile needs at least 10 digits.';
+  if (!form.gender) errors.gender = 'Choose gender.';
+  if (!form.meditation) errors.meditation = 'Choose how long into meditation.';
+  const monthMsg = birthMonthError(form);
+  const dateMsg = birthDateError(form);
+  if (monthMsg) errors.birthMonth = monthMsg;
+  if (dateMsg) errors.birthDate = dateMsg;
+  return errors;
+}
+
+function placeFieldErrors(form) {
+  const errors = {};
+  if (form.place && form.place.kind === 'urban') {
+    if (!String(form.place.city || '').trim()) errors.city = 'Enter city.';
+  } else if (!String((form.place && form.place.village) || '').trim()) {
+    errors.village = 'Enter village.';
+  }
+  return errors;
+}
 
 const PLAN_LABELS = { free: 'Free stay', paid: 'Paid stay' };
 
@@ -250,8 +291,7 @@ export function StayWizard({
   bookingId = null,
   updateSanghaProfile = false,
   cancelTo = null,
-  cancelLabel = null,
-  cancelIcon = 'reply',
+  crumbs = null,
   showBookingModePicker = false,
   onBookingModeChange = null
 }) {
@@ -272,6 +312,7 @@ export function StayWizard({
       ? {
           ...emptyProfile(),
           ...initialForm,
+          meditation: initialForm.meditation || 'new',
           place: { ...emptyProfile().place, ...(initialForm.place || {}) },
           members: Array.isArray(initialForm.members) ? initialForm.members : []
         }
@@ -288,11 +329,73 @@ export function StayWizard({
   const [busy, setBusy] = useState(false);
   const [bookedAt, setBookedAt] = useState('');
   const [camera, setCamera] = useState(null);
+  /** Guest booking: existing sangha member matched by mobile (do not registerFamily). */
+  const [guestKnownPerson, setGuestKnownPerson] = useState(false);
+  const [lookedUpMobile, setLookedUpMobile] = useState('');
+  const [mobileLookupStatus, setMobileLookupStatus] = useState(''); // '', looking, found, new
+  const guestLookupGen = useRef(0);
   const STEPS = STAY_STEPS;
+  const isGuestBooking = bookingMode === 'guest' && !isEdit;
 
   useEffect(() => {
     if (window.UIkit) window.UIkit.update(document.body);
   }, [step, form.members.length, camera]);
+
+  useEffect(() => {
+    if (!isGuestBooking || step !== 0) return;
+    requestAnimationFrame(() => focusField('mobile'));
+  }, [isGuestBooking]);
+
+  useEffect(() => {
+    if (!isGuestBooking) return;
+    const digits = normalizeMobile(form.mobile);
+    if (digits.length < 10) {
+      setMobileLookupStatus((prev) => (prev === 'looking' ? '' : prev));
+      return;
+    }
+    if (digits === lookedUpMobile) return;
+
+    const gen = ++guestLookupGen.current;
+    setMobileLookupStatus('looking');
+    const timer = setTimeout(async () => {
+      try {
+        const res = await api.lookupProfileByMobile(digits);
+        if (guestLookupGen.current !== gen) return;
+        const next = formFromProfile(res.data, digits);
+        const whoErr = whoFieldErrors(next);
+        const placeErr = placeFieldErrors(next);
+        const withDates = withStayDefaults(next, event);
+        setForm(Object.keys(whoErr).length || Object.keys(placeErr).length ? next : withDates);
+        setGuestKnownPerson(true);
+        setLookedUpMobile(digits);
+        setMobileLookupStatus('found');
+        setFieldErrors({});
+        setMemberErrors({});
+        setStayErrors({});
+        setError('');
+        if (!Object.keys(whoErr).length && !Object.keys(placeErr).length) {
+          setStep(STEP_DAYS);
+        } else if (!Object.keys(whoErr).length) {
+          setStep(STEP_PLACE);
+        }
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      } catch (err) {
+        if (guestLookupGen.current !== gen) return;
+        if (err && err.status === 404) {
+          setGuestKnownPerson(false);
+          setLookedUpMobile(digits);
+          setMobileLookupStatus('new');
+        } else {
+          setMobileLookupStatus('');
+        }
+      }
+    }, 320);
+    return () => {
+      clearTimeout(timer);
+    };
+    // event window used only when advancing to days after a successful lookup
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- stable event id + dates
+  }, [form.mobile, isGuestBooking, lookedUpMobile, event?.id, event?.startDate, event?.endDate]);
 
   function clearFieldError(key) {
     setFieldErrors((prev) => {
@@ -354,28 +457,29 @@ export function StayWizard({
   }
 
   function validateWhoFields() {
-    const errors = {};
-    if (!form.fullName.trim()) errors.fullName = 'Enter your full name.';
-    const mobile = normalizeMobile(form.mobile);
-    if (!mobile) errors.mobile = 'Enter your mobile number.';
-    else if (mobile.length < 10) errors.mobile = 'Mobile needs at least 10 digits.';
-    if (!form.gender) errors.gender = 'Choose gender.';
-    if (!form.meditation) errors.meditation = 'Choose how long into meditation.';
-    const monthMsg = birthMonthError(form);
-    const dateMsg = birthDateError(form);
-    if (monthMsg) errors.birthMonth = monthMsg;
-    if (dateMsg) errors.birthDate = dateMsg;
-    return errors;
+    return whoFieldErrors(form);
   }
 
   function validatePlaceFields() {
-    const errors = {};
-    if (form.place.kind === 'urban') {
-      if (!form.place.city.trim()) errors.city = 'Enter city.';
-    } else if (!form.place.village.trim()) {
-      errors.village = 'Enter village.';
+    return placeFieldErrors(form);
+  }
+
+  function onGuestMobileChange(value) {
+    clearFieldError('mobile');
+    const digits = normalizeMobile(value);
+    if (guestKnownPerson && digits !== lookedUpMobile) {
+      guestLookupGen.current += 1;
+      setGuestKnownPerson(false);
+      setLookedUpMobile('');
+      setMobileLookupStatus('');
+      setForm({ ...emptyProfile(), mobile: value, meditation: 'new' });
+      return;
     }
-    return errors;
+    if (!guestKnownPerson && lookedUpMobile && digits !== lookedUpMobile) {
+      setLookedUpMobile('');
+      setMobileLookupStatus('');
+    }
+    setForm((prev) => ({ ...prev, mobile: value }));
   }
 
   function validateFamilyFields() {
@@ -393,9 +497,10 @@ export function StayWizard({
       const errors = validateWhoFields();
       setFieldErrors(errors);
       setMemberErrors({});
-      const first = ['fullName', 'mobile', 'gender', 'meditation', 'birthDate', 'birthMonth'].find(
-        (k) => errors[k]
-      );
+      const whoOrder = isGuestBooking
+        ? ['mobile', 'fullName', 'gender', 'meditation', 'birthDate', 'birthMonth']
+        : ['fullName', 'mobile', 'gender', 'meditation', 'birthDate', 'birthMonth'];
+      const first = whoOrder.find((k) => errors[k]);
       if (first) {
         requestAnimationFrame(() => focusField(first));
         return;
@@ -477,13 +582,37 @@ export function StayWizard({
           updateSanghaProfile
         });
       } else {
-        res = await api.createStayBooking({
-          plan,
-          eventId: event && event.id,
-          eventName: event && event.name,
-          registerFamily: bookingMode === 'guest',
-          family: form
-        });
+        const registerFamily = bookingMode === 'guest' && !guestKnownPerson;
+        try {
+          res = await api.createStayBooking({
+            plan,
+            eventId: event && event.id,
+            eventName: event && event.name,
+            registerFamily,
+            family: form
+          });
+        } catch (err) {
+          const mobileTaken =
+            registerFamily &&
+            (err.status === 409 ||
+              (err.body && err.body.error && err.body.error.code === 'MOBILE_TAKEN') ||
+              /already registered/i.test(err.message || ''));
+          if (!mobileTaken) throw err;
+          const digits = normalizeMobile(form.mobile);
+          const looked = await api.lookupProfileByMobile(digits);
+          const next = withStayDefaults(formFromProfile(looked.data, digits), event);
+          setForm(next);
+          setGuestKnownPerson(true);
+          setLookedUpMobile(digits);
+          setMobileLookupStatus('found');
+          res = await api.createStayBooking({
+            plan,
+            eventId: event && event.id,
+            eventName: event && event.name,
+            registerFamily: false,
+            family: next
+          });
+        }
       }
       const booking = res.data && res.data.booking;
       setBookedAt((booking && (booking.bookedAt || booking.createdAt)) || bookedAt);
@@ -491,19 +620,11 @@ export function StayWizard({
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (err) {
       const message = err.message || (isEdit ? 'Could not save changes.' : 'Could not submit interest.');
-      const mobileTaken =
-        bookingMode === 'guest' &&
-        (err.status === 409 ||
-          (err.body && err.body.error && err.body.error.code === 'MOBILE_TAKEN') ||
-          /already registered/i.test(message));
-      if (mobileTaken) {
-        const takenMsg = 'This mobile is already registered. Use a different mobile or book from their own login.';
-        setError(takenMsg);
-        setFieldErrors({ mobile: takenMsg });
+      setError(message);
+      if (bookingMode === 'guest' && /already registered|MOBILE_TAKEN/i.test(message)) {
+        setFieldErrors({ mobile: message });
         setStep(STAY_STEPS.findIndex((s) => s.id === 'who'));
         requestAnimationFrame(() => focusField('mobile'));
-      } else {
-        setError(message);
       }
     } finally {
       setBusy(false);
@@ -605,22 +726,46 @@ export function StayWizard({
 
   const stepMeta = STEPS[step];
   const partyCount = 1 + form.members.length;
+  const trail = Array.isArray(crumbs) ? crumbs.filter((c) => c && c.label) : [];
+  const hasTrail = trail.length > 0;
 
   return (
     <main className="uk-section uk-section-small uk-padding-remove-top">
       <div className="uk-container app-column">
         <div
-          className={`step-bar${cancelTo || showBookingModePicker ? ' step-bar-split' : ''}`}
+          className={`step-bar${hasTrail || showBookingModePicker ? ' step-bar-split' : ''}`}
         >
-          {cancelTo ? (
-            <Link className="step-bar-exit" to={cancelTo}>
-              <span
-                className="step-bar-exit-icon"
-                uk-icon={`icon: ${cancelIcon || 'reply'}; ratio: 0.85`}
-                aria-hidden="true"
-              />
-              <span className="step-bar-exit-text">{cancelLabel || 'Back'}</span>
-            </Link>
+          {hasTrail ? (
+            <nav className="stay-crumb" aria-label="Stay path">
+              {trail.map((crumb, index) => {
+                const last = index === trail.length - 1;
+                const to = crumb.to ? String(crumb.to) : '';
+                return (
+                  <span key={`${crumb.label}-${index}`} className="stay-crumb-item">
+                    {index > 0 ? (
+                      <span
+                        className="stay-crumb-sep"
+                        uk-icon="icon: chevron-right; ratio: 0.7"
+                        aria-hidden="true"
+                      />
+                    ) : null}
+                    {to && !last ? (
+                      <Link className="stay-crumb-link" to={to}>
+                        {crumb.label}
+                      </Link>
+                    ) : to && last ? (
+                      <Link className="stay-crumb-link stay-crumb-current" to={to}>
+                        {crumb.label}
+                      </Link>
+                    ) : (
+                      <span className="stay-crumb-current" aria-current={last ? 'page' : undefined}>
+                        {crumb.label}
+                      </span>
+                    )}
+                  </span>
+                );
+              })}
+            </nav>
           ) : null}
           {showBookingModePicker && typeof onBookingModeChange === 'function' ? (
             <div className="stay-entry-modes" role="group" aria-label="Book accommodation for">
@@ -668,18 +813,13 @@ export function StayWizard({
         </div>
 
         <div className="uk-card uk-card-default uk-card-small uk-card-body uk-box-shadow-medium">
-          <div className="x-role-chips uk-margin-small-bottom">
-            <span className="x-role-chip">{planLabel}</span>
-            <span className="x-role-chip">{eventName}</span>
-          </div>
-
           {STEPS[step].id === 'who' && (
             <>
               <header className="x-step-head form-head">
                 <h2 className="form-title">Who is coming?</h2>
                 <p className="form-summary">
                   {bookingMode === 'guest'
-                    ? `Details of the visitor you are booking ${planLabel.toLowerCase()} accommodation for.`
+                    ? `Enter the visitor’s mobile first — we fill details if they are already in the sangha.`
                     : `A few details about you for your ${planLabel.toLowerCase()} accommodation.`}
                 </p>
               </header>
@@ -689,6 +829,51 @@ export function StayWizard({
                     <span uk-icon="icon: user; ratio: 0.75" /> Identity
                   </h3>
                   <div className="uk-grid-small uk-child-width-1-1 uk-child-width-1-2@s" uk-grid="">
+                    {isGuestBooking ? (
+                      <div className="x-field uk-width-1-1">
+                        <label className="x-label" htmlFor="mobile">
+                          Mobile
+                        </label>
+                        <div className="uk-inline uk-width-1-1">
+                          <span className="uk-form-icon" uk-icon="icon: receiver" />
+                          <input
+                            className={`uk-input uk-form-small${fieldErrors.mobile ? ' uk-form-danger' : ''}${guestKnownPerson ? ' filled' : ''}`}
+                            id="mobile"
+                            type="tel"
+                            inputMode="tel"
+                            placeholder="98765 43210"
+                            autoComplete="tel"
+                            autoFocus
+                            aria-invalid={fieldErrors.mobile ? 'true' : undefined}
+                            aria-describedby={
+                              fieldErrors.mobile
+                                ? 'err-mobile'
+                                : mobileLookupStatus
+                                  ? 'mobile-lookup-hint'
+                                  : undefined
+                            }
+                            value={form.mobile}
+                            onChange={(e) => onGuestMobileChange(e.target.value)}
+                          />
+                        </div>
+                        <FieldError id="err-mobile" message={fieldErrors.mobile} />
+                        {mobileLookupStatus === 'looking' ? (
+                          <p className="hint" id="mobile-lookup-hint">
+                            Looking up sangha member…
+                          </p>
+                        ) : null}
+                        {mobileLookupStatus === 'found' ? (
+                          <p className="hint" id="mobile-lookup-hint" role="status">
+                            Found {form.fullName || 'member'} — details filled.
+                          </p>
+                        ) : null}
+                        {mobileLookupStatus === 'new' ? (
+                          <p className="hint" id="mobile-lookup-hint" role="status">
+                            Not in sangha yet — enter their details below.
+                          </p>
+                        ) : null}
+                      </div>
+                    ) : null}
                     <div className="x-field">
                       <label className="x-label" htmlFor="full-name">
                         Full name
@@ -708,6 +893,7 @@ export function StayWizard({
                       </div>
                       <FieldError id="err-full-name" message={fieldErrors.fullName} />
                     </div>
+                    {!isGuestBooking ? (
                     <div className="x-field">
                       <label className="x-label" htmlFor="mobile">
                         Mobile
@@ -730,6 +916,7 @@ export function StayWizard({
                       </div>
                       <FieldError id="err-mobile" message={fieldErrors.mobile} />
                     </div>
+                    ) : null}
                     <div className="x-field">
                       <label className="x-label" htmlFor="email">
                         Email <span className="uk-text-muted">(optional)</span>
@@ -1234,8 +1421,7 @@ export function StayWizard({
               <header className="x-step-head form-head">
                 <h2 className="form-title">Review &amp; submit</h2>
                 <p className="form-summary">
-                  A quick look before you register interest for {eventName} ({planLabel.toLowerCase()}). Rooms are not
-                  assigned yet — we are collecting who plans to attend. Change anything with Back, then submit.
+                  A quick look before you register interest for {eventName} ({planLabel.toLowerCase()}). Accommodation is not yet assigned — we are collecting who plans to attend. Change anything with Back, then submit.
                 </p>
               </header>
               <div className="x-summary">

@@ -54,6 +54,7 @@ export function AuthProvider({ children }) {
       isPssmAdmin: hasRole('pssm_admin'),
       isOrganizer: hasRole('event_organizer'),
       isAccommodationVolunteer: hasRole('accommodation_volunteer'),
+      isAccommodationAdmin: hasRole('accommodation_admin'),
       hasRole,
       login,
       logout,

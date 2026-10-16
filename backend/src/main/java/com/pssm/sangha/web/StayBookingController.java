@@ -33,8 +33,18 @@ public class StayBookingController {
     }
 
     @GetMapping
-    public ResponseEntity<?> list(@RequestParam("eventId") String eventId) {
-        return ResponseEntity.ok(ApiResponses.data(stayBookingService.listForEvent(eventId)));
+    public ResponseEntity<?> list(
+            @RequestParam("eventId") String eventId,
+            @RequestParam(value = "q", required = false) String q,
+            @RequestParam(value = "gender", required = false) String gender,
+            @RequestParam(value = "ages", required = false) String ages,
+            @RequestParam(value = "meditation", required = false) String meditation,
+            @RequestParam(value = "location", required = false) String location,
+            @RequestParam(value = "stayRange", required = false) String stayRange,
+            @RequestParam(value = "page", required = false) Integer page,
+            @RequestParam(value = "size", required = false) Integer size) {
+        return ResponseEntity.ok(ApiResponses.data(stayBookingService.listForEvent(
+                eventId, q, gender, ages, meditation, location, stayRange, page, size)));
     }
 
     @GetMapping("/{id}")

@@ -12,6 +12,9 @@ import { PasswordPage } from './pages/PasswordPage.jsx';
 import { ProfilePage } from './pages/ProfilePage.jsx';
 import { StayPage } from './pages/StayPage.jsx';
 import { StayEditPage } from './pages/StayEditPage.jsx';
+import { StayAllotmentsPage } from './pages/StayAllotmentsPage.jsx';
+import { StayHotelFormPage } from './pages/StayHotelFormPage.jsx';
+import { StayHotelsPage } from './pages/StayHotelsPage.jsx';
 import { StayRegistrationsPage } from './pages/StayRegistrationsPage.jsx';
 
 export default function App() {
@@ -34,10 +37,42 @@ export default function App() {
                 }
               />
               <Route
+                path="/stay/allotments"
+                element={
+                  <ProtectedRoute>
+                    <StayAllotmentsPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
                 path="/stay/edit/:bookingId"
                 element={
                   <ProtectedRoute>
                     <StayEditPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/stay/hotels"
+                element={
+                  <ProtectedRoute>
+                    <StayHotelsPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/stay/hotels/new"
+                element={
+                  <ProtectedRoute>
+                    <StayHotelFormPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/stay/hotels/:hotelId/edit"
+                element={
+                  <ProtectedRoute>
+                    <StayHotelFormPage />
                   </ProtectedRoute>
                 }
               />

@@ -78,6 +78,11 @@ export const ROLES = {
     id: 'accommodation_volunteer',
     label: 'Accommodation Volunteer',
     assignable: true
+  },
+  accommodation_admin: {
+    id: 'accommodation_admin',
+    label: 'Accommodation Admin',
+    assignable: true
   }
 };
 
@@ -115,7 +120,7 @@ export function emptyMember() {
     mobile: '',
     gender: '',
     age: 'adult',
-    meditation: '',
+    meditation: 'new',
     profession: '',
     addrMode: 'same',
     place: { kind: 'rural', village: '', town: '', district: '', city: '', state: '', country: 'India' },
@@ -135,7 +140,7 @@ export function emptyProfile() {
     altMobile: '',
     gender: '',
     age: 'adult',
-    meditation: '',
+    meditation: 'new',
     profession: '',
     birthDate: '',
     birthMonth: '',

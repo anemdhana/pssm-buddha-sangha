@@ -133,7 +133,11 @@ export function StayEditPage() {
       bookingId={bookingId}
       updateSanghaProfile
       cancelTo="/stay/registrations"
-      cancelLabel="Interested Friends and Masters"
+      crumbs={[
+        { label: 'Stay' },
+        { label: 'Friends and Masters List', to: '/stay/registrations' },
+        { label: 'Edit' }
+      ]}
     />
   );
 }

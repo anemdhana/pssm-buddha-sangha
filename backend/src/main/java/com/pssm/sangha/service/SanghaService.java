@@ -117,6 +117,25 @@ public class SanghaService {
         return result;
     }
 
+    /**
+     * Full profile by exact mobile for Stay booking prefill (volunteer / organizer / admin).
+     */
+    @Transactional(readOnly = true)
+    public ProfileDto lookupProfileByMobile(String mobileQuery) {
+        authService.requireAnyRole(
+                SanghaRole.ACCOMMODATION_VOLUNTEER,
+                SanghaRole.EVENT_ORGANIZER,
+                SanghaRole.PSSM_ADMIN);
+        String digits = PasswordSupport.normalizeMobile(mobileQuery);
+        if (digits.isBlank() || digits.length() < 10) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "VALIDATION", "Enter a mobile number with at least 10 digits.");
+        }
+        Person person = personRepository.findByMobile(digits)
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "NOT_FOUND",
+                        "No sangha member found for that mobile."));
+        return profileMapper.toDto(person);
+    }
+
     @Transactional
     public Map<String, Object> updateRoles(String mobilePath, List<String> roles) {
         authService.requireRole(SanghaRole.PSSM_ADMIN);

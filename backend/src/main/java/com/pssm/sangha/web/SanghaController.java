@@ -47,6 +47,11 @@ public class SanghaController {
         return ResponseEntity.ok(ApiResponses.data(sanghaService.searchPeople(mobile)));
     }
 
+    @GetMapping("/profile-by-mobile")
+    public ResponseEntity<?> profileByMobile(@RequestParam(name = "mobile") String mobile) {
+        return ResponseEntity.ok(ApiResponses.data(sanghaService.lookupProfileByMobile(mobile)));
+    }
+
     @PutMapping("/people/{mobile}/roles")
     public ResponseEntity<?> roles(@PathVariable String mobile, @RequestBody RolesRequest body) {
         return ResponseEntity.ok(ApiResponses.data(sanghaService.updateRoles(mobile, body.roles)));

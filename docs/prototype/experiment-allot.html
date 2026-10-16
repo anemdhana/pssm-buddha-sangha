@@ -1,0 +1,815 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Experiment · Allot hotel rooms</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/uikit@3.21.13/dist/css/uikit.min.css">
+    <link rel="stylesheet" href="app.css">
+    <style>
+        :root { --ink: #1b2a6b; }
+        .x-page { max-width: 880px; margin: 0 auto; padding: 16px 12px 160px; position: relative; z-index: 1; }
+        .x-card {
+            border: 1px solid #e6e9f2;
+            border-radius: 14px;
+            background: rgba(255, 255, 255, 0.94);
+            box-shadow: 0 10px 28px rgba(27, 42, 107, 0.06);
+            overflow: hidden;
+        }
+        .x-hero {
+            display: flex;
+            align-items: flex-end;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 14px 16px 12px;
+            background: linear-gradient(135deg, #1b2a6b 0%, #2a4494 55%, #3d5bb0 100%);
+            color: #fff;
+        }
+        .x-hero h1 { margin: 0; font-size: 1.15rem; font-weight: 650; letter-spacing: -0.02em; }
+        .x-hero p { margin: 2px 0 0; opacity: 0.85; font-size: 0.78rem; line-height: 1.35; }
+        .x-badge {
+            flex: 0 0 auto;
+            padding: 4px 10px;
+            border-radius: 999px;
+            background: rgba(224, 178, 58, 0.95);
+            color: #1b2a6b;
+            font-size: 0.68rem;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+        }
+        .x-body { padding: 12px 14px 14px; }
+        .x-note { margin: 8px 0 12px; color: #889; font-size: 0.72rem; }
+        .x-tile-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(112px, 1fr));
+            gap: 10px;
+            margin: 0 0 12px;
+        }
+        .x-tile {
+            position: relative;
+            margin: 0;
+            padding: 0;
+            border: 2px solid #dce1ec;
+            border-radius: 10px;
+            overflow: hidden;
+            aspect-ratio: 3 / 4;
+            background: #1f2a1c;
+            text-align: left;
+            cursor: pointer;
+        }
+        .x-tile.is-selected { border-color: rgba(90, 152, 110, 0.95); box-shadow: 0 0 0 2px rgba(90, 152, 110, 0.25); }
+        .x-tile-photo { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+        .x-tile-fallback {
+            position: absolute; inset: 0; display: grid; place-items: center;
+            background: linear-gradient(160deg, #3d5a40 0%, #1f2a1c 100%);
+            color: #f4f7f2; font-size: 1.6rem; font-weight: 700;
+        }
+        .x-tile-overlay {
+            position: absolute; left: 0; right: 0; bottom: 0; z-index: 1;
+            padding: 1.6rem 0.55rem 0.55rem;
+            background: linear-gradient(180deg, transparent 0%, rgba(12, 18, 36, 0.9) 55%);
+            color: #fff;
+        }
+        .x-tile-overlay strong { display: block; font-size: 0.82rem; line-height: 1.2; }
+        .x-tile-overlay span { display: block; font-size: 0.68rem; opacity: 0.9; }
+
+        /* Compact allot confirm */
+        .uk-modal-dialog.x-allot-confirm-dialog {
+            width: 680px;
+            max-width: 94vw;
+            border-radius: 12px;
+            overflow: hidden;
+        }
+        .x-allot-confirm-dialog .uk-modal-header {
+            background: #f7f8fc;
+            border-bottom: 1px solid #e4e7f0;
+            padding: 10px 14px 10px 14px;
+        }
+        .x-allot-confirm-dialog .uk-modal-title {
+            color: var(--ink);
+            font-size: 1.05rem;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+            line-height: 1.2;
+        }
+        .x-allot-confirm-dialog .uk-modal-body {
+            padding: 10px 14px;
+            max-height: min(58vh, 460px);
+        }
+        .x-allot-confirm-dialog .uk-modal-footer {
+            border-top: 1px solid #e4e7f0;
+            background: #fafbfe;
+            padding: 8px 14px;
+        }
+        .x-allot-hotel-thumb {
+            width: 56px;
+            height: 42px;
+            border-radius: 6px;
+            object-fit: cover;
+            background: #dce3ef;
+            display: block;
+        }
+        .x-chip-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+            align-items: center;
+        }
+        .x-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 2px 8px;
+            border-radius: 999px;
+            border: 1px solid transparent;
+            font-size: 0.68rem;
+            font-weight: 700;
+            line-height: 1.35;
+            white-space: nowrap;
+        }
+        .x-chip strong { font-size: 0.78rem; }
+        .x-chip.is-ink { color: #1b2a6b; background: rgba(27, 42, 107, 0.08); border-color: rgba(27, 42, 107, 0.16); }
+        .x-chip.is-gold { color: #1b2a6b; background: rgba(224, 178, 58, 0.28); border-color: rgba(224, 178, 58, 0.55); }
+        .x-chip.is-full { color: #7f1d1d; background: rgba(185, 28, 28, 0.1); border-color: rgba(185, 28, 28, 0.28); }
+        .x-chip.is-partial { color: #92400e; background: rgba(245, 158, 11, 0.16); border-color: rgba(217, 119, 6, 0.35); }
+        .x-chip.is-free { color: #166534; background: rgba(34, 197, 94, 0.12); border-color: rgba(22, 163, 74, 0.3); }
+        .x-chip.is-ac { color: #1e3a8a; background: rgba(59, 130, 246, 0.12); border-color: rgba(59, 130, 246, 0.3); }
+        .x-chip.is-nonac { color: #374151; background: rgba(107, 114, 128, 0.12); border-color: rgba(107, 114, 128, 0.28); }
+        .x-chip.is-loc { color: #5b21b6; background: rgba(139, 92, 246, 0.12); border-color: rgba(124, 58, 237, 0.28); }
+        .x-chip.is-age { color: #9a3412; background: rgba(251, 146, 60, 0.18); border-color: rgba(234, 88, 12, 0.3); }
+        .x-chip.is-muted { color: #5a6275; background: #eef1f6; border-color: #dce1ec; }
+        .x-allot-room-number {
+            width: 52px;
+            height: 52px;
+            display: grid;
+            place-items: center;
+            border-radius: 8px;
+            background: #fff;
+            border: 1px solid #e5e7eb;
+            color: var(--ink);
+            font-size: 1.25rem;
+            font-weight: 800;
+            line-height: 1;
+        }
+        .x-allot-room-panel {
+            margin: 0 0 8px !important;
+            padding: 8px 10px !important;
+            border-radius: 10px !important;
+            border: 1px solid #e4e7f0;
+            background: #fbfbfd;
+            box-shadow: none;
+        }
+        .x-allot-section {
+            margin: 6px 0 4px;
+            color: #667086;
+            font-size: 0.62rem;
+            font-weight: 700;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+        }
+        .x-person-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            max-width: 100%;
+            margin: 0 6px 6px 0;
+            padding: 3px 8px 3px 3px;
+            border-radius: 999px;
+            background: #fff;
+            border: 1px solid #e0e4ee;
+            color: var(--ink);
+            font-size: 0.72rem;
+            font-weight: 600;
+            line-height: 1.2;
+            vertical-align: middle;
+        }
+        .x-person-chip.is-occupant {
+            background: #fff8eb;
+            border-color: #f0dfb0;
+        }
+        .x-person-avatar {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            object-fit: cover;
+            flex: 0 0 auto;
+            background: #d7e0ee;
+        }
+        .x-person-avatar.is-fallback {
+            display: grid;
+            place-items: center;
+            background: linear-gradient(160deg, #3d5a40 0%, #1f2a1c 100%);
+            color: #f4f7f2;
+            font-size: 0.62rem;
+            font-weight: 700;
+        }
+        .x-person-chip-meta {
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+            padding-right: 2px;
+        }
+        .x-person-chip-meta em {
+            font-style: normal;
+            color: #667086;
+            font-size: 0.62rem;
+            font-weight: 500;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 110px;
+        }
+        .x-allot-nav-count {
+            min-width: 2.2rem;
+            text-align: center;
+            font-size: 0.7rem;
+            font-weight: 700;
+            color: #5a6275;
+            line-height: 28px;
+        }
+        .x-allot-summary-line {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 6px 10px;
+            margin: 0 0 8px;
+            color: var(--ink);
+            font-size: 0.78rem;
+        }
+
+        .x-suitable-hotels-overlay {
+            position: fixed; left: 50%; bottom: 12px; z-index: 980;
+            width: min(1100px, calc(100vw - 24px)); margin: 0; transform: translateX(-50%);
+            border: 1px solid #d8dde8; border-radius: 14px; background: rgba(255, 255, 255, 0.97);
+            box-shadow: 0 12px 36px rgba(27, 42, 107, 0.18); backdrop-filter: blur(8px);
+            padding: 12px;
+        }
+        .x-suitable-hotels-head {
+            display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-bottom: 10px;
+        }
+        .x-suitable-hotels-title {
+            margin: 0; color: var(--ink); font-size: 0.78rem; font-weight: 700;
+            letter-spacing: 0.04em; text-transform: uppercase;
+        }
+        .x-suitable-hotels-meta {
+            color: #667086; font-size: 0.72rem; font-weight: 500; letter-spacing: 0; text-transform: none;
+        }
+        .x-suitable-hotels-list {
+            display: flex; flex-wrap: nowrap; gap: 10px; margin: 0; padding: 2px 0 4px;
+            list-style: none; overflow-x: auto;
+        }
+        .x-suitable-hotel-card {
+            position: relative; display: flex; align-items: flex-start; gap: 8px;
+            min-width: 180px; max-width: 220px; padding: 10px 12px;
+            border: 2px solid #dce1ec; border-radius: 10px; background: #fff; text-align: left; cursor: pointer;
+        }
+        .x-suitable-hotel-card:disabled { cursor: default; opacity: 0.85; }
+        .x-suitable-hotel-card.is-proposed {
+            border-color: rgba(90, 152, 110, 0.75);
+            box-shadow: 0 0 0 1px rgba(90, 152, 110, 0.2);
+            background: rgba(90, 152, 110, 0.06);
+        }
+        .x-suitable-hotel-rank {
+            flex: 0 0 auto; width: 22px; height: 22px; display: grid; place-items: center;
+            border-radius: 999px; background: #eef1f7; color: #5a6275; font-size: 0.72rem; font-weight: 700;
+        }
+        .x-suitable-hotel-card.is-proposed .x-suitable-hotel-rank {
+            background: rgba(90, 152, 110, 0.2); color: #2f5c3d;
+        }
+        .x-suitable-hotel-body { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+        .x-suitable-hotel-name { color: var(--ink); font-size: 0.86rem; font-weight: 700; line-height: 1.25; }
+        .x-suitable-hotel-sub { color: #667086; font-size: 0.72rem; line-height: 1.3; }
+        .x-suitable-hotel-badge {
+            position: absolute; top: 6px; right: 6px; padding: 1px 6px; border-radius: 999px;
+            background: rgba(90, 152, 110, 0.9); color: #fff; font-size: 0.62rem; font-weight: 700;
+            letter-spacing: 0.02em; text-transform: uppercase;
+        }
+    </style>
+</head>
+<body>
+    <main class="x-page">
+        <p class="x-note">
+            <a href="visitor.html">← Prototype home</a> ·
+            Mirrors <strong>Stay → Friends and Masters List</strong> allot popup (sample values only)
+        </p>
+
+        <div class="x-card">
+            <div class="x-hero">
+                <div>
+                    <h1>Allot hotel rooms</h1>
+                    <p>Select people, then open a hotel from the strip — same confirm structure as the live app.</p>
+                </div>
+                <span class="x-badge">Experiment</span>
+            </div>
+            <div class="x-body">
+                <p class="uk-text-meta uk-margin-small-bottom">Sample selection (click to toggle)</p>
+                <div class="x-tile-grid" id="people-tiles"></div>
+                <p class="uk-text-meta uk-margin-remove" id="selection-hint">3 selected · use the hotel strip below</p>
+            </div>
+        </div>
+    </main>
+
+    <div class="x-suitable-hotels-overlay" id="hotel-strip" aria-label="Suitable hotels" hidden></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/uikit@3.21.13/dist/js/uikit.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/uikit@3.21.13/dist/js/uikit-icons.min.js"></script>
+    <script>
+    (function () {
+        /** Sample data shaped like live allotmentConfirmHtml / SuitableHotelsStrip. */
+        const PEOPLE = [
+            {
+                id: 'p1',
+                name: 'Veeraiah',
+                location: 'Chilakaluripet',
+                age: 'senior',
+                gender: 'male',
+                photo: 'https://randomuser.me/api/portraits/men/32.jpg'
+            },
+            {
+                id: 'p2',
+                name: 'Padma',
+                location: 'Chilakaluripet',
+                age: 'senior',
+                gender: 'female',
+                photo: 'https://randomuser.me/api/portraits/women/44.jpg'
+            },
+            {
+                id: 'p3',
+                name: 'Karthik',
+                location: 'Chilakaluripet',
+                age: 'adult',
+                gender: 'male',
+                photo: 'https://randomuser.me/api/portraits/men/46.jpg'
+            },
+            {
+                id: 'p4',
+                name: 'Meenakshi Devi',
+                location: 'Hyderabad',
+                age: 'adult',
+                gender: 'female',
+                photo: 'https://randomuser.me/api/portraits/women/65.jpg'
+            },
+            {
+                id: 'p5',
+                name: 'Anitha Reddy',
+                location: 'Hyderabad',
+                age: 'adult',
+                gender: 'female',
+                photo: 'https://randomuser.me/api/portraits/women/68.jpg'
+            }
+        ];
+
+        const OCCUPANT_SAMPLE = {
+            name: 'Meenakshi Devi',
+            location: 'Hyderabad',
+            stay: '26 Oct – 5 Nov',
+            age: 'adult',
+            photo: 'https://randomuser.me/api/portraits/women/65.jpg'
+        };
+
+        const HOTELS = [
+            {
+                hotelId: 'htl_sample_sai_prakash',
+                hotelName: 'Hotel Sai Prakash',
+                address: 'Public Garden Road, near Nampally Exhibition Grounds, Hyderabad',
+                contact: '040-23203131',
+                distanceKm: 0.4,
+                freeBeds: 10,
+                roomCount: 6,
+                capacity: 24,
+                fill: { full: 1, partial: 1, free: 4 },
+                peopleSoFar: 5,
+                locations: [
+                    { name: 'Hyderabad', count: 2 },
+                    { name: 'Chilakaluripet', count: 3 }
+                ],
+                proposed: true,
+                roomHint: 'Rm 231, Rm 235'
+            },
+            {
+                hotelId: 'htl_sample_lakdikapul_residency',
+                hotelName: 'Lakdi-ka-pul Residency',
+                address: 'Opposite Railway Bridge, Lakdi-ka-pul, Hyderabad',
+                contact: '040-23311234',
+                distanceKm: 2.8,
+                freeBeds: 8,
+                roomCount: 5,
+                capacity: 62,
+                fill: { full: 0, partial: 2, free: 3 },
+                peopleSoFar: 7,
+                locations: [
+                    { name: 'Vijayawada', count: 4 },
+                    { name: 'Guntur', count: 3 }
+                ],
+                proposed: true,
+                roomHint: 'Rm 501'
+            },
+            {
+                hotelId: 'htl_sample_three_castle',
+                hotelName: 'Three Castle Executive',
+                address: 'Nampally Station Road, beside Exhibition Grounds, Hyderabad',
+                contact: '040-24605678',
+                distanceKm: 0.6,
+                freeBeds: 4,
+                roomCount: 6,
+                capacity: 18,
+                fill: { full: 2, partial: 1, free: 3 },
+                peopleSoFar: 9,
+                locations: [{ name: 'Hyderabad', count: 9 }],
+                proposed: false,
+                roomHint: '4 beds free'
+            },
+            {
+                hotelId: 'htl_sample_abids_inn',
+                hotelName: 'Abids Comfort Inn',
+                address: 'Troop Bazaar, Abids, Hyderabad',
+                contact: '040-23204567',
+                distanceKm: 1.4,
+                freeBeds: 12,
+                roomCount: 5,
+                capacity: 52,
+                fill: { full: 0, partial: 1, free: 4 },
+                peopleSoFar: 3,
+                locations: [{ name: 'Bengaluru', count: 3 }],
+                proposed: false,
+                roomHint: '12 beds free'
+            }
+        ];
+
+        /** Per-hotel room panels + smart alternatives (same shape as listSmartRoomOptions). */
+        const PLACEMENTS = {
+            htl_sample_sai_prakash: [
+                {
+                    bookingId: 'stay_sample_veeraiah',
+                    members: [PEOPLE[0], PEOPLE[1], PEOPLE[2]],
+                    alternatives: [
+                        {
+                            roomNumber: '231',
+                            roomKind: 'regular',
+                            roomType: 'ac',
+                            capacity: 4,
+                            usedBefore: 1,
+                            roomStatusBefore: 'partial',
+                            exactMatch: false,
+                            occupants: [OCCUPANT_SAMPLE]
+                        },
+                        {
+                            roomNumber: '233',
+                            roomKind: 'regular',
+                            roomType: 'non_ac',
+                            capacity: 4,
+                            usedBefore: 0,
+                            roomStatusBefore: 'free',
+                            exactMatch: false,
+                            occupants: []
+                        },
+                        {
+                            roomNumber: '234',
+                            roomKind: 'regular',
+                            roomType: 'non_ac',
+                            capacity: 4,
+                            usedBefore: 0,
+                            roomStatusBefore: 'free',
+                            exactMatch: false,
+                            occupants: []
+                        }
+                    ]
+                }
+            ],
+            htl_sample_lakdikapul_residency: [
+                {
+                    bookingId: 'stay_sample_veeraiah',
+                    members: [PEOPLE[0], PEOPLE[1], PEOPLE[2]],
+                    alternatives: [
+                        {
+                            roomNumber: '501',
+                            roomKind: 'regular',
+                            roomType: 'ac',
+                            capacity: 4,
+                            usedBefore: 0,
+                            roomStatusBefore: 'free',
+                            exactMatch: false,
+                            occupants: []
+                        },
+                        {
+                            roomNumber: '502',
+                            roomKind: 'regular',
+                            roomType: 'ac',
+                            capacity: 4,
+                            usedBefore: 0,
+                            roomStatusBefore: 'free',
+                            exactMatch: false,
+                            occupants: []
+                        }
+                    ]
+                }
+            ]
+        };
+
+        const selected = new Set(['p1', 'p2', 'p3']);
+
+        function statusLabel(status) {
+            if (status === 'full') return 'Full';
+            if (status === 'partial') return 'Partial';
+            return 'Free';
+        }
+
+        function ageLabel(age) {
+            if (age === 'child') return 'Child';
+            if (age === 'senior') return 'Senior';
+            return 'Adult';
+        }
+
+        function initials(name) {
+            const parts = String(name || '').trim().split(/\s+/).filter(Boolean);
+            if (!parts.length) return '?';
+            if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+            return `${parts[0][0] || ''}${parts[1][0] || ''}`.toUpperCase();
+        }
+
+        function escapeHtml(text) {
+            return String(text ?? '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;');
+        }
+
+        function initialsSvg(name) {
+            const letters = String(name || 'H').replace(/[^A-Za-z]/g, '').slice(0, 2).toUpperCase() || 'H';
+            const svg =
+                `<svg xmlns="http://www.w3.org/2000/svg" width="144" height="108">` +
+                `<rect width="144" height="108" fill="#d7e0ee"/>` +
+                `<text x="72" y="62" text-anchor="middle" font-family="Arial,sans-serif" ` +
+                `font-size="36" font-weight="700" fill="#4a5d73">${letters}</text></svg>`;
+            return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+        }
+
+        function personChip(person, { occupant = false } = {}) {
+            const photo = String(person.photo || '').trim();
+            const avatar = photo
+                ? `<img class="x-person-avatar" src="${escapeHtml(photo)}" alt="">`
+                : `<span class="x-person-avatar is-fallback" aria-hidden="true">${escapeHtml(initials(person.name))}</span>`;
+            const metaBits = [
+                person.location || '',
+                person.stay || '',
+                person.age ? ageLabel(person.age) : ''
+            ].filter(Boolean);
+            return (
+                `<span class="x-person-chip${occupant ? ' is-occupant' : ''}" ` +
+                `uk-tooltip="title: ${escapeHtml(metaBits.join(' · ') || person.name)}; pos: top">` +
+                avatar +
+                `<span class="x-person-chip-meta">` +
+                `<span>${escapeHtml(person.name)}</span>` +
+                (metaBits.length ? `<em>${escapeHtml(metaBits[0])}</em>` : '') +
+                `</span></span>`
+            );
+        }
+
+        function roomPanelInner(room, members, altIndex, altTotal) {
+            const multi = altTotal > 1;
+            const occupants = room.occupants || [];
+            const roomChips =
+                `<span class="x-chip is-${escapeHtml(room.roomStatusBefore)}">${escapeHtml(statusLabel(room.roomStatusBefore))}</span>` +
+                `<span class="x-chip ${room.roomType === 'ac' ? 'is-ac' : 'is-nonac'}">${room.roomType === 'ac' ? 'AC' : 'Non-AC'}</span>` +
+                `<span class="x-chip is-muted">${escapeHtml(room.roomKind)}</span>` +
+                `<span class="x-chip is-ink"><strong>${room.capacity}</strong> beds</span>` +
+                (room.usedBefore > 0
+                    ? `<span class="x-chip is-partial"><strong>${room.usedBefore}</strong> in</span>`
+                    : '') +
+                (room.exactMatch ? `<span class="x-chip is-gold">Exact fit</span>` : '');
+
+            const nav = multi
+                ? `<div class="uk-flex uk-flex-middle" role="group" aria-label="Smart room recommendations">` +
+                  `<button type="button" class="uk-icon-button js-room-prev" uk-tooltip="title: Previous recommendation; pos: top" uk-icon="icon: chevron-left; ratio: 0.85" aria-label="Previous"></button>` +
+                  `<span class="x-allot-nav-count" aria-live="polite">${altIndex + 1}/${altTotal}</span>` +
+                  `<button type="button" class="uk-icon-button js-room-next" uk-tooltip="title: Next recommendation; pos: top" uk-icon="icon: chevron-right; ratio: 0.85" aria-label="Next"></button>` +
+                  `</div>`
+                : '';
+
+            return (
+                `<div class="uk-grid-small uk-flex-middle" uk-grid>` +
+                `<div class="uk-width-auto"><div class="x-allot-room-number">${escapeHtml(room.roomNumber)}</div></div>` +
+                `<div class="uk-width-expand"><div class="x-chip-row">${roomChips}</div></div>` +
+                (nav ? `<div class="uk-width-auto">${nav}</div>` : '') +
+                `</div>` +
+                (occupants.length
+                    ? `<p class="x-allot-section">Already staying</p>` +
+                      `<div>${occupants.map((o) => personChip(o, { occupant: true })).join('')}</div>`
+                    : '') +
+                `<p class="x-allot-section">Going to allocate</p>` +
+                `<div>${members.map((m) => personChip(m)).join('')}</div>`
+            );
+        }
+
+        function allotConfirmHeader(hotel) {
+            const thumb = hotel.image || initialsSvg(hotel.hotelName);
+            return (
+                `<button class="uk-modal-close-default" type="button" uk-close aria-label="Close"></button>` +
+                `<div class="uk-modal-header">` +
+                `<div class="uk-grid-small uk-flex-middle" uk-grid>` +
+                `<div class="uk-width-auto"><img class="x-allot-hotel-thumb" src="${escapeHtml(thumb)}" alt=""></div>` +
+                `<div class="uk-width-expand">` +
+                `<h2 class="uk-modal-title uk-margin-remove">${escapeHtml(hotel.hotelName)}</h2>` +
+                `<p class="uk-text-meta uk-margin-remove" style="font-size:0.72rem;line-height:1.3">` +
+                `${escapeHtml(hotel.address)}` +
+                `</p>` +
+                `<div class="x-chip-row uk-margin-small-top">` +
+                `<span class="x-chip is-gold" uk-tooltip="title: Distance from venue; pos: top">${hotel.distanceKm} km</span>` +
+                `<span class="x-chip is-ink"><strong>${hotel.roomCount}</strong> rooms</span>` +
+                `<span class="x-chip is-ink"><strong>${hotel.capacity}</strong> beds</span>` +
+                `<span class="x-chip is-muted" uk-tooltip="title: Front desk; pos: top">${escapeHtml(hotel.contact || '—')}</span>` +
+                `</div></div></div></div>`
+            );
+        }
+
+        function allotConfirmBody(hotel, panelState) {
+            const fillChips =
+                `<span class="x-chip is-full" uk-tooltip="title: Full rooms; pos: top"><strong>${hotel.fill.full}</strong> Full</span>` +
+                `<span class="x-chip is-partial" uk-tooltip="title: Partially free rooms; pos: top"><strong>${hotel.fill.partial}</strong> Partial</span>` +
+                `<span class="x-chip is-free" uk-tooltip="title: Fully free rooms; pos: top"><strong>${hotel.fill.free}</strong> Free</span>` +
+                `<span class="x-chip is-ink" uk-tooltip="title: People already allotted here; pos: top"><strong>${hotel.peopleSoFar}</strong> staying</span>`;
+
+            const locationChips = (hotel.locations || [])
+                .map(
+                    (l) =>
+                        `<span class="x-chip is-loc"><strong>${l.count}</strong> ${escapeHtml(l.name)}</span>`
+                )
+                .join('');
+
+            const roomBlocks = panelState
+                .map((panel, index) => {
+                    const room = panel.alternatives[panel.altIndex];
+                    return (
+                        `<div class="uk-card uk-card-default uk-card-body x-allot-room-panel" data-panel-index="${index}">` +
+                        roomPanelInner(room, panel.members, panel.altIndex, panel.alternatives.length) +
+                        `</div>`
+                    );
+                })
+                .join('');
+
+            return (
+                `<div class="x-allot-summary-line" role="group" aria-label="Hotel snapshot">` +
+                `<div class="x-chip-row">${fillChips}</div>` +
+                `</div>` +
+                `<div class="x-chip-row uk-margin-small-bottom">${locationChips || '<span class="x-chip is-muted">No locations yet</span>'}</div>` +
+                `<p class="x-allot-section uk-margin-remove-top">Rooms to allot</p>` +
+                roomBlocks
+            );
+        }
+
+        function openHotelPopup(hotelId) {
+            const hotel = HOTELS.find((h) => h.hotelId === hotelId);
+            const placements = PLACEMENTS[hotelId];
+            if (!hotel || !placements || !placements.length) return;
+
+            const panelState = placements.map((p) => ({
+                members: p.members,
+                alternatives: p.alternatives,
+                altIndex: 0
+            }));
+
+            const html =
+                allotConfirmHeader(hotel) +
+                `<div class="uk-modal-body" uk-overflow-auto>${allotConfirmBody(hotel, panelState)}</div>` +
+                `<div class="uk-modal-footer uk-text-right">` +
+                `<button type="button" class="uk-button uk-button-default uk-modal-close">Cancel</button>` +
+                `<button type="button" class="uk-button uk-button-primary uk-margin-small-left js-allot-ok">` +
+                `<span uk-icon="icon: check; ratio: 0.85"></span> Allot rooms</button>` +
+                `</div>`;
+
+            const modal = UIkit.modal.dialog(html, { stack: true, bgClose: true, escClose: true });
+            const el = modal.$el;
+            const dialog = el.querySelector('.uk-modal-dialog');
+            if (dialog) {
+                dialog.classList.add('x-allot-confirm-dialog', 'uk-margin-auto-vertical');
+            }
+            if (typeof UIkit.update === 'function') UIkit.update(el);
+
+            function refreshPanel(panelIndex) {
+                const panel = panelState[panelIndex];
+                const node = el.querySelector(`.x-allot-room-panel[data-panel-index="${panelIndex}"]`);
+                if (!node || !panel) return;
+                const room = panel.alternatives[panel.altIndex];
+                node.innerHTML = roomPanelInner(
+                    room,
+                    panel.members,
+                    panel.altIndex,
+                    panel.alternatives.length
+                );
+                if (typeof UIkit.update === 'function') UIkit.update(node);
+            }
+
+            UIkit.util.on(el, 'click', (e) => {
+                const prevBtn = e.target.closest('.js-room-prev');
+                const nextBtn = e.target.closest('.js-room-next');
+                const navBtn = prevBtn || nextBtn;
+                if (navBtn && el.contains(navBtn) && !navBtn.disabled) {
+                    e.preventDefault();
+                    const panelEl = navBtn.closest('.x-allot-room-panel');
+                    const panelIndex = Number(panelEl && panelEl.getAttribute('data-panel-index'));
+                    if (!Number.isFinite(panelIndex)) return;
+                    const panel = panelState[panelIndex];
+                    const total = panel.alternatives.length;
+                    if (total <= 1) return;
+                    panel.altIndex = (panel.altIndex + (prevBtn ? -1 : 1) + total) % total;
+                    refreshPanel(panelIndex);
+                    return;
+                }
+
+                const ok = e.target.closest('.js-allot-ok');
+                if (ok && el.contains(ok)) {
+                    e.preventDefault();
+                    const rooms = panelState
+                        .map((p) => p.alternatives[p.altIndex].roomNumber)
+                        .join(', ');
+                    UIkit.notification({
+                        message: `Prototype only — would allot ${hotel.hotelName} rooms ${rooms}`,
+                        status: 'success',
+                        pos: 'top-center',
+                        timeout: 2600
+                    });
+                    modal.hide();
+                }
+            });
+        }
+
+        function renderTiles() {
+            const root = document.getElementById('people-tiles');
+            root.innerHTML = PEOPLE.map((p) => {
+                const on = selected.has(p.id);
+                const photo = String(p.photo || '').trim();
+                const media = photo
+                    ? `<img class="x-tile-photo" src="${escapeHtml(photo)}" alt="">`
+                    : `<div class="x-tile-fallback" aria-hidden="true">${escapeHtml(initials(p.name))}</div>`;
+                return (
+                    `<button type="button" class="x-tile${on ? ' is-selected' : ''}" data-id="${p.id}" aria-pressed="${on}">` +
+                    media +
+                    `<span class="x-tile-overlay">` +
+                    `<strong>${escapeHtml(p.name)}</strong>` +
+                    `<span>${escapeHtml(p.location)}</span>` +
+                    `<span class="x-chip is-gold" style="margin-top:4px">${escapeHtml(ageLabel(p.age))}</span>` +
+                    `</span></button>`
+                );
+            }).join('');
+            document.getElementById('selection-hint').textContent = selected.size
+                ? `${selected.size} selected · tap a green hotel card to open the allot popup`
+                : 'Select people to show suitable hotels';
+        }
+
+        function renderStrip() {
+            const strip = document.getElementById('hotel-strip');
+            if (!selected.size) {
+                strip.hidden = true;
+                strip.innerHTML = '';
+                return;
+            }
+            strip.hidden = false;
+            const placeable = Math.min(selected.size, 3);
+            strip.innerHTML =
+                `<div class="x-suitable-hotels-head">` +
+                `<h3 class="x-suitable-hotels-title">Suitable hotels` +
+                `<span class="x-suitable-hotels-meta"> · most to least suitable · ${placeable}/${selected.size} people placeable</span>` +
+                `</h3></div>` +
+                `<ul class="x-suitable-hotels-list">` +
+                HOTELS.map((h, index) => {
+                    const proposed = h.proposed;
+                    return (
+                        `<li><button type="button" class="x-suitable-hotel-card${proposed ? ' is-proposed' : ''}" ` +
+                        `data-hotel-id="${h.hotelId}" ${proposed ? '' : 'disabled '} ` +
+                        `title="${proposed ? 'Review allotment' : 'Not in current proposal'}">` +
+                        `<span class="x-suitable-hotel-rank">${index + 1}</span>` +
+                        `<span class="x-suitable-hotel-body">` +
+                        `<span class="x-suitable-hotel-name">${escapeHtml(h.hotelName)}</span>` +
+                        `<span class="x-suitable-hotel-sub">${h.distanceKm} km · ${escapeHtml(h.roomHint)}</span>` +
+                        `</span>` +
+                        (proposed ? `<span class="x-suitable-hotel-badge">Allot here</span>` : '') +
+                        `</button></li>`
+                    );
+                }).join('') +
+                `</ul>`;
+        }
+
+        document.getElementById('people-tiles').addEventListener('click', (e) => {
+            const btn = e.target.closest('.x-tile');
+            if (!btn) return;
+            const id = btn.getAttribute('data-id');
+            if (selected.has(id)) selected.delete(id);
+            else selected.add(id);
+            renderTiles();
+            renderStrip();
+        });
+
+        document.getElementById('hotel-strip').addEventListener('click', (e) => {
+            const card = e.target.closest('.x-suitable-hotel-card.is-proposed');
+            if (!card || card.disabled) return;
+            openHotelPopup(card.getAttribute('data-hotel-id'));
+        });
+
+        renderTiles();
+        renderStrip();
+    })();
+    </script>
+</body>
+</html>

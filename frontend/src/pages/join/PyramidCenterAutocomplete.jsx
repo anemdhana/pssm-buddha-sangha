@@ -122,6 +122,11 @@ export function PyramidCenterAutocomplete({
                 }}
               >
                 <span className="x-place-ac-name">{item.name}</span>
+                {item.locality || item.city ? (
+                  <span className="x-place-ac-meta">
+                    {item.locality || [item.city, item.state].filter(Boolean).join(', ')}
+                  </span>
+                ) : null}
               </button>
             </li>
           ))}

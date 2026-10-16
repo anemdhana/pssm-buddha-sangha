@@ -32,6 +32,8 @@ const liveApi = {
   join: (payload) => request('/sangha/join', { method: 'POST', body: JSON.stringify(payload) }),
   getMyProfile: () => request('/sangha/me'),
   updateMyProfile: (payload) => request('/sangha/me', { method: 'PUT', body: JSON.stringify(payload) }),
+  lookupProfileByMobile: (mobile) =>
+    request(`/sangha/profile-by-mobile?mobile=${encodeURIComponent(mobile)}`),
   searchPeople: (mobile) => request(`/sangha/people?mobile=${encodeURIComponent(mobile)}`),
   updateRoles: (mobile, roles) =>
     request(`/sangha/people/${encodeURIComponent(mobile)}/roles`, {
@@ -62,13 +64,39 @@ const liveApi = {
   rememberPyramidCenter: (payload) =>
     request('/pyramid-centers', { method: 'POST', body: JSON.stringify(payload) }),
   createStayBooking: (payload) => request('/bookings', { method: 'POST', body: JSON.stringify(payload) }),
-  listStayBookings: (eventId) =>
-    request(`/bookings?eventId=${encodeURIComponent(eventId)}`),
+  listStayBookings: (eventId, params = {}) => {
+    const query = new URLSearchParams({ eventId: String(eventId || '') });
+    Object.entries(params || {}).forEach(([key, value]) => {
+      if (value == null || value === '') return;
+      if (Array.isArray(value)) {
+        if (value.length) query.set(key, value.join(','));
+        return;
+      }
+      query.set(key, String(value));
+    });
+    return request(`/bookings?${query.toString()}`);
+  },
   getStayBooking: (id) => request(`/bookings/${encodeURIComponent(id)}`),
   updateStayBooking: (id, payload) =>
     request(`/bookings/${encodeURIComponent(id)}`, { method: 'PUT', body: JSON.stringify(payload) }),
   deleteStayBooking: (id) =>
     request(`/bookings/${encodeURIComponent(id)}`, { method: 'DELETE' }),
+  listStayAllotments: (eventId, params = {}) => {
+    const query = new URLSearchParams({ eventId: String(eventId || '') });
+    Object.entries(params || {}).forEach(([key, value]) => {
+      if (value == null || value === '') return;
+      query.set(key, String(value));
+    });
+    return request(`/allotments?${query.toString()}`);
+  },
+  createStayAllotments: (payload) =>
+    request('/allotments', { method: 'POST', body: JSON.stringify(payload) }),
+  listHotels: (eventId) =>
+    request(`/hotels?eventId=${encodeURIComponent(String(eventId || ''))}`),
+  getHotel: (id) => request(`/hotels/${encodeURIComponent(id)}`),
+  createHotel: (payload) => request('/hotels', { method: 'POST', body: JSON.stringify(payload) }),
+  updateHotel: (id, payload) =>
+    request(`/hotels/${encodeURIComponent(id)}`, { method: 'PUT', body: JSON.stringify(payload) }),
   countPssmAdmins: async () => 0
 };
 

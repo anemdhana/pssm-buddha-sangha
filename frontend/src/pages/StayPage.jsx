@@ -38,8 +38,6 @@ export function StayPage() {
   const { signedIn, hasRole, loading } = useAuth();
   const { picked } = useEventPick();
   const isAccommodationVolunteer = hasRole('accommodation_volunteer');
-  const canViewRegistrations =
-    isAccommodationVolunteer || hasRole('pssm_admin') || hasRole('event_organizer');
 
   const [profile, setProfile] = useState(null);
   const [profileLoaded, setProfileLoaded] = useState(false);
@@ -66,6 +64,7 @@ export function StayPage() {
         setProfile({
           ...emptyProfile(),
           ...res.data,
+          meditation: res.data.meditation || 'new',
           place: { ...emptyProfile().place, ...(res.data.place || {}) },
           members: Array.isArray(res.data.members) ? res.data.members : []
         });
@@ -155,7 +154,14 @@ export function StayPage() {
     sub: picked.sub
   };
 
-  const linkToInterest = fromInterest || canViewRegistrations;
+  const planCrumb = plan === 'paid' ? 'Paid Accommodation' : 'Free Accommodation';
+  const crumbs = fromInterest
+    ? [
+        { label: 'Stay' },
+        { label: 'Friends and Masters List', to: '/stay/registrations' },
+        { label: 'Register family' }
+      ]
+    : [{ label: 'Stay' }, { label: planCrumb }];
 
   return (
     <StayWizard
@@ -165,9 +171,8 @@ export function StayPage() {
       bookingMode={bookingMode}
       initialForm={forSelf ? profile : null}
       skipToDays={forSelf && hasProfile}
-      cancelTo={linkToInterest ? '/stay/registrations' : null}
-      cancelLabel={linkToInterest ? 'Interested Friends and Masters' : null}
-      cancelIcon={fromInterest ? 'reply' : 'users'}
+      cancelTo={fromInterest ? '/stay/registrations' : null}
+      crumbs={crumbs}
       showBookingModePicker={isAccommodationVolunteer && !fromInterest}
       onBookingModeChange={setMode}
     />

@@ -8,6 +8,10 @@ spring:
 
 server:
   port: ${SERVER_PORT:8080}
+  tomcat:
+    # Hotel image is sent as a JPEG data URL inside JSON.
+    max-http-form-post-size: 8MB
+    max-swallow-size: 8MB
   servlet:
     session:
       cookie:

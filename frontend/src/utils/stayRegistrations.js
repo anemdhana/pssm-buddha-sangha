@@ -190,11 +190,38 @@ export function stayRangeKey(start, end) {
   return `${a}|${b}`;
 }
 
+/** Compact readable range, e.g. `13–20 Oct 2026` or `13 Oct – 2 Nov 2026`. */
 export function stayRangeLabel(start, end) {
-  const a = formatStayDay(start);
-  const b = formatStayDay(end);
+  const rawStart = String(start || '').trim();
+  const rawEnd = String(end || '').trim();
+  const ma = /^(\d{4})-(\d{2})-(\d{2})$/.exec(rawStart);
+  const mb = /^(\d{4})-(\d{2})-(\d{2})$/.exec(rawEnd);
+  if (ma && mb) {
+    const y1 = ma[1];
+    const m1 = Number(ma[2]);
+    const d1 = Number(ma[3]);
+    const y2 = mb[1];
+    const m2 = Number(mb[2]);
+    const d2 = Number(mb[3]);
+    if (m1 >= 1 && m1 <= 12 && m2 >= 1 && m2 <= 12 && d1 && d2) {
+      if (y1 === y2 && m1 === m2) {
+        return `${d1}–${d2} ${MONTH_SHORT[m1 - 1]} ${y1}`;
+      }
+      if (y1 === y2) {
+        return `${d1} ${MONTH_SHORT[m1 - 1]} – ${d2} ${MONTH_SHORT[m2 - 1]} ${y1}`;
+      }
+      return `${d1} ${MONTH_SHORT[m1 - 1]} ${y1} – ${d2} ${MONTH_SHORT[m2 - 1]} ${y2}`;
+    }
+  }
+  const a = formatStayDay(rawStart);
+  const b = formatStayDay(rawEnd);
   if (!a || !b) return '';
-  return `${a} to ${b}`;
+  return `${a} – ${b}`;
+}
+
+/** Chronological sort for facet keys `YYYY-MM-DD|YYYY-MM-DD`. */
+export function compareStayRangeKeys(a, b) {
+  return String(a || '').localeCompare(String(b || ''));
 }
 
 /** Location facet rows for the left filter menu: [{ name, count }]. */
@@ -220,11 +247,7 @@ export function registrationStayRangeFacets(people) {
     prev.count += 1;
     counts.set(key, prev);
   });
-  return Array.from(counts.values()).sort((a, b) => {
-    if (a.key < b.key) return -1;
-    if (a.key > b.key) return 1;
-    return b.count - a.count;
-  });
+  return Array.from(counts.values()).sort((a, b) => compareStayRangeKeys(a.key, b.key));
 }
 
 /** How many interest tiles to paint at once (full match set can be large). */
@@ -321,6 +344,21 @@ export function registrationTilePeople(bookings) {
     });
   });
   return people;
+}
+
+/** Group flattened tile people into one family card per booking (order preserved). */
+export function groupTilePeopleByFamily(people) {
+  const map = new Map();
+  (Array.isArray(people) ? people : []).forEach((person) => {
+    if (!person || !person.bookingId) return;
+    const list = map.get(person.bookingId) || [];
+    list.push(person);
+    map.set(person.bookingId, list);
+  });
+  return Array.from(map.entries()).map(([bookingId, members]) => ({
+    bookingId,
+    members
+  }));
 }
 
 /** Unique stay booking ids for selected tile people (one family = one booking). */

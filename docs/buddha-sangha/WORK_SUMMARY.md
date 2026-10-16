@@ -62,7 +62,7 @@ Also: `GET /auth/me`, `POST /auth/logout`
 - Logged-in with profile: prefills and opens at How long  
 - Accommodation Volunteer: Myself / New visitor (new visitor → sangha register + booking)  
 - Server records `bookedAt` when submitted; status `registered`  
-- `/stay/registrations` — Interested Friends and Masters (volunteer / organizer / admin); filters include stay date ranges; Edit on a family member opens the family step for that person
+- `/stay/registrations` — Friends and Masters List (volunteer / organizer / admin); filters include stay date ranges; Edit on a family member opens the family step for that person
 
 ---
 

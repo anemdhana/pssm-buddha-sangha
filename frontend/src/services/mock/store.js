@@ -9,6 +9,7 @@ import {
 } from '../../utils/password.js';
 import seedPlaces from '../../data/sangha_places.json';
 import seedCenters from '../../data/sangha_pyramid_centers.json';
+import { hotelPlaceholderImage } from '../../utils/hotelImage.js';
 
 const PEOPLE_KEY = 'pssm_sangha_people';
 const SESSION_KEY = 'pssm_sangha_session';
@@ -17,6 +18,11 @@ const ROLE_ASSIGN_KEY = 'pssm_role_assignments';
 const PLACES_KEY = 'pssm_sangha_places';
 const CENTERS_KEY = 'pssm_sangha_pyramid_centers';
 const STAY_BOOKINGS_KEY = 'pssm_stay_bookings';
+const HOTELS_KEY = 'pssm_hotels';
+const ALLOTMENTS_KEY = 'pssm_stay_allotments';
+const ALLOTMENTS_SEED_KEY = 'pssm_stay_allotments_seed';
+/** Bump to force-reset localStorage allotments (clears duplicate room assignments). */
+const ALLOTMENTS_SEED_VERSION = '2';
 
 const SAMPLE_ADMIN = {
   fullName: 'Srinivasa Rao',
@@ -84,6 +90,22 @@ const SAMPLE_PEOPLE = [
     place: { kind: 'urban', city: 'Hyderabad', state: 'Telangana', country: 'India' },
     members: [],
     roles: ['accommodation_volunteer', 'pmma_member']
+  },
+  {
+    fullName: 'Subhash Reddy',
+    mobile: '7780254680',
+    gender: 'male',
+    age: 'adult',
+    meditation: '5',
+    profession: 'Volunteer coordinator',
+    birthDate: '14',
+    birthMonth: '02',
+    language: 'Telugu',
+    pyramidCenter: 'Brahmarshi Patriji Pyramid Care Centre',
+    sinceYear: '2015',
+    place: { kind: 'urban', city: 'Guntur', state: 'Andhra Pradesh', country: 'India' },
+    members: [],
+    roles: ['accommodation_admin']
   }
 ];
 
@@ -165,11 +187,21 @@ function savePlaces(list) {
 
 function toCenterRow(raw, index) {
   const name = String(raw.name || '').trim();
+  const locality = String(raw.locality || '').trim();
+  const city = String(raw.city || '').trim();
+  const state = String(raw.state || '').trim();
+  const country = String(raw.country || '').trim();
+  const address = String(raw.address || '').trim();
   return {
     id: raw.id || `seed_center_${index}`,
     name,
+    locality,
+    city,
+    state,
+    country,
+    address,
     usageCount: Number(raw.usageCount) || 0,
-    label: name
+    label: locality ? `${name} — ${locality}` : name
   };
 }
 
@@ -180,17 +212,25 @@ function ensureCenters() {
     writeJson(CENTERS_KEY, seeded);
     return seeded;
   }
-  if (existing.length >= seeded.length) {
-    return existing;
-  }
-  const merged = [...seeded];
+  const byName = new Map(
+    existing.map((c) => [String(c.name || '').toLowerCase(), c]).filter(([name]) => name)
+  );
+  const merged = seeded.map((seed) => {
+    const prev = byName.get(seed.name.toLowerCase());
+    if (!prev) return seed;
+    return {
+      ...seed,
+      id: prev.id || seed.id,
+      usageCount: Number(prev.usageCount) || seed.usageCount
+    };
+  });
   existing
     .filter((c) => String(c.id || '').startsWith('user_'))
     .forEach((userCenter) => {
       const dup = merged.some(
         (c) => c.name.toLowerCase() === String(userCenter.name || '').toLowerCase()
       );
-      if (!dup) merged.push(userCenter);
+      if (!dup) merged.push(toCenterRow(userCenter, merged.length));
     });
   writeJson(CENTERS_KEY, merged);
   return merged;
@@ -303,6 +343,613 @@ function countPssmAdmins() {
     if (dig && normalizeRoles(person.roles).indexOf('pssm_admin') >= 0) seen[dig] = true;
   });
   return Object.keys(seen).length;
+}
+
+const SAMPLE_HOTELS = [
+  {
+    id: 'htl_sample_sai_prakash',
+    eventId: 'evt_sample_anandotsavam',
+    name: 'Hotel Sai Prakash',
+    address: 'Public Garden Road, near Nampally Exhibition Grounds, Hyderabad',
+    contact: '040-23203131',
+    distanceKm: 0.4,
+    active: true,
+    reserved: false,
+    rooms: [
+      { roomNumber: '231', capacity: 4, kind: 'regular', roomType: 'ac', genderAllowed: '', status: 'available' },
+      { roomNumber: '232', capacity: 4, kind: 'regular', roomType: 'ac', genderAllowed: '', status: 'available' },
+      { roomNumber: '233', capacity: 4, kind: 'regular', roomType: 'non_ac', genderAllowed: '', status: 'available' },
+      { roomNumber: '234', capacity: 4, kind: 'regular', roomType: 'non_ac', genderAllowed: '', status: 'available' }
+    ],
+    createdBy: '7780254680',
+    createdAt: '2026-10-01T00:00:00.000Z',
+    updatedAt: '2026-10-01T00:00:00.000Z'
+  },
+  {
+    id: 'htl_sample_three_castle',
+    eventId: 'evt_sample_anandotsavam',
+    name: 'Three Castle Executive',
+    address: 'Nampally Station Road, beside Exhibition Grounds, Hyderabad',
+    contact: '040-24605678',
+    distanceKm: 0.6,
+    active: true,
+    reserved: true,
+    rooms: [
+      { roomNumber: '101', capacity: 3, kind: 'regular', roomType: 'ac', genderAllowed: '', status: 'available' },
+      { roomNumber: '103', capacity: 3, kind: 'regular', roomType: 'non_ac', genderAllowed: '', status: 'available' }
+    ],
+    createdBy: '7780254680',
+    createdAt: '2026-10-01T00:00:00.000Z',
+    updatedAt: '2026-10-01T00:00:00.000Z'
+  },
+  {
+    id: 'htl_sample_abids_inn',
+    eventId: 'evt_sample_anandotsavam',
+    name: 'Abids Comfort Inn',
+    address: 'Troop Bazaar, Abids, Hyderabad (towards Exhibition Grounds)',
+    contact: '040-23204567',
+    distanceKm: 1.4,
+    active: true,
+    reserved: false,
+    rooms: [
+      { roomNumber: '201', capacity: 3, kind: 'regular', roomType: 'ac', genderAllowed: '', status: 'available' },
+      {
+        roomNumber: 'D-G1',
+        capacity: 24,
+        kind: 'dormitory',
+        roomType: 'ac',
+        genderAllowed: 'gents',
+        status: 'available'
+      },
+      {
+        roomNumber: 'D-L1',
+        capacity: 20,
+        kind: 'dormitory',
+        roomType: 'non_ac',
+        genderAllowed: 'ladies',
+        status: 'available'
+      }
+    ],
+    createdBy: '7780254680',
+    createdAt: '2026-10-01T00:00:00.000Z',
+    updatedAt: '2026-10-01T00:00:00.000Z'
+  },
+  {
+    id: 'htl_sample_basheerbagh_lodge',
+    eventId: 'evt_sample_anandotsavam',
+    name: 'Basheerbagh Stay Lodge',
+    address: 'Near Assembly, Basheerbagh Road, Hyderabad',
+    contact: '040-23207890',
+    distanceKm: 2.2,
+    active: false,
+    reserved: false,
+    rooms: [
+      { roomNumber: '11', capacity: 2, kind: 'regular', roomType: 'non_ac', genderAllowed: '', status: 'available' },
+      {
+        roomNumber: 'HALL-A',
+        capacity: 40,
+        kind: 'hall',
+        roomType: 'non_ac',
+        genderAllowed: 'gents',
+        status: 'available'
+      }
+    ],
+    createdBy: '7780254680',
+    createdAt: '2026-10-01T00:00:00.000Z',
+    updatedAt: '2026-10-01T00:00:00.000Z'
+  },
+  {
+    id: 'htl_sample_lakdikapul_residency',
+    eventId: 'evt_sample_anandotsavam',
+    name: 'Lakdi-ka-pul Residency',
+    address: 'Opposite Railway Bridge, Lakdi-ka-pul, Hyderabad',
+    contact: '040-23311234',
+    distanceKm: 2.8,
+    active: true,
+    reserved: false,
+    rooms: [
+      { roomNumber: '501', capacity: 4, kind: 'regular', roomType: 'ac', genderAllowed: '', status: 'available' },
+      {
+        roomNumber: 'HALL-L',
+        capacity: 35,
+        kind: 'hall',
+        roomType: 'ac',
+        genderAllowed: 'ladies',
+        status: 'available'
+      }
+    ],
+    createdBy: '7780254680',
+    createdAt: '2026-10-01T00:00:00.000Z',
+    updatedAt: '2026-10-01T00:00:00.000Z'
+  },
+  {
+    id: 'htl_sample_banjara_park',
+    eventId: 'evt_sample_dussehra',
+    name: 'Banjara Park Hotel',
+    address: 'Road No. 1, Banjara Hills, Hyderabad',
+    contact: '040-23356677',
+    distanceKm: 4.5,
+    active: true,
+    reserved: true,
+    rooms: [
+      { roomNumber: '701', capacity: 2, kind: 'regular', roomType: 'ac', genderAllowed: '', status: 'available' },
+      { roomNumber: '704', capacity: 3, kind: 'regular', roomType: 'non_ac', genderAllowed: '', status: 'available' }
+    ],
+    createdBy: '7780254680',
+    createdAt: '2026-10-01T00:00:00.000Z',
+    updatedAt: '2026-10-01T00:00:00.000Z'
+  },
+  {
+    id: 'htl_sample_mehdipatnam_yatra',
+    eventId: 'evt_sample_dussehra',
+    name: 'Mehdipatnam Yatra Nest',
+    address: 'Near Sarojini Devi Eye Hospital, Mehdipatnam, Hyderabad',
+    contact: '040-23534567',
+    distanceKm: 5.2,
+    active: true,
+    reserved: false,
+    rooms: [
+      { roomNumber: 'A1', capacity: 4, kind: 'regular', roomType: 'non_ac', genderAllowed: '', status: 'available' },
+      {
+        roomNumber: 'D-L2',
+        capacity: 28,
+        kind: 'dormitory',
+        roomType: 'non_ac',
+        genderAllowed: 'ladies',
+        status: 'available'
+      },
+      {
+        roomNumber: 'HALL-B',
+        capacity: 50,
+        kind: 'hall',
+        roomType: 'non_ac',
+        genderAllowed: 'gents',
+        status: 'available'
+      }
+    ],
+    createdBy: '7780254680',
+    createdAt: '2026-10-01T00:00:00.000Z',
+    updatedAt: '2026-10-01T00:00:00.000Z'
+  },
+  {
+    id: 'htl_sample_koti_guest',
+    eventId: 'evt_sample_dussehra',
+    name: 'Koti Guest House (Inactive demo)',
+    address: 'Sultan Bazar, Koti, Hyderabad',
+    contact: '040-24751212',
+    distanceKm: 1.8,
+    active: false,
+    reserved: true,
+    rooms: [
+      { roomNumber: '1', capacity: 2, kind: 'regular', roomType: 'ac', genderAllowed: '', status: 'available' },
+      { roomNumber: '2', capacity: 2, kind: 'regular', roomType: 'non_ac', genderAllowed: '', status: 'available' }
+    ],
+    createdBy: '7780254680',
+    createdAt: '2026-10-01T00:00:00.000Z',
+    updatedAt: '2026-10-01T00:00:00.000Z'
+  }
+].map((hotel) => ({
+  ...hotel,
+  image: hotelPlaceholderImage(hotel.name)
+}));
+
+function readHotels() {
+  const list = readJson(HOTELS_KEY, null);
+  if (!Array.isArray(list) || list.length === 0) {
+    writeJson(HOTELS_KEY, SAMPLE_HOTELS);
+    return SAMPLE_HOTELS.slice();
+  }
+  // One-time migrate older mock rows that had no event link.
+  if (list.some((h) => h && !String(h.eventId || '').trim())) {
+    writeJson(HOTELS_KEY, SAMPLE_HOTELS);
+    return SAMPLE_HOTELS.slice();
+  }
+  // Soft-fill sample hotel thumbnails when missing (keep custom hotels intact).
+  const sampleById = Object.fromEntries(SAMPLE_HOTELS.map((h) => [h.id, h]));
+  let changed = false;
+  const next = list.map((hotel) => {
+    if (!hotel || String(hotel.image || '').trim()) return hotel;
+    const sample = sampleById[hotel.id];
+    if (!sample?.image) return { ...hotel, image: '' };
+    changed = true;
+    return { ...hotel, image: sample.image };
+  });
+  if (changed) writeJson(HOTELS_KEY, next);
+  return next;
+}
+
+function writeHotels(list) {
+  writeJson(HOTELS_KEY, Array.isArray(list) ? list : []);
+}
+
+const SAMPLE_ALLOTMENTS = [
+  {
+    id: 'allot_sample_meenakshi',
+    eventId: 'evt_sample_anandotsavam',
+    eventName: 'Dhyana Dussera Anandotsavam - 2026',
+    bookingId: 'stay_sample_meenakshi_alone',
+    plan: 'free',
+    status: 'checked_in',
+    hotelId: 'htl_sample_sai_prakash',
+    hotelName: 'Hotel Sai Prakash',
+    roomNumber: '231',
+    roomType: 'ac',
+    roomKind: 'regular',
+    familyMobile: '9966362691',
+    familyFullName: 'Meenakshi Devi',
+    place: { kind: 'urban', city: 'Hyderabad', state: 'Telangana', country: 'India' },
+    guests: [
+      {
+        name: 'Meenakshi Devi',
+        relation: '',
+        mobile: '9966362691',
+        gender: 'female',
+        age: 'adult',
+        livePhoto: '',
+        primary: true
+      }
+    ],
+    checkInDate: '2026-10-26',
+    checkOutDate: '2026-11-05',
+    personCount: 1
+  },
+  {
+    id: 'allot_sample_anitha',
+    eventId: 'evt_sample_anandotsavam',
+    eventName: 'Dhyana Dussera Anandotsavam - 2026',
+    bookingId: 'stay_sample_anitha_paid',
+    plan: 'paid',
+    status: 'allotted',
+    hotelId: 'htl_sample_sai_prakash',
+    hotelName: 'Hotel Sai Prakash',
+    roomNumber: '232',
+    roomType: 'ac',
+    roomKind: 'regular',
+    familyMobile: '9395324465',
+    familyFullName: 'Anitha Reddy',
+    place: { kind: 'urban', city: 'Hyderabad', state: 'Telangana', country: 'India' },
+    guests: [
+      {
+        name: 'Anitha Reddy',
+        relation: '',
+        mobile: '9395324465',
+        gender: 'female',
+        age: 'adult',
+        livePhoto: '',
+        primary: true
+      }
+    ],
+    checkInDate: '2026-10-29',
+    checkOutDate: '2026-10-30',
+    personCount: 1
+  },
+  {
+    id: 'allot_sample_veeraiah',
+    eventId: 'evt_sample_anandotsavam',
+    eventName: 'Dhyana Dussera Anandotsavam - 2026',
+    bookingId: 'stay_sample_veeraiah_rural_family',
+    plan: 'free',
+    status: 'allotted',
+    hotelId: 'htl_sample_lakdikapul_residency',
+    hotelName: 'Lakdi-ka-pul Residency',
+    roomNumber: '501',
+    roomType: 'ac',
+    roomKind: 'regular',
+    familyMobile: '9959129737',
+    familyFullName: 'Veeraiah',
+    place: { kind: 'rural', village: 'Chilakaluripet', state: 'Andhra Pradesh', country: 'India' },
+    guests: [
+      {
+        name: 'Veeraiah',
+        relation: '',
+        mobile: '9959129737',
+        gender: 'male',
+        age: 'senior',
+        livePhoto: '',
+        primary: true
+      },
+      {
+        name: 'Padma',
+        relation: 'Spouse',
+        mobile: '7382463452',
+        gender: 'female',
+        age: 'senior',
+        livePhoto: '',
+        primary: false
+      },
+      {
+        name: 'Karthik',
+        relation: 'Child',
+        mobile: '9542495504',
+        gender: 'male',
+        age: 'adult',
+        livePhoto: '',
+        primary: false
+      }
+    ],
+    checkInDate: '2026-10-26',
+    checkOutDate: '2026-11-05',
+    personCount: 3
+  },
+  {
+    id: 'allot_sample_vasavi',
+    eventId: 'evt_sample_anandotsavam',
+    eventName: 'Dhyana Dussera Anandotsavam - 2026',
+    bookingId: 'stay_sample_vasavi_alone',
+    plan: 'free',
+    status: 'allotted',
+    hotelId: 'htl_sample_three_castle',
+    hotelName: 'Three Castle Executive',
+    roomNumber: '101',
+    roomType: 'ac',
+    roomKind: 'regular',
+    familyMobile: '9032123366',
+    familyFullName: 'Vasavi Kumari',
+    place: { kind: 'urban', city: 'Hyderabad', state: 'Telangana', country: 'India' },
+    guests: [
+      {
+        name: 'Vasavi Kumari',
+        relation: '',
+        mobile: '9032123366',
+        gender: 'female',
+        age: 'adult',
+        livePhoto: '',
+        primary: true
+      }
+    ],
+    checkInDate: '2026-10-28',
+    checkOutDate: '2026-10-30',
+    personCount: 1
+  },
+  {
+    id: 'allot_sample_sowjanya',
+    eventId: 'evt_sample_dussehra',
+    eventName: 'Dussehra Sangeetha Dhyana Maha Yagnam',
+    bookingId: 'stay_sample_sowjanya_couple',
+    plan: 'free',
+    status: 'checked_in',
+    hotelId: 'htl_sample_abids_inn',
+    hotelName: 'Abids Comfort Inn',
+    roomNumber: '201',
+    roomType: 'ac',
+    roomKind: 'regular',
+    familyMobile: '9845055103',
+    familyFullName: 'Sowjanya Lakshmi',
+    place: { kind: 'urban', city: 'Bengaluru', state: 'Karnataka', country: 'India' },
+    guests: [
+      {
+        name: 'Sowjanya Lakshmi',
+        relation: '',
+        mobile: '9845055103',
+        gender: 'female',
+        age: 'adult',
+        livePhoto: '',
+        primary: true
+      },
+      {
+        name: 'Venkat Rao',
+        relation: 'Spouse',
+        mobile: '9379060510',
+        gender: 'male',
+        age: 'adult',
+        livePhoto: '',
+        primary: false
+      }
+    ],
+    checkInDate: '2026-10-15',
+    checkOutDate: '2026-10-24',
+    personCount: 2
+  },
+  {
+    id: 'allot_sample_uma',
+    eventId: 'evt_sample_dussehra',
+    eventName: 'Dussehra Sangeetha Dhyana Maha Yagnam',
+    bookingId: 'stay_sample_uma_paid',
+    plan: 'paid',
+    status: 'allotted',
+    hotelId: 'htl_sample_abids_inn',
+    hotelName: 'Abids Comfort Inn',
+    roomNumber: 'D-L1',
+    roomType: 'non_ac',
+    roomKind: 'dormitory',
+    familyMobile: '8667684104',
+    familyFullName: 'Uma Maheshwari',
+    place: { kind: 'urban', city: 'Hyderabad', state: 'Telangana', country: 'India' },
+    guests: [
+      {
+        name: 'Uma Maheshwari',
+        relation: '',
+        mobile: '8667684104',
+        gender: 'female',
+        age: 'adult',
+        livePhoto: '',
+        primary: true
+      }
+    ],
+    checkInDate: '2026-10-15',
+    checkOutDate: '2026-10-24',
+    personCount: 1
+  }
+];
+
+function allotmentGuestKey(guest, bookingId = '') {
+  const mobile = normalizeMobile(guest?.mobile);
+  if (mobile) return `m:${mobile}`;
+  const name = String(guest?.name || '')
+    .trim()
+    .toLowerCase();
+  if (name) return `n:${String(bookingId || '').trim()}:${name}`;
+  return '';
+}
+
+/** Remove guests (by mobile/name) from existing event allotments so a person is never in two rooms. */
+function stripGuestsFromEventAllotments(list, eventId, guestKeys) {
+  const id = String(eventId || '').trim();
+  if (!id || !guestKeys?.size) return Array.isArray(list) ? list.slice() : [];
+  return (Array.isArray(list) ? list : [])
+    .map((row) => {
+      if (!row || String(row.eventId || '') !== id) return row;
+      const guests = Array.isArray(row.guests) ? row.guests : [];
+      const kept = guests.filter((g) => {
+        const key = allotmentGuestKey(g, row.bookingId);
+        return !key || !guestKeys.has(key);
+      });
+      if (kept.length === guests.length) return row;
+      if (!kept.length) return null;
+      const primary = kept.find((g) => g.primary) || kept[0] || {};
+      return {
+        ...row,
+        guests: kept,
+        personCount: kept.length,
+        familyMobile: primary.mobile || '',
+        familyFullName: primary.name || ''
+      };
+    })
+    .filter(Boolean);
+}
+
+function allotmentsHaveDuplicatePeople(list) {
+  const seen = new Set();
+  for (const row of Array.isArray(list) ? list : []) {
+    if (!row) continue;
+    const eventId = String(row.eventId || '');
+    const guests = Array.isArray(row.guests) ? row.guests : [];
+    for (const g of guests) {
+      const key = allotmentGuestKey(g, row.bookingId);
+      if (!key) continue;
+      const full = `${eventId}|${key}`;
+      if (seen.has(full)) return true;
+      seen.add(full);
+    }
+  }
+  return false;
+}
+
+function readAllotments() {
+  const seeded = String(readJson(ALLOTMENTS_SEED_KEY, '') || '');
+  const list = readJson(ALLOTMENTS_KEY, null);
+  const needsReset =
+    seeded !== ALLOTMENTS_SEED_VERSION ||
+    !Array.isArray(list) ||
+    list.length === 0 ||
+    allotmentsHaveDuplicatePeople(list);
+  if (needsReset) {
+    writeJson(ALLOTMENTS_KEY, SAMPLE_ALLOTMENTS);
+    writeJson(ALLOTMENTS_SEED_KEY, ALLOTMENTS_SEED_VERSION);
+    return SAMPLE_ALLOTMENTS.slice();
+  }
+  return list;
+}
+
+function requireHotelAdmin() {
+  if (!isSignedIn()) throw apiError(401, 'UNAUTHORIZED', 'Please login again.');
+  const session = readSession();
+  const roles = rolesForMobile(session.mobile);
+  if (roles.indexOf('accommodation_admin') < 0 && roles.indexOf('pssm_admin') < 0) {
+    throw apiError(403, 'FORBIDDEN', 'Only an Accommodation Admin can manage hotels and rooms.');
+  }
+  return session;
+}
+
+function requireHotelReader() {
+  if (!isSignedIn()) throw apiError(401, 'UNAUTHORIZED', 'Please login again.');
+  const session = readSession();
+  const roles = rolesForMobile(session.mobile);
+  const ok =
+    roles.indexOf('accommodation_admin') >= 0 ||
+    roles.indexOf('accommodation_volunteer') >= 0 ||
+    roles.indexOf('event_organizer') >= 0 ||
+    roles.indexOf('pssm_admin') >= 0;
+  if (!ok) throw apiError(403, 'FORBIDDEN', 'Not allowed to view hotels.');
+  return session;
+}
+
+function requireAllotmentManager() {
+  return requireHotelReader();
+}
+
+function enrichHotel(hotel) {
+  const rooms = Array.isArray(hotel.rooms) ? hotel.rooms : [];
+  const capacityTotal = rooms.reduce((sum, room) => sum + Math.max(0, Number(room.capacity) || 0), 0);
+  return {
+    ...hotel,
+    rooms,
+    roomCount: rooms.length,
+    capacityTotal
+  };
+}
+
+function normalizeHotelPayload(payload, { id, createdBy, createdAt, eventId: eventIdOpt }) {
+  const name = String(payload?.name || '').trim();
+  const address = String(payload?.address || '').trim();
+  const contact = String(payload?.contact || '').trim();
+  const image = String(payload?.image || '').trim();
+  const distanceKm = Number(payload?.distanceKm);
+  const eventId = String(eventIdOpt || payload?.eventId || '').trim();
+  if (!eventId) throw apiError(400, 'VALIDATION', 'Select an event before adding a hotel.');
+  if (!name) throw apiError(400, 'VALIDATION', 'Enter the hotel name.');
+  if (!address) throw apiError(400, 'VALIDATION', 'Enter the hotel address.');
+  if (!contact) throw apiError(400, 'VALIDATION', 'Enter the hotel contact number.');
+  if (!(distanceKm >= 0)) {
+    throw apiError(400, 'VALIDATION', 'Enter distance from the event place in kilometres (0 or more).');
+  }
+  const roomsIn = Array.isArray(payload?.rooms) ? payload.rooms : [];
+  const seen = {};
+  const rooms = roomsIn.map((room, index) => {
+    const roomNumber = String(room?.roomNumber || '').trim();
+    if (!roomNumber) {
+      throw apiError(400, 'VALIDATION', `Enter room number for room row ${index + 1}.`);
+    }
+    const key = roomNumber.toLowerCase();
+    if (seen[key]) {
+      throw apiError(400, 'VALIDATION', `Room number ${roomNumber} is duplicated in this hotel.`);
+    }
+    seen[key] = true;
+    const capacity = Number(room?.capacity);
+    if (!(capacity >= 1)) {
+      throw apiError(400, 'VALIDATION', `Enter capacity (persons) for room ${roomNumber}.`);
+    }
+    let kind = String(room?.kind || 'regular').trim().toLowerCase();
+    if (kind === 'dorm') kind = 'dormitory';
+    if (kind !== 'dormitory' && kind !== 'hall') kind = 'regular';
+    const roomType = String(room?.roomType || 'ac').trim().toLowerCase() === 'non_ac' ? 'non_ac' : 'ac';
+    let genderAllowed = '';
+    if (kind === 'dormitory' || kind === 'hall') {
+      const g = String(room?.genderAllowed || '').trim().toLowerCase();
+      if (g === 'ladies' || g === 'ladies_only' || g === 'female') genderAllowed = 'ladies';
+      else if (g === 'gents' || g === 'gents_only' || g === 'male') genderAllowed = 'gents';
+      else {
+        throw apiError(
+          400,
+          'VALIDATION',
+          `Choose who may stay (Gents or Ladies) for dormitory/hall room ${roomNumber}.`
+        );
+      }
+    }
+    return {
+      roomNumber,
+      capacity,
+      kind,
+      roomType,
+      genderAllowed,
+      status: 'available'
+    };
+  });
+  return {
+    id,
+    eventId,
+    name,
+    address,
+    contact,
+    image,
+    distanceKm,
+    active: payload?.active === false ? false : true,
+    reserved: Boolean(payload?.reserved),
+    rooms,
+    createdBy,
+    createdAt,
+    updatedAt: new Date().toISOString()
+  };
 }
 
 function ensureSampleAdmin() {
@@ -541,6 +1188,24 @@ export const mockApi = {
     return { data: next };
   },
 
+  async lookupProfileByMobile(mobileQuery) {
+    if (!isSignedIn()) throw apiError(401, 'UNAUTHORIZED', 'Please login again.');
+    const roles = rolesForMobile(readSession().mobile);
+    const canLookup =
+      roles.indexOf('accommodation_volunteer') >= 0 ||
+      roles.indexOf('event_organizer') >= 0 ||
+      roles.indexOf('pssm_admin') >= 0;
+    if (!canLookup) throw apiError(403, 'FORBIDDEN', 'Role not allowed.');
+    const digits = normalizeMobile(mobileQuery);
+    if (!digits || digits.length < 10) {
+      throw apiError(400, 'VALIDATION', 'Enter a mobile number with at least 10 digits.');
+    }
+    const profile = findPerson(digits);
+    if (!profile) throw apiError(404, 'NOT_FOUND', 'No sangha member found for that mobile.');
+    const { password, ...rest } = profile;
+    return { data: { ...rest, mobile: digits, roles: rolesForMobile(digits) } };
+  },
+
   async searchPeople(mobileQuery) {
     if (!isSignedIn()) throw apiError(401, 'UNAUTHORIZED', 'Please login again.');
     if (rolesForMobile(readSession().mobile).indexOf('pssm_admin') < 0) {
@@ -700,9 +1365,10 @@ export const mockApi = {
     const rows = readCenters()
       .filter((c) => {
         if (!query) return true;
-        return String(c.name || '')
-          .toLowerCase()
-          .includes(query);
+        const hay = [c.name, c.locality, c.city, c.state, c.address]
+          .map((v) => String(v || '').toLowerCase())
+          .join(' ');
+        return hay.includes(query);
       })
       .sort((a, b) => (b.usageCount || 0) - (a.usageCount || 0) || a.name.localeCompare(b.name))
       .slice(0, size);
@@ -784,10 +1450,12 @@ export const mockApi = {
     if (!isSignedIn()) throw apiError(401, 'UNAUTHORIZED', 'Please login again.');
     const session = readSession();
     const roles = rolesForMobile(session.mobile);
-    const isVolunteer =
-      roles.indexOf('accommodation_volunteer') >= 0 || roles.indexOf('pssm_admin') >= 0;
+    const canManage =
+      roles.indexOf('accommodation_volunteer') >= 0 ||
+      roles.indexOf('event_organizer') >= 0 ||
+      roles.indexOf('pssm_admin') >= 0;
     const wantRegister = Boolean(registerFamily);
-    if (wantRegister && !isVolunteer) {
+    if (wantRegister && !canManage) {
       throw apiError(403, 'FORBIDDEN', 'Only an Accommodation Volunteer can register a new visitor while booking.');
     }
     const eventKey = String(eventId || '').trim();
@@ -830,7 +1498,7 @@ export const mockApi = {
       upsertPerson(profile);
       temporaryPassword = composedPassword(profile);
       newlyRegistered = true;
-    } else if (digits !== normalizeMobile(session.mobile) && !isVolunteer) {
+    } else if (digits !== normalizeMobile(session.mobile) && !canManage) {
       throw apiError(403, 'FORBIDDEN', 'You can only book accommodation for your own family.');
     }
 
@@ -868,7 +1536,7 @@ export const mockApi = {
     return { data };
   },
 
-  async listStayBookings(eventId) {
+  async listStayBookings(eventId, params = {}) {
     if (!isSignedIn()) throw apiError(401, 'UNAUTHORIZED', 'Please login again.');
     const session = readSession();
     const roles = rolesForMobile(session.mobile);
@@ -881,11 +1549,146 @@ export const mockApi = {
     }
     const id = String(eventId || '').trim();
     if (!id) throw apiError(400, 'VALIDATION', 'Event id is required.');
-    const rows = readStayBookings()
-      .filter((b) => b && b.eventId === id)
-      .sort((a, b) => String(b.bookedAt || b.createdAt || '').localeCompare(String(a.bookedAt || a.createdAt || '')))
+    const q = String(params.q || '').trim().toLowerCase();
+    const gender = String(params.gender || '').trim().toLowerCase();
+    const ages = String(params.ages || '')
+      .split(',')
+      .map((v) => v.trim().toLowerCase())
+      .filter(Boolean);
+    const meditation = String(params.meditation || '').trim().toLowerCase();
+    const location = String(params.location || '').trim().toLowerCase();
+    const stayRange = String(params.stayRange || '').trim();
+    const page = Math.max(0, Number(params.page) || 0);
+    const size = Math.min(100, Math.max(1, Number(params.size) || 24));
+
+    const matchesBooking = (b) => {
+      if (!b || b.eventId !== id) return false;
+      const guests = Array.isArray(b.guests) ? b.guests : [];
+      const family = b.family || {};
+      if (q) {
+        const hay = [b.familyFullName, b.familyMobile, ...guests.map((g) => `${g?.name || ''} ${g?.mobile || ''}`)]
+          .join(' ')
+          .toLowerCase();
+        if (!hay.includes(q)) return false;
+      }
+      if (gender && !guests.some((g) => String(g?.gender || '').toLowerCase() === gender)) return false;
+      if (ages.length && !guests.some((g) => ages.includes(String(g?.age || '').toLowerCase()))) return false;
+      if (meditation && String(family.meditation || '').toLowerCase() !== meditation) return false;
+      if (location) {
+        const place = b.place || family.place || {};
+        const labels = [place.city, place.district, place.name, place.village]
+          .map((v) => String(v || '').trim().toLowerCase())
+          .filter(Boolean);
+        if (!labels.includes(location)) return false;
+      }
+      if (stayRange) {
+        const [start, end] = stayRange.split('|');
+        const primary = guests.find((g) => g?.primary) || guests[0];
+        if (!primary || primary.stayStartDate !== start || primary.stayEndDate !== end) return false;
+      }
+      return true;
+    };
+
+    const matched = readStayBookings()
+      .filter(matchesBooking)
+      .sort((a, b) =>
+        String(b.bookedAt || b.createdAt || '').localeCompare(String(a.bookedAt || a.createdAt || ''))
+      )
       .map(enrichStayBookingRow);
-    return { data: rows };
+
+    const total = matched.length;
+    const items = matched.slice(page * size, page * size + size);
+    let people = 0;
+    let rural = 0;
+    let urban = 0;
+    matched.forEach((row) => {
+      const count = Number(row.personCount) || (row.guests || []).length;
+      people += count;
+      if (row.place?.kind === 'rural') rural += count;
+      else urban += count;
+    });
+
+    const eventBookings = readStayBookings()
+      .filter((b) => b && b.eventId === id)
+      .map(enrichStayBookingRow);
+    const allotments = readAllotments().filter((a) => a && a.eventId === id);
+    const allottedBookingIds = new Set(
+      allotments.map((a) => String(a.bookingId || '').trim()).filter(Boolean)
+    );
+    const allottedMobiles = new Set(
+      allotments.map((a) => normalizeMobile(a.familyMobile)).filter(Boolean)
+    );
+    let waitList = 0;
+    let allotted = 0;
+    eventBookings.forEach((row) => {
+      const count = Number(row.personCount) || (row.guests || []).length;
+      const mobile = normalizeMobile(row.familyMobile);
+      const isAllotted =
+        allottedBookingIds.has(String(row.id || '')) || (mobile && allottedMobiles.has(mobile));
+      if (isAllotted) allotted += count;
+      else waitList += count;
+    });
+
+    const locCounts = {};
+    const rangeCounts = {};
+    matched.forEach((row) => {
+      const guests = Array.isArray(row.guests) ? row.guests.filter(Boolean) : [];
+      const members = Array.isArray(row.family?.members) ? row.family.members.filter(Boolean) : [];
+      const personCount = Math.max(
+        Number(row.personCount) || 0,
+        guests.length,
+        members.length > 0 ? members.length + 1 : 0,
+        1
+      );
+      const place = row.place || {};
+      const loc =
+        place.kind === 'rural'
+          ? String(place.district || 'Rural')
+          : String(place.city || place.name || 'Urban');
+      locCounts[loc] = (locCounts[loc] || 0) + personCount;
+      if (guests.length > 0) {
+        guests.forEach((guest) => {
+          if (!guest?.stayStartDate || !guest?.stayEndDate) return;
+          const key = `${guest.stayStartDate}|${guest.stayEndDate}`;
+          rangeCounts[key] = rangeCounts[key] || {
+            key,
+            label: `${guest.stayStartDate} to ${guest.stayEndDate}`,
+            count: 0
+          };
+          rangeCounts[key].count += 1;
+        });
+      } else {
+        const primary = row.family || {};
+        if (primary.stayStartDate && primary.stayEndDate) {
+          const key = `${primary.stayStartDate}|${primary.stayEndDate}`;
+          rangeCounts[key] = rangeCounts[key] || {
+            key,
+            label: `${primary.stayStartDate} to ${primary.stayEndDate}`,
+            count: 0
+          };
+          rangeCounts[key].count += personCount;
+        }
+      }
+    });
+
+    return {
+      data: {
+        items,
+        total,
+        page,
+        size,
+        totalPages: Math.ceil(total / size) || 0,
+        stats: { families: total, people, rural, urban, waitList, allotted },
+        facets: {
+          locations: Object.entries(locCounts)
+            .map(([name, count]) => ({ name, count }))
+            .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name)),
+          stayRanges: Object.values(rangeCounts).sort((a, b) =>
+            String(a.key || '').localeCompare(String(b.key || ''))
+          )
+        }
+      }
+    };
   },
 
   async getStayBooking(id) {
@@ -959,6 +1762,248 @@ export const mockApi = {
     if (next.length === list.length) throw apiError(404, 'NOT_FOUND', 'Registration not found.');
     writeStayBookings(next);
     return { data: { deleted: true, id: key } };
+  },
+
+  async listStayAllotments(eventId, params = {}) {
+    if (!isSignedIn()) throw apiError(401, 'UNAUTHORIZED', 'Please login again.');
+    const session = readSession();
+    const roles = rolesForMobile(session.mobile);
+    const allowed =
+      roles.indexOf('accommodation_volunteer') >= 0 ||
+      roles.indexOf('accommodation_admin') >= 0 ||
+      roles.indexOf('pssm_admin') >= 0 ||
+      roles.indexOf('event_organizer') >= 0;
+    if (!allowed) throw apiError(403, 'FORBIDDEN', 'Not allowed to view who is staying in hotels.');
+    const id = String(eventId || '').trim();
+    if (!id) throw apiError(400, 'VALIDATION', 'Event id is required.');
+    const q = String(params.q || '').trim().toLowerCase();
+    const hotelId = String(params.hotelId || '').trim();
+    const roomType = String(params.roomType || '').trim().toLowerCase();
+    const roomKind = String(params.roomKind || '').trim().toLowerCase();
+    const gender = String(params.gender || '').trim().toLowerCase();
+    const status = String(params.status || '').trim().toLowerCase();
+    const location = String(params.location || '').trim().toLowerCase();
+    const page = Math.max(0, Number(params.page) || 0);
+    const size = Math.min(100, Math.max(1, Number(params.size) || 24));
+
+    function hometownLabel(place) {
+      const p = place || {};
+      return p.kind === 'rural'
+        ? String(p.district || 'Rural')
+        : String(p.city || p.name || 'Urban');
+    }
+
+    function matchesRow(row, { omitLocation = false } = {}) {
+      if (!row || row.eventId !== id) return false;
+      const guests = Array.isArray(row.guests) ? row.guests : [];
+      if (q) {
+        const hay = [
+          row.familyFullName,
+          row.familyMobile,
+          row.hotelName,
+          row.roomNumber,
+          ...guests.map((g) => `${g?.name || ''} ${g?.mobile || ''}`)
+        ]
+          .join(' ')
+          .toLowerCase();
+        if (!hay.includes(q)) return false;
+      }
+      if (hotelId && row.hotelId !== hotelId) return false;
+      if (roomType) {
+        const normalized = roomType === 'non_ac' ? 'non_ac' : 'ac';
+        if ((row.roomType === 'non_ac' ? 'non_ac' : 'ac') !== normalized) return false;
+      }
+      if (roomKind && String(row.roomKind || 'regular') !== roomKind) return false;
+      if (status && String(row.status || '') !== status) return false;
+      if (gender && !guests.some((g) => String(g?.gender || '').toLowerCase() === gender)) return false;
+      if (!omitLocation && location) {
+        if (hometownLabel(row.place).toLowerCase() !== location) return false;
+      }
+      return true;
+    }
+
+    const enrich = (row) => ({
+      ...row,
+      personCount: Array.isArray(row.guests) ? row.guests.length : row.personCount || 0
+    });
+
+    const matched = readAllotments()
+      .filter((row) => matchesRow(row))
+      .slice()
+      .sort((a, b) => {
+        const h = String(a.hotelName || '').localeCompare(String(b.hotelName || ''));
+        if (h !== 0) return h;
+        return String(a.roomNumber || '').localeCompare(String(b.roomNumber || ''), undefined, {
+          numeric: true
+        });
+      })
+      .map(enrich);
+
+    const facetBase = readAllotments()
+      .filter((row) => matchesRow(row, { omitLocation: true }))
+      .map(enrich);
+
+    const total = matched.length;
+    const items = matched.slice(page * size, page * size + size);
+    let people = 0;
+    let checkedIn = 0;
+    const hotelSet = new Set();
+    const hotelCounts = {};
+    matched.forEach((row) => {
+      const personCount = row.personCount || 0;
+      people += personCount;
+      hotelSet.add(row.hotelId || row.hotelName);
+      if (row.status === 'checked_in') checkedIn += 1;
+      const key = row.hotelId || row.hotelName;
+      hotelCounts[key] = hotelCounts[key] || { key, label: row.hotelName || key, count: 0 };
+      hotelCounts[key].count += 1;
+    });
+
+    const locCounts = {};
+    facetBase.forEach((row) => {
+      const loc = hometownLabel(row.place);
+      if (loc) locCounts[loc] = (locCounts[loc] || 0) + (row.personCount || 1);
+    });
+
+    return {
+      data: {
+        items,
+        total,
+        page,
+        size,
+        totalPages: Math.ceil(total / size) || 0,
+        stats: {
+          parties: total,
+          people,
+          hotels: hotelSet.size,
+          checkedIn,
+          allotted: Math.max(0, total - checkedIn)
+        },
+        facets: {
+          hotels: Object.values(hotelCounts).sort((a, b) => a.label.localeCompare(b.label)),
+          locations: Object.entries(locCounts)
+            .map(([name, count]) => ({ name, count }))
+            .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name))
+        }
+      }
+    };
+  },
+
+  async listHotels(eventId) {
+    requireHotelReader();
+    const id = String(eventId || '').trim();
+    if (!id) throw apiError(400, 'VALIDATION', 'Event id is required.');
+    const list = readHotels()
+      .filter((h) => h && String(h.eventId || '') === id)
+      .slice()
+      .sort((a, b) => {
+        const d = Number(a.distanceKm) - Number(b.distanceKm);
+        if (d !== 0) return d;
+        return String(a.name || '').localeCompare(String(b.name || ''));
+      });
+    return { data: list.map(enrichHotel) };
+  },
+
+  async getHotel(id) {
+    requireHotelReader();
+    const hotel = readHotels().find((h) => h && h.id === String(id || '').trim());
+    if (!hotel) throw apiError(404, 'NOT_FOUND', 'Hotel not found.');
+    return { data: enrichHotel(hotel) };
+  },
+
+  async createStayAllotments(payload) {
+    requireAllotmentManager();
+    const eventId = String(payload?.eventId || '').trim();
+    if (!eventId) throw apiError(400, 'VALIDATION', 'Event id is required.');
+    const placements = Array.isArray(payload?.placements) ? payload.placements : [];
+    if (!placements.length) throw apiError(400, 'VALIDATION', 'No room placements to save.');
+
+    const hotels = readHotels();
+    const guestKeys = new Set();
+    const prepared = [];
+    placements.forEach((p, index) => {
+      const hotelId = String(p?.hotelId || '').trim();
+      const hotel = hotels.find((h) => h && h.id === hotelId);
+      if (!hotel || hotel.reserved || hotel.active === false) {
+        throw apiError(400, 'VALIDATION', `Hotel not available for allotment (${hotelId || 'missing'}).`);
+      }
+      const bookingId = String(p?.bookingId || '').trim();
+      const members = Array.isArray(p?.members) ? p.members : [];
+      const guests = members.map((m, i) => ({
+        name: m.name || '',
+        relation: m.relation || '',
+        mobile: normalizeMobile(m.mobile),
+        gender: m.gender || '',
+        age: m.age || '',
+        livePhoto: m.livePhoto || '',
+        primary: Boolean(m.primary) || i === 0
+      }));
+      if (!guests.length) {
+        throw apiError(400, 'VALIDATION', 'Each placement needs at least one person.');
+      }
+      guests.forEach((g) => {
+        const key = allotmentGuestKey(g, bookingId);
+        if (key) guestKeys.add(key);
+      });
+      const primary = guests.find((g) => g.primary) || guests[0] || {};
+      prepared.push({
+        id: `allot_${Date.now()}_${index}`,
+        eventId,
+        eventName: String(payload?.eventName || '').trim(),
+        bookingId,
+        plan: p?.plan === 'paid' ? 'paid' : 'free',
+        status: 'allotted',
+        hotelId,
+        hotelName: hotel.name,
+        roomNumber: String(p?.roomNumber || '').trim(),
+        roomType: p?.roomType === 'non_ac' ? 'non_ac' : 'ac',
+        roomKind: p?.roomKind || 'regular',
+        familyMobile: primary.mobile || '',
+        familyFullName: primary.name || '',
+        place: p?.place || {},
+        guests,
+        personCount: guests.length,
+        checkInDate: p?.checkInDate || '',
+        checkOutDate: p?.checkOutDate || '',
+        createdAt: new Date().toISOString()
+      });
+    });
+
+    const next = stripGuestsFromEventAllotments(readAllotments(), eventId, guestKeys);
+    prepared.forEach((row) => next.unshift(row));
+    writeJson(ALLOTMENTS_KEY, next);
+    writeJson(ALLOTMENTS_SEED_KEY, ALLOTMENTS_SEED_VERSION);
+    return { data: { created: prepared.length, allotments: prepared } };
+  },
+
+  async createHotel(payload) {
+    const session = requireHotelAdmin();
+    const hotel = normalizeHotelPayload(payload, {
+      id: `htl_${Date.now()}`,
+      createdBy: session.mobile,
+      createdAt: new Date().toISOString()
+    });
+    const list = readHotels();
+    list.push(hotel);
+    writeHotels(list);
+    return { data: enrichHotel(hotel) };
+  },
+
+  async updateHotel(id, payload) {
+    requireHotelAdmin();
+    const hotelId = String(id || '').trim();
+    const list = readHotels();
+    const idx = list.findIndex((h) => h && h.id === hotelId);
+    if (idx < 0) throw apiError(404, 'NOT_FOUND', 'Hotel not found.');
+    const hotel = normalizeHotelPayload(payload, {
+      id: hotelId,
+      eventId: payload?.eventId || list[idx].eventId,
+      createdBy: list[idx].createdBy,
+      createdAt: list[idx].createdAt
+    });
+    list[idx] = hotel;
+    writeHotels(list);
+    return { data: enrichHotel(hotel) };
   },
 
   async updateEvent(id, { name, startDate, endDate, location, expectedBudgetInr, meditationHoursPerDay }) {

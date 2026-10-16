@@ -1,1 +1,555 @@
-[{"name": "Santh Kabir Das Pyramid Centre"}, {"name": "Atma Ganga Pyramid Dhyana Kendram"}, {"name": "Maha Shakthi Pyramid"}, {"name": "Sripada Srivallabha Meditation Centre"}, {"name": "S.R.Nagar Care Centre"}, {"name": "Mallikarjun Mahadipatnam Pyramid"}, {"name": "Brahmarshi Pyramid Centre"}, {"name": "Alivelu Manga Dhyana Kendram"}, {"name": "Himalaya Pyramid Meditation Centre"}, {"name": "Sri Vasavi Pyramid Meditation Centre"}, {"name": "Virat Pyramid Dhyana Kendram"}, {"name": "Atma Rama Pyramid Dhyana Kendram"}, {"name": "Sri Matha Pyramid Dhyana Kendram"}, {"name": "Aslama Pyramid Dhyana Kendram"}, {"name": "Dwaraka Mayi Pyramid Dhyana Kendram"}, {"name": "Sri Snigdha Pyramid Dhyana Kendram"}, {"name": "Viswa Matha Pyramid Dhyana Kendram"}, {"name": "Sri Krishna Chaitanya Pyramid Dhyana Kendram"}, {"name": "Sadananda Pyramid Dhyana Arogya Spiritual Knowledge Centre"}, {"name": "Rafi Pyramid Meditation Centre"}, {"name": "Jayanagar Pyramid Care Centre"}, {"name": "Bodhisattva Pyramid Care Centre"}, {"name": "Muneshwara Pyramid Care Centre"}, {"name": "Buddha Pyramid Care Centre"}, {"name": "Empty Space Pyramid Care Centre"}, {"name": "Little Buddha Pyramid Spiritual Care Centre"}, {"name": "Soultrends"}, {"name": "Karnataka Pyramid Dhyana Prachara Trust"}, {"name": "Anuradha Pyramid Care Centre"}, {"name": "Yvk Pyramid Care Centre"}, {"name": "Dwaraka Mai Pyramid Care Centre"}, {"name": "Radhakrishna Pyramid Care Centre"}, {"name": "Uma Maheshwari Pyramid Care Centre"}, {"name": "Ezhilaga Pyramid Care Centre"}, {"name": "Swarekha Pyramid Care Centre"}, {"name": "Shambhala Pyramid Care Centre"}, {"name": "Sri Narayana Pyramid Care Centre"}, {"name": "Babaji Pyramid Care Centre"}, {"name": "Paramahamsa Pyramid Care Centre"}, {"name": "Rajeswari Pyramid Care Centre"}, {"name": "Brahmarshi Patriji Pyramid Care Centre"}, {"name": "Neelakanta Pyramid Dhyana Kendram"}, {"name": "Ramanadham Venkateswarlu Dhyana Nilayam"}, {"name": "Buddha Pyramid Meditation Centre"}, {"name": "Narayana Pyramid Meditation Centre"}, {"name": "Sai Durga Pyramid Meditation Centre"}, {"name": "Sarva Mangala Pyramid"}, {"name": "N.A. Soubhagyam"}, {"name": "Siva Dhyana Buddha Pyramid"}, {"name": "Rajithagiri Pyramid Care Centre"}, {"name": "Sri Veeranjaneya Pyramid Dhyana Kendram"}, {"name": "Milarepa Pyramid Dhyana Kendram"}, {"name": "Sanjeevani Dhyana Pyramid"}, {"name": "Divya Jeevalinga Pyramid Dhyana Kendhram"}, {"name": "Yogi Vemana Pyramid Care Centre"}, {"name": "Arogya Ananda Pyramid Meditation Centre"}, {"name": "Jahnavi Dhyana Mandir"}, {"name": "Gnana Sai Pyramid Dhyana Kendram"}, {"name": "Sri Mukkanti Pyramid Dhyana Kendram"}, {"name": "Sri Anjaneya Mega Pyramid Care Centre"}, {"name": "Sri Surya Bhanu Pyramid Dhyana Kendram"}, {"name": "Sri Yesu Prabhuvu Pyramid Dhyana Kendram"}, {"name": "Earn More Energy Meditation Care Centre"}, {"name": "Sri Lalitha Meditation Care Centre"}, {"name": "Sri Sai Lalithakala Meditation Care Centre"}, {"name": "Osho Pyramid Care Centre"}, {"name": "Bhavani Pyramid Meditation Centre"}, {"name": "Dwarkamai Pyramid Meditation Centre"}, {"name": "Hanuma Pyramid Meditation Centre"}, {"name": "Pyramid Model School And Meditation Centre"}, {"name": "Sri Venkateswara Pyramid"}, {"name": "Seetha Rama Pyramid Dhyana Mandhir"}, {"name": "Sri Gayathri Pyramid"}, {"name": "Mathru Krupa Pyramid Centre"}, {"name": "Pyramid Meditation Centre"}, {"name": "Bala Tripura Sundari Pyramid Meditation Centre"}, {"name": "Atma Jyothi Pyramid Care Centre"}, {"name": "C.V.V Pyramid Centre"}, {"name": "Shiva Krishna Pyramid Care Centre"}]
+[
+  {
+    "name": "Santh Kabir Das Pyramid Centre",
+    "locality": "H- No: 1-10-1/215/190A Beside Balaji Temple, Hyderabad",
+    "city": "Hyderabad",
+    "state": "Telangana",
+    "country": "India"
+  },
+  {
+    "name": "Atma Ganga Pyramid Dhyana Kendram",
+    "locality": "H.No. 1-201, Hyderabad",
+    "city": "Hyderabad",
+    "state": "Telangana",
+    "country": "India"
+  },
+  {
+    "name": "Maha Shakthi Pyramid",
+    "locality": "Vijayapuri Colony, Hyderabad",
+    "city": "Hyderabad",
+    "state": "Telangana",
+    "country": "India"
+  },
+  {
+    "name": "Sripada Srivallabha Meditation Centre",
+    "locality": "Plot No 59, Hyderabad",
+    "city": "Hyderabad",
+    "state": "Telangana",
+    "country": "India"
+  },
+  {
+    "name": "S.R.Nagar Care Centre",
+    "locality": "H.No:359/Srt, Hyderabad",
+    "city": "Hyderabad",
+    "state": "Telangana",
+    "country": "India"
+  },
+  {
+    "name": "Mallikarjun Mahadipatnam Pyramid",
+    "locality": "Spiritual 1, Hyderabad",
+    "city": "Hyderabad",
+    "state": "Telangana",
+    "country": "India"
+  },
+  {
+    "name": "Brahmarshi Pyramid Centre",
+    "locality": "Moosapet, Hyderabad",
+    "city": "Hyderabad",
+    "state": "Telangana",
+    "country": "India"
+  },
+  {
+    "name": "Alivelu Manga Dhyana Kendram",
+    "locality": "H.No:8-8-180/2, Hyderabad",
+    "city": "Hyderabad",
+    "state": "Telangana",
+    "country": "India"
+  },
+  {
+    "name": "Himalaya Pyramid Meditation Centre",
+    "locality": "Putta Road, Vijayawada",
+    "city": "Vijayawada",
+    "state": "Andhra Pradesh",
+    "country": "India"
+  },
+  {
+    "name": "Sri Vasavi Pyramid Meditation Centre",
+    "locality": "D.No : 11-45-92, Vijayawada",
+    "city": "Vijayawada",
+    "state": "Andhra Pradesh",
+    "country": "India"
+  },
+  {
+    "name": "Virat Pyramid Dhyana Kendram",
+    "locality": "Bhrammam Gari Devastham, Vijayawada",
+    "city": "Vijayawada",
+    "state": "Andhra Pradesh",
+    "country": "India"
+  },
+  {
+    "name": "Atma Rama Pyramid Dhyana Kendram",
+    "locality": "#76-10/3-10, Vijayawada",
+    "city": "Vijayawada",
+    "state": "Andhra Pradesh",
+    "country": "India"
+  },
+  {
+    "name": "Sri Matha Pyramid Dhyana Kendram",
+    "locality": "#42-7-35, Vijayawada",
+    "city": "Vijayawada",
+    "state": "Andhra Pradesh",
+    "country": "India"
+  },
+  {
+    "name": "Aslama Pyramid Dhyana Kendram",
+    "locality": "#43-123-11, Vijayawada",
+    "city": "Vijayawada",
+    "state": "Andhra Pradesh",
+    "country": "India"
+  },
+  {
+    "name": "Dwaraka Mayi Pyramid Dhyana Kendram",
+    "locality": "#8-136/1, Vijayawada",
+    "city": "Vijayawada",
+    "state": "Andhra Pradesh",
+    "country": "India"
+  },
+  {
+    "name": "Sri Snigdha Pyramid Dhyana Kendram",
+    "locality": "Plot No: Sb, Vijayawada",
+    "city": "Vijayawada",
+    "state": "Andhra Pradesh",
+    "country": "India"
+  },
+  {
+    "name": "Viswa Matha Pyramid Dhyana Kendram",
+    "locality": "Viswa Matha Pyramid Dhyana Kendram, Vijayawada",
+    "city": "Vijayawada",
+    "state": "Andhra Pradesh",
+    "country": "India"
+  },
+  {
+    "name": "Sri Krishna Chaitanya Pyramid Dhyana Kendram",
+    "locality": "76-14-244C/2, Vijayawada",
+    "city": "Vijayawada",
+    "state": "Andhra Pradesh",
+    "country": "India"
+  },
+  {
+    "name": "Sadananda Pyramid Dhyana Arogya Spiritual Knowledge Centre",
+    "locality": "#56-15-22/3A, Vijayawada",
+    "city": "Vijayawada",
+    "state": "Andhra Pradesh",
+    "country": "India"
+  },
+  {
+    "name": "Rafi Pyramid Meditation Centre",
+    "locality": "D.No : 43-126-5, Vijayawada",
+    "city": "Vijayawada",
+    "state": "Andhra Pradesh",
+    "country": "India"
+  },
+  {
+    "name": "Jayanagar Pyramid Care Centre",
+    "locality": "#No 425 2nd Floor, Bengaluru",
+    "city": "Bengaluru",
+    "state": "Karnataka",
+    "country": "India"
+  },
+  {
+    "name": "Bodhisattva Pyramid Care Centre",
+    "locality": "#119, Bengaluru",
+    "city": "Bengaluru",
+    "state": "Karnataka",
+    "country": "India"
+  },
+  {
+    "name": "Muneshwara Pyramid Care Centre",
+    "locality": "No. 91, Bengaluru",
+    "city": "Bengaluru",
+    "state": "Karnataka",
+    "country": "India"
+  },
+  {
+    "name": "Buddha Pyramid Care Centre",
+    "locality": "#1481, Bengaluru",
+    "city": "Bengaluru",
+    "state": "Karnataka",
+    "country": "India"
+  },
+  {
+    "name": "Empty Space Pyramid Care Centre",
+    "locality": "#3999, Bengaluru",
+    "city": "Bengaluru",
+    "state": "Karnataka",
+    "country": "India"
+  },
+  {
+    "name": "Little Buddha Pyramid Spiritual Care Centre",
+    "locality": "Laasya Pride Apartments, Bengaluru",
+    "city": "Bengaluru",
+    "state": "Karnataka",
+    "country": "India"
+  },
+  {
+    "name": "Soultrends",
+    "locality": "Sy 551, Bengaluru",
+    "city": "Bengaluru",
+    "state": "Karnataka",
+    "country": "India"
+  },
+  {
+    "name": "Karnataka Pyramid Dhyana Prachara Trust",
+    "locality": "No.7, Bengaluru",
+    "city": "Bengaluru",
+    "state": "Karnataka",
+    "country": "India"
+  },
+  {
+    "name": "Anuradha Pyramid Care Centre",
+    "locality": "# 411 Apts Thirumenahalli, Bengaluru",
+    "city": "Bengaluru",
+    "state": "Karnataka",
+    "country": "India"
+  },
+  {
+    "name": "Yvk Pyramid Care Centre",
+    "locality": "#B-105, Bengaluru",
+    "city": "Bengaluru",
+    "state": "Karnataka",
+    "country": "India"
+  },
+  {
+    "name": "Dwaraka Mai Pyramid Care Centre",
+    "locality": "# 374, Bengaluru",
+    "city": "Bengaluru",
+    "state": "Karnataka",
+    "country": "India"
+  },
+  {
+    "name": "Radhakrishna Pyramid Care Centre",
+    "locality": "#787, Bengaluru",
+    "city": "Bengaluru",
+    "state": "Karnataka",
+    "country": "India"
+  },
+  {
+    "name": "Uma Maheshwari Pyramid Care Centre",
+    "locality": "224/D, Chennai",
+    "city": "Chennai",
+    "state": "Tamil Nadu",
+    "country": "India"
+  },
+  {
+    "name": "Ezhilaga Pyramid Care Centre",
+    "locality": "55/1, Chennai",
+    "city": "Chennai",
+    "state": "Tamil Nadu",
+    "country": "India"
+  },
+  {
+    "name": "Swarekha Pyramid Care Centre",
+    "locality": "73/26, Chennai",
+    "city": "Chennai",
+    "state": "Tamil Nadu",
+    "country": "India"
+  },
+  {
+    "name": "Shambhala Pyramid Care Centre",
+    "locality": "41/39, Chennai",
+    "city": "Chennai",
+    "state": "Tamil Nadu",
+    "country": "India"
+  },
+  {
+    "name": "Sri Narayana Pyramid Care Centre",
+    "locality": "48, Chennai",
+    "city": "Chennai",
+    "state": "Tamil Nadu",
+    "country": "India"
+  },
+  {
+    "name": "Babaji Pyramid Care Centre",
+    "locality": "25/56, Chennai",
+    "city": "Chennai",
+    "state": "Tamil Nadu",
+    "country": "India"
+  },
+  {
+    "name": "Paramahamsa Pyramid Care Centre",
+    "locality": "New No 236, Chennai",
+    "city": "Chennai",
+    "state": "Tamil Nadu",
+    "country": "India"
+  },
+  {
+    "name": "Rajeswari Pyramid Care Centre",
+    "locality": "30/127, Chennai",
+    "city": "Chennai",
+    "state": "Tamil Nadu",
+    "country": "India"
+  },
+  {
+    "name": "Brahmarshi Patriji Pyramid Care Centre",
+    "locality": "Kakumanu Post, Guntur",
+    "city": "Guntur",
+    "state": "Andhra Pradesh",
+    "country": "India"
+  },
+  {
+    "name": "Neelakanta Pyramid Dhyana Kendram",
+    "locality": "Mangalagiri (Md), Guntur",
+    "city": "Guntur",
+    "state": "Andhra Pradesh",
+    "country": "India"
+  },
+  {
+    "name": "Ramanadham Venkateswarlu Dhyana Nilayam",
+    "locality": "Kupparao Colony, Guntur",
+    "city": "Guntur",
+    "state": "Andhra Pradesh",
+    "country": "India"
+  },
+  {
+    "name": "Buddha Pyramid Meditation Centre",
+    "locality": "No: 16-21-40, Guntur",
+    "city": "Guntur",
+    "state": "Andhra Pradesh",
+    "country": "India"
+  },
+  {
+    "name": "Narayana Pyramid Meditation Centre",
+    "locality": "Palakaluru Area, Guntur",
+    "city": "Guntur",
+    "state": "Andhra Pradesh",
+    "country": "India"
+  },
+  {
+    "name": "Sai Durga Pyramid Meditation Centre",
+    "locality": "No: 15-18-121, Guntur",
+    "city": "Guntur",
+    "state": "Andhra Pradesh",
+    "country": "India"
+  },
+  {
+    "name": "Sarva Mangala Pyramid",
+    "locality": "Old Bank Colony, Mangalagiri",
+    "city": "Mangalagiri",
+    "state": "Andhra Pradesh",
+    "country": "India"
+  },
+  {
+    "name": "N.A. Soubhagyam",
+    "locality": "Ncc Road, Mangalagiri",
+    "city": "Mangalagiri",
+    "state": "Andhra Pradesh",
+    "country": "India"
+  },
+  {
+    "name": "Siva Dhyana Buddha Pyramid",
+    "locality": "Pedda Koneru Veedhi, Mangalagiri",
+    "city": "Mangalagiri",
+    "state": "Andhra Pradesh",
+    "country": "India"
+  },
+  {
+    "name": "Rajithagiri Pyramid Care Centre",
+    "locality": "Kakumanu Mandal, Mangalagiri",
+    "city": "Mangalagiri",
+    "state": "Andhra Pradesh",
+    "country": "India"
+  },
+  {
+    "name": "Sri Veeranjaneya Pyramid Dhyana Kendram",
+    "locality": "Bhargavapet, Mangalagiri",
+    "city": "Mangalagiri",
+    "state": "Andhra Pradesh",
+    "country": "India"
+  },
+  {
+    "name": "Milarepa Pyramid Dhyana Kendram",
+    "locality": "D. No. 19-12-19, Tirupati",
+    "city": "Tirupati",
+    "state": "Andhra Pradesh",
+    "country": "India"
+  },
+  {
+    "name": "Sanjeevani Dhyana Pyramid",
+    "locality": "Thumbalagunta, Tirupati",
+    "city": "Tirupati",
+    "state": "Andhra Pradesh",
+    "country": "India"
+  },
+  {
+    "name": "Divya Jeevalinga Pyramid Dhyana Kendhram",
+    "locality": "Jeevakona, Tirupati",
+    "city": "Tirupati",
+    "state": "Andhra Pradesh",
+    "country": "India"
+  },
+  {
+    "name": "Yogi Vemana Pyramid Care Centre",
+    "locality": "Vemuru, Tirupati",
+    "city": "Tirupati",
+    "state": "Andhra Pradesh",
+    "country": "India"
+  },
+  {
+    "name": "Arogya Ananda Pyramid Meditation Centre",
+    "locality": "near Girls High School, Tirupati",
+    "city": "Tirupati",
+    "state": "Andhra Pradesh",
+    "country": "India"
+  },
+  {
+    "name": "Jahnavi Dhyana Mandir",
+    "locality": "Door No.4-288/8, Kakinada",
+    "city": "Kakinada",
+    "state": "Andhra Pradesh",
+    "country": "India"
+  },
+  {
+    "name": "Gnana Sai Pyramid Dhyana Kendram",
+    "locality": "Jayaprakash Nagar Turangi D.No.9-22 Kakinada…, Kakinada",
+    "city": "Kakinada",
+    "state": "Andhra Pradesh",
+    "country": "India"
+  },
+  {
+    "name": "Sri Mukkanti Pyramid Dhyana Kendram",
+    "locality": "Om Shanthi Nagar Bhagyalakshumma, Kadapa",
+    "city": "Kadapa",
+    "state": "Andhra Pradesh",
+    "country": "India"
+  },
+  {
+    "name": "Sri Anjaneya Mega Pyramid Care Centre",
+    "locality": "Rayachoti Road, Kadapa",
+    "city": "Kadapa",
+    "state": "Andhra Pradesh",
+    "country": "India"
+  },
+  {
+    "name": "Sri Surya Bhanu Pyramid Dhyana Kendram",
+    "locality": "N.G.O. Colony, Kadapa",
+    "city": "Kadapa",
+    "state": "Andhra Pradesh",
+    "country": "India"
+  },
+  {
+    "name": "Sri Yesu Prabhuvu Pyramid Dhyana Kendram",
+    "locality": "Vuutukur Kadapa, Kadapa",
+    "city": "Kadapa",
+    "state": "Andhra Pradesh",
+    "country": "India"
+  },
+  {
+    "name": "Earn More Energy Meditation Care Centre",
+    "locality": "D.No: 25-4-25; N.R.Pet, Eluru",
+    "city": "Eluru",
+    "state": "Andhra Pradesh",
+    "country": "India"
+  },
+  {
+    "name": "Sri Lalitha Meditation Care Centre",
+    "locality": "#D.No.4-14-1; Agraharam, Eluru",
+    "city": "Eluru",
+    "state": "Andhra Pradesh",
+    "country": "India"
+  },
+  {
+    "name": "Sri Sai Lalithakala Meditation Care Centre",
+    "locality": "Sri Majeti Seshagiri Rao, Eluru",
+    "city": "Eluru",
+    "state": "Andhra Pradesh",
+    "country": "India"
+  },
+  {
+    "name": "Osho Pyramid Care Centre",
+    "locality": "Reddynagar, Narasaraopeta",
+    "city": "Narasaraopeta",
+    "state": "Andhra Pradesh",
+    "country": "India"
+  },
+  {
+    "name": "Bhavani Pyramid Meditation Centre",
+    "locality": "D.No.16-1-259, Narasaraopeta",
+    "city": "Narasaraopeta",
+    "state": "Andhra Pradesh",
+    "country": "India"
+  },
+  {
+    "name": "Dwarkamai Pyramid Meditation Centre",
+    "locality": "D.No.7-286-1, Narasaraopeta",
+    "city": "Narasaraopeta",
+    "state": "Andhra Pradesh",
+    "country": "India"
+  },
+  {
+    "name": "Hanuma Pyramid Meditation Centre",
+    "locality": "Vengamamba Nagar, Narasaraopeta",
+    "city": "Narasaraopeta",
+    "state": "Andhra Pradesh",
+    "country": "India"
+  },
+  {
+    "name": "Pyramid Model School And Meditation Centre",
+    "locality": "near Collectorate, Khammam",
+    "city": "Khammam",
+    "state": "Telangana",
+    "country": "India"
+  },
+  {
+    "name": "Sri Venkateswara Pyramid",
+    "locality": "Disney Hills, Khammam",
+    "city": "Khammam",
+    "state": "Telangana",
+    "country": "India"
+  },
+  {
+    "name": "Seetha Rama Pyramid Dhyana Mandhir",
+    "locality": "Sambani Nagar, Khammam",
+    "city": "Khammam",
+    "state": "Telangana",
+    "country": "India"
+  },
+  {
+    "name": "Sri Gayathri Pyramid",
+    "locality": "Brahmana Bazaar, Khammam",
+    "city": "Khammam",
+    "state": "Telangana",
+    "country": "India"
+  },
+  {
+    "name": "Mathru Krupa Pyramid Centre",
+    "locality": "Ram Kishan, Kamareddy",
+    "city": "Kamareddy",
+    "state": "Telangana",
+    "country": "India"
+  },
+  {
+    "name": "Pyramid Meditation Centre",
+    "locality": "Chandrashekhar, Kamareddy",
+    "city": "Kamareddy",
+    "state": "Telangana",
+    "country": "India"
+  },
+  {
+    "name": "Bala Tripura Sundari Pyramid Meditation Centre",
+    "locality": "Rimmanapudi, Pamarru",
+    "city": "Pamarru",
+    "state": "Andhra Pradesh",
+    "country": "India"
+  },
+  {
+    "name": "Atma Jyothi Pyramid Care Centre",
+    "locality": "Lalithamba Temple Besides, Nizamabad",
+    "city": "Nizamabad",
+    "state": "Telangana",
+    "country": "India"
+  },
+  {
+    "name": "C.V.V Pyramid Centre",
+    "locality": "Sitharam Nagar Colony Forest Office Opp. Varn…, Nizamabad",
+    "city": "Nizamabad",
+    "state": "Telangana",
+    "country": "India"
+  },
+  {
+    "name": "Shiva Krishna Pyramid Care Centre",
+    "locality": "Chikka. Krishna Brothers & Sisters, Mahabubabad",
+    "city": "Mahabubabad",
+    "state": "Andhra Pradesh",
+    "country": "India"
+  }
+]

@@ -144,6 +144,19 @@ public class AuthService {
         }
     }
 
+    public void requireAnyRole(String... roles) {
+        Person person = currentPerson();
+        if (roles == null || roles.length == 0) {
+            throw new ApiException(HttpStatus.FORBIDDEN, "FORBIDDEN", "Role not allowed.");
+        }
+        for (String role : roles) {
+            if (role != null && person.getRoles().contains(role)) {
+                return;
+            }
+        }
+        throw new ApiException(HttpStatus.FORBIDDEN, "FORBIDDEN", "Role not allowed.");
+    }
+
     private Map<String, Object> sessionView(Person person) {
         List<String> roles = sortedRoles(person);
         Map<String, Object> data = new LinkedHashMap<>();

@@ -9,6 +9,7 @@ import {
   registrationLocationShort,
   registrationStayRangeFacets,
   registrationStats,
+  groupTilePeopleByFamily,
   registrationTilePeople,
   removeRegistrationConfirmHtml,
   removeRegistrationConfirmPlain,
@@ -93,11 +94,16 @@ describe('stayRegistrations', () => {
     expect(people[1].profession).toBe('Homemaker');
     expect(people[1].memberIndex).toBe(0);
     expect(registrationLocationShort(people[0].place)).toBe('Ranga Reddy');
+    const families = groupTilePeopleByFamily(people);
+    expect(families).toHaveLength(1);
+    expect(families[0].bookingId).toBe('stay_1');
+    expect(families[0].members).toHaveLength(2);
   });
 
-  it('formats stay date ranges like 13-Oct-2026 to 20-Oct-2026', () => {
+  it('formats stay date ranges compactly in start-to-end order', () => {
     expect(formatStayDay('2026-10-13')).toBe('13-Oct-2026');
-    expect(stayRangeLabel('2026-10-13', '2026-10-20')).toBe('13-Oct-2026 to 20-Oct-2026');
+    expect(stayRangeLabel('2026-10-13', '2026-10-20')).toBe('13–20 Oct 2026');
+    expect(stayRangeLabel('2026-10-13', '2026-11-02')).toBe('13 Oct – 2 Nov 2026');
     expect(stayRangeKey('2026-10-13', '2026-10-20')).toBe('2026-10-13|2026-10-20');
   });
 
@@ -146,8 +152,8 @@ describe('stayRegistrations', () => {
       { name: 'Vijayawada', count: 1 }
     ]);
     expect(registrationStayRangeFacets(people)).toEqual([
-      { key: '2026-10-13|2026-10-20', label: '13-Oct-2026 to 20-Oct-2026', count: 2 },
-      { key: '2026-10-15|2026-10-18', label: '15-Oct-2026 to 18-Oct-2026', count: 1 }
+      { key: '2026-10-13|2026-10-20', label: '13–20 Oct 2026', count: 2 },
+      { key: '2026-10-15|2026-10-18', label: '15–18 Oct 2026', count: 1 }
     ]);
   });
 

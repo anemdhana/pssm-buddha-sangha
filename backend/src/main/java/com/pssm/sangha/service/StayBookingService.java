@@ -4,11 +4,16 @@ import com.pssm.sangha.common.ApiException;
 import com.pssm.sangha.domain.Person;
 import com.pssm.sangha.domain.SanghaEvent;
 import com.pssm.sangha.domain.SanghaRole;
+import com.pssm.sangha.domain.StayAllotment;
 import com.pssm.sangha.domain.StayBooking;
 import com.pssm.sangha.domain.StayBooking.StayGuest;
 import com.pssm.sangha.repo.PersonRepository;
 import com.pssm.sangha.repo.SanghaEventRepository;
+import com.pssm.sangha.repo.StayAllotmentRepository;
+import com.pssm.sangha.repo.StayBookingQueryRepository;
+import com.pssm.sangha.repo.StayBookingQueryRepository.BookingFilters;
 import com.pssm.sangha.repo.StayBookingRepository;
+import com.pssm.sangha.web.dto.PageDtos;
 import com.pssm.sangha.web.dto.ProfileDtos.MemberDto;
 import com.pssm.sangha.web.dto.ProfileDtos.ProfileDto;
 import com.pssm.sangha.web.dto.StayBookingDtos.CreateStayBookingRequest;
@@ -17,11 +22,13 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -31,6 +38,8 @@ import org.springframework.transaction.annotation.Transactional;
 public class StayBookingService {
 
     private final StayBookingRepository stayBookingRepository;
+    private final StayBookingQueryRepository stayBookingQueryRepository;
+    private final StayAllotmentRepository stayAllotmentRepository;
     private final SanghaEventRepository eventRepository;
     private final PersonRepository personRepository;
     private final ProfileMapper profileMapper;
@@ -38,12 +47,16 @@ public class StayBookingService {
     private final AuthService authService;
 
     public StayBookingService(StayBookingRepository stayBookingRepository,
+                              StayBookingQueryRepository stayBookingQueryRepository,
+                              StayAllotmentRepository stayAllotmentRepository,
                               SanghaEventRepository eventRepository,
                               PersonRepository personRepository,
                               ProfileMapper profileMapper,
                               PasswordEncoder passwordEncoder,
                               AuthService authService) {
         this.stayBookingRepository = stayBookingRepository;
+        this.stayBookingQueryRepository = stayBookingQueryRepository;
+        this.stayAllotmentRepository = stayAllotmentRepository;
         this.eventRepository = eventRepository;
         this.personRepository = personRepository;
         this.profileMapper = profileMapper;
@@ -115,40 +128,126 @@ public class StayBookingService {
     }
 
     @Transactional(readOnly = true)
-    public List<Map<String, Object>> listForEvent(String eventId) {
+    public Map<String, Object> listForEvent(String eventId,
+                                            String q,
+                                            String gender,
+                                            String ages,
+                                            String meditation,
+                                            String location,
+                                            String stayRange,
+                                            Integer pageRaw,
+                                            Integer sizeRaw) {
         requireRegistrationViewer(authService.currentPerson());
         String id = eventId == null ? "" : eventId.trim();
         if (id.isBlank()) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "VALIDATION", "Event id is required.");
         }
-        List<Map<String, Object>> rows = new ArrayList<>();
-        for (StayBooking booking : stayBookingRepository.findByEventIdOrderByCreatedAtDesc(id)) {
-            try {
-                rows.add(toView(booking));
-            } catch (RuntimeException ex) {
-                // Keep list usable if one legacy/seed document has odd familyDetail shape.
-                Map<String, Object> fallback = new LinkedHashMap<>();
-                fallback.put("id", booking.getId());
-                fallback.put("eventId", booking.getEventId());
-                fallback.put("eventName", booking.getEventName());
-                fallback.put("plan", booking.getPlan());
-                fallback.put("status", booking.getStatus());
-                fallback.put("familyMobile", booking.getFamilyMobile());
-                fallback.put("familyFullName", booking.getFamilyFullName());
-                fallback.put("bookedAt",
-                        booking.getCreatedAt() == null ? null : booking.getCreatedAt().toString());
-                fallback.put("createdAt",
-                        booking.getCreatedAt() == null ? null : booking.getCreatedAt().toString());
-                fallback.put("place", profileMapper.placeToMap(booking.getPlace()));
-                fallback.put("guests", booking.getGuests() == null ? List.of() : booking.getGuests());
-                int count = booking.getGuests() == null ? 0 : booking.getGuests().size();
-                fallback.put("personCount", count);
-                fallback.put("familyCount", Math.max(0, count - 1));
-                fallback.put("family", Map.of());
-                rows.add(fallback);
+        int page = PageDtos.normalizePage(pageRaw);
+        int size = PageDtos.normalizeSize(sizeRaw);
+        BookingFilters filters = new BookingFilters(id, q, gender, ages, meditation, location, stayRange);
+
+        long total = stayBookingQueryRepository.count(filters);
+        List<Map<String, Object>> items = new ArrayList<>();
+        for (StayBooking booking : stayBookingQueryRepository.search(filters, page, size)) {
+            items.add(safeView(booking));
+        }
+
+        Map<String, Object> stats = buildRegistrationStats(filters, total);
+        Map<String, Object> facets = new LinkedHashMap<>();
+        facets.put("locations", stayBookingQueryRepository.locationFacets(filters));
+        facets.put("stayRanges", stayBookingQueryRepository.stayRangeFacets(filters));
+
+        return PageDtos.page(items, total, page, size, stats, facets);
+    }
+
+    private Map<String, Object> safeView(StayBooking booking) {
+        try {
+            return toView(booking);
+        } catch (RuntimeException ex) {
+            Map<String, Object> fallback = new LinkedHashMap<>();
+            fallback.put("id", booking.getId());
+            fallback.put("eventId", booking.getEventId());
+            fallback.put("eventName", booking.getEventName());
+            fallback.put("plan", booking.getPlan());
+            fallback.put("status", booking.getStatus());
+            fallback.put("familyMobile", booking.getFamilyMobile());
+            fallback.put("familyFullName", booking.getFamilyFullName());
+            fallback.put("bookedAt",
+                    booking.getCreatedAt() == null ? null : booking.getCreatedAt().toString());
+            fallback.put("createdAt",
+                    booking.getCreatedAt() == null ? null : booking.getCreatedAt().toString());
+            fallback.put("place", profileMapper.placeToMap(booking.getPlace()));
+            fallback.put("guests", booking.getGuests() == null ? List.of() : booking.getGuests());
+            int count = booking.getGuests() == null ? 0 : booking.getGuests().size();
+            fallback.put("personCount", count);
+            fallback.put("familyCount", Math.max(0, count - 1));
+            fallback.put("family", Map.of());
+            return fallback;
+        }
+    }
+
+    private Map<String, Object> buildRegistrationStats(BookingFilters filters, long totalFamilies) {
+        // Filtered stats from matching docs (cap scan for safety).
+        int limit = (int) Math.min(Math.max(totalFamilies, 0), 5000);
+        List<StayBooking> matched = stayBookingQueryRepository.search(filters, 0, Math.max(limit, 1));
+        int people = 0;
+        int rural = 0;
+        int urban = 0;
+        for (StayBooking booking : matched) {
+            int count = booking.getGuests() == null ? 0 : booking.getGuests().size();
+            people += count;
+            String kind = booking.getPlace() == null ? "" : String.valueOf(booking.getPlace().getKind());
+            if ("rural".equalsIgnoreCase(kind)) {
+                rural += count;
+            } else {
+                urban += count;
             }
         }
-        return rows;
+
+        // Event-wide accommodation (independent of current filters).
+        BookingFilters eventOnly = new BookingFilters(filters.eventId(), "", "", "", "", "", "");
+        long eventTotal = stayBookingQueryRepository.count(eventOnly);
+        int eventLimit = (int) Math.min(Math.max(eventTotal, 0), 5000);
+        List<StayBooking> eventBookings =
+                stayBookingQueryRepository.search(eventOnly, 0, Math.max(eventLimit, 1));
+        Set<String> allottedBookingIds = new HashSet<>();
+        Set<String> allottedMobiles = new HashSet<>();
+        for (StayAllotment allotment :
+                stayAllotmentRepository.findByEventIdOrderByHotelNameAscRoomNumberAsc(filters.eventId())) {
+            if (allotment == null) {
+                continue;
+            }
+            String bookingId = allotment.getBookingId() == null ? "" : allotment.getBookingId().trim();
+            if (!bookingId.isBlank()) {
+                allottedBookingIds.add(bookingId);
+            }
+            String mobile = PasswordSupport.normalizeMobile(allotment.getFamilyMobile());
+            if (!mobile.isBlank()) {
+                allottedMobiles.add(mobile);
+            }
+        }
+        int waitList = 0;
+        int allotted = 0;
+        for (StayBooking booking : eventBookings) {
+            int count = booking.getGuests() == null ? 0 : booking.getGuests().size();
+            String mobile = PasswordSupport.normalizeMobile(booking.getFamilyMobile());
+            boolean isAllotted = allottedBookingIds.contains(booking.getId())
+                    || (!mobile.isBlank() && allottedMobiles.contains(mobile));
+            if (isAllotted) {
+                allotted += count;
+            } else {
+                waitList += count;
+            }
+        }
+
+        Map<String, Object> stats = new LinkedHashMap<>();
+        stats.put("families", totalFamilies);
+        stats.put("people", people);
+        stats.put("rural", rural);
+        stats.put("urban", urban);
+        stats.put("waitList", waitList);
+        stats.put("allotted", allotted);
+        return stats;
     }
 
     @Transactional(readOnly = true)

@@ -169,6 +169,7 @@ export function SanghaWizard({
       ? {
           ...emptyProfile(),
           ...initialForm,
+          meditation: initialForm.meditation || 'new',
           place: { ...emptyProfile().place, ...(initialForm.place || {}) },
           members: Array.isArray(initialForm.members) ? initialForm.members : []
         }
@@ -357,6 +358,7 @@ export function SanghaWizard({
         setForm({
           ...emptyProfile(),
           ...res.data,
+          meditation: res.data.meditation || 'new',
           place: { ...emptyProfile().place, ...(res.data.place || {}) },
           members: Array.isArray(res.data.members) ? res.data.members : []
         });
@@ -456,19 +458,33 @@ export function SanghaWizard({
   return (
     <main className="uk-section uk-section-small uk-padding-remove-top">
       <div className="uk-container app-column">
-        <div className="step-bar">
-          <button
-            className="uk-button uk-button-text chrome-back"
-            type="button"
-            aria-label="Back"
-            hidden={STEPS[step].id === 'done' || (step === 0 && !isProfile)}
-            onClick={goBack}
-          >
-            <span uk-icon="icon: chevron-left; ratio: 0.85" />
-          </button>
-          <p className="step-label">
-            Step {Math.min(step + 1, 5)} of 5 · {stepMeta.label}
-          </p>
+        <div className={`step-bar${isProfile ? ' step-bar-split' : ''}`}>
+          {isProfile ? (
+            <nav className="stay-crumb" aria-label="Profile path">
+              <button
+                type="button"
+                className="stay-crumb-link stay-crumb-current stay-crumb-exit"
+                onClick={leaveWizard}
+              >
+                <span uk-icon="icon: reply; ratio: 0.85" aria-hidden="true" />
+                My Profile
+              </button>
+            </nav>
+          ) : null}
+          <div className="step-bar-current">
+            <button
+              className="uk-button uk-button-text chrome-back"
+              type="button"
+              aria-label="Previous step"
+              hidden={STEPS[step].id === 'done' || (step === 0 && !isProfile)}
+              onClick={goBack}
+            >
+              <span uk-icon="icon: chevron-left; ratio: 0.85" />
+            </button>
+            <p className="step-label">
+              Step {Math.min(step + 1, 5)} of 5 · {stepMeta.label}
+            </p>
+          </div>
         </div>
         <div className="app-progress">
           <progress
