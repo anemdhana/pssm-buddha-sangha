@@ -73,7 +73,7 @@ describe('mock stay allotments', () => {
     });
     expect(first.data.created).toBe(1);
 
-    await mockApi.createStayAllotments({
+    const second = await mockApi.createStayAllotments({
       eventId: 'evt_sample_anandotsavam',
       eventName: 'Dhyana Dussera Anandotsavam - 2026',
       placements: [
@@ -87,6 +87,13 @@ describe('mock stay allotments', () => {
         }
       ]
     });
+    expect(second.data.moves).toEqual([
+      expect.objectContaining({
+        name: 'Dup Guest',
+        fromRoom: '231',
+        toRoom: '232'
+      })
+    ]);
 
     const listed = await mockApi.listStayAllotments('evt_sample_anandotsavam', { size: 200 });
     const matches = (listed.data.items || []).filter((row) =>

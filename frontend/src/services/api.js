@@ -91,6 +91,8 @@ const liveApi = {
   },
   createStayAllotments: (payload) =>
     request('/allotments', { method: 'POST', body: JSON.stringify(payload) }),
+  releaseStayAllotments: (payload) =>
+    request('/allotments/release', { method: 'POST', body: JSON.stringify(payload) }),
   listHotels: (eventId) =>
     request(`/hotels?eventId=${encodeURIComponent(String(eventId || ''))}`),
   getHotel: (id) => request(`/hotels/${encodeURIComponent(id)}`),

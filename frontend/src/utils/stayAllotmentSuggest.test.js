@@ -1,14 +1,17 @@
 import { describe, expect, it } from 'vitest';
 import {
   expandGroupedPlacementChoice,
+  formatAllotmentMovesMessage,
   groupPlacementsByRoom,
   hotelLocationPeopleSummary,
+  priorAllotmentMoves,
   hotelPeopleAccommodatedSoFar,
   hotelRoomFillCounts,
   hotelSuggestionPage,
   listSmartRoomOptions,
   partiesFromSelectedPeople,
-  suggestHotelsForSelection
+  suggestHotelsForSelection,
+  suggestPlacementsForHotel
 } from './stayAllotmentSuggest.js';
 
 describe('stayAllotmentSuggest', () => {
@@ -64,6 +67,23 @@ describe('stayAllotmentSuggest', () => {
     const parties = partiesFromSelectedPeople(new Set(['b1:primary', 'b1:member:0']), people);
     expect(parties).toHaveLength(1);
     expect(parties[0].size).toBe(2);
+  });
+
+  it('places selection into a chosen hotel on drop', () => {
+    const placements = suggestPlacementsForHotel({
+      hotelId: 'h_near',
+      hotels,
+      allotments: [],
+      selectedIds: new Set(['b1:primary', 'b1:member:0']),
+      people
+    });
+    expect(placements).toHaveLength(1);
+    expect(placements[0]).toMatchObject({
+      hotelId: 'h_near',
+      roomNumber: '101',
+      bookingId: 'b1'
+    });
+    expect(placements[0].members).toHaveLength(2);
   });
 
   it('ranks nearer non-reserved hotels first and proposes exact capacity', () => {
@@ -125,6 +145,37 @@ describe('stayAllotmentSuggest', () => {
     expect(hotelLocationPeopleSummary('h_near', allotments)).toEqual([
       { name: 'Tirupati', count: 3 }
     ]);
+  });
+
+  it('describes moves from a prior room when re-allotting', () => {
+    const moves = priorAllotmentMoves(
+      {
+        bookingId: 'b1',
+        hotelId: 'h2',
+        hotelName: 'New Hotel',
+        roomNumber: '202',
+        members: [{ name: 'Veeraiah', mobile: '9959129737' }]
+      },
+      [
+        {
+          bookingId: 'b1',
+          hotelId: 'h1',
+          hotelName: 'Old Hotel',
+          roomNumber: '501',
+          guests: [{ name: 'Veeraiah', mobile: '9959129737', primary: true }]
+        }
+      ]
+    );
+    expect(moves).toEqual([
+      {
+        name: 'Veeraiah',
+        fromHotel: 'Old Hotel',
+        fromRoom: '501',
+        toHotel: 'New Hotel',
+        toRoom: '202'
+      }
+    ]);
+    expect(formatAllotmentMovesMessage(moves)).toContain('Old Hotel #501 → New Hotel #202');
   });
 
   it('merges placements that share a room for one confirm panel', () => {

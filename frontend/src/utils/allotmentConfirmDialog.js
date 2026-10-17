@@ -78,6 +78,26 @@ function refreshPanel(el, state, panelIndex, allotments) {
   }
 }
 
+function showPanel(el, index) {
+  const stage = el.querySelector('.x-allot-panel-stage');
+  if (!stage) return false;
+  const total = Number(stage.getAttribute('data-total')) || 0;
+  if (total <= 1) return false;
+  const next = Math.min(Math.max(0, index), total - 1);
+  stage.setAttribute('data-active', String(next));
+  el.querySelectorAll('.x-allot-room-panel').forEach((node) => {
+    const i = Number(node.getAttribute('data-panel-index'));
+    node.classList.toggle('is-hidden', i !== next);
+  });
+  const prevBtn = el.querySelector('.js-panel-prev');
+  const nextBtn = el.querySelector('.js-panel-next');
+  if (prevBtn) prevBtn.disabled = next <= 0;
+  if (nextBtn) nextBtn.disabled = next >= total - 1;
+  const count = el.querySelector('.js-panel-count-current');
+  if (count) count.textContent = String(next + 1);
+  return true;
+}
+
 function buildPanelState(placements, hotels, allotments) {
   return groupPlacementsByRoom(placements).map((placement) => {
     const subPlacements = Array.isArray(placement.subPlacements)
@@ -148,8 +168,17 @@ export function openAllotmentConfirmDialog({
     return Promise.resolve(state.flatMap((panel) => expandGroupedPlacementChoice(panel)));
   }
 
+  const multiPanel = state.length > 1;
+  const edgeNav = multiPanel
+    ? `<button type="button" class="x-allot-panel-edge x-allot-panel-edge-prev js-panel-prev" aria-label="Previous room allotment">` +
+      `<span uk-icon="icon: chevron-left; ratio: 1.5"></span></button>` +
+      `<button type="button" class="x-allot-panel-edge x-allot-panel-edge-next js-panel-next" aria-label="Next room allotment">` +
+      `<span uk-icon="icon: chevron-right; ratio: 1.5"></span></button>`
+    : '';
+
   const html =
     `<button class="uk-modal-close-default" type="button" uk-close aria-label="Close"></button>` +
+    edgeNav +
     `<div class="uk-modal-body x-allot-confirm-body">${bodyHtml}</div>` +
     `<div class="uk-modal-footer uk-text-right">` +
     `<button type="button" class="uk-button uk-button-default uk-modal-close">Cancel</button>` +
@@ -162,6 +191,7 @@ export function openAllotmentConfirmDialog({
     const dialog = el.querySelector('.uk-modal-dialog');
     if (dialog) {
       dialog.classList.add('x-allot-confirm-dialog', 'uk-margin-auto-vertical');
+      if (multiPanel) dialog.classList.add('has-panel-nav');
     }
     if (typeof UIkit.update === 'function') {
       try {
@@ -170,6 +200,7 @@ export function openAllotmentConfirmDialog({
         /* ignore */
       }
     }
+    showPanel(el, 0);
 
     let settled = false;
     const finish = (value) => {
@@ -199,6 +230,18 @@ export function openAllotmentConfirmDialog({
             /* ignore */
           }
         }
+        return;
+      }
+
+      const panelPrev = e.target?.closest?.('.js-panel-prev');
+      const panelNext = e.target?.closest?.('.js-panel-next');
+      const panelNav = panelPrev || panelNext;
+      if (panelNav && el.contains(panelNav) && !panelNav.disabled) {
+        e.preventDefault();
+        e.stopPropagation();
+        const stage = el.querySelector('.x-allot-panel-stage');
+        const active = Number(stage?.getAttribute('data-active')) || 0;
+        showPanel(el, active + (panelPrev ? -1 : 1));
         return;
       }
 

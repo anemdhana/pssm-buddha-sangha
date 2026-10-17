@@ -15,6 +15,7 @@ import com.pssm.sangha.web.dto.PageDtos;
 import com.pssm.sangha.web.dto.StayAllotmentDtos.CreateAllotmentsRequest;
 import com.pssm.sangha.web.dto.StayAllotmentDtos.GuestDto;
 import com.pssm.sangha.web.dto.StayAllotmentDtos.PlacementDto;
+import com.pssm.sangha.web.dto.StayAllotmentDtos.ReleaseAllotmentsRequest;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -169,8 +170,27 @@ public class StayAllotmentService {
             toSave.add(allotment);
         }
 
-        // Drop these people from any prior rooms in the event so they are not duplicated.
-        stripGuestsFromEventAllotments(eventId, guestKeys);
+        Map<String, Map<String, String>> targetsByGuestKey = new LinkedHashMap<>();
+        for (StayAllotment allotment : toSave) {
+            if (allotment == null || allotment.getGuests() == null) {
+                continue;
+            }
+            for (AllotmentGuest guest : allotment.getGuests()) {
+                String key = guestIdentityKey(guest, allotment.getBookingId());
+                if (key.isBlank() || targetsByGuestKey.containsKey(key)) {
+                    continue;
+                }
+                Map<String, String> target = new LinkedHashMap<>();
+                target.put("hotelId", allotment.getHotelId() == null ? "" : allotment.getHotelId());
+                target.put("hotelName", allotment.getHotelName() == null ? "" : allotment.getHotelName());
+                target.put("roomNumber", allotment.getRoomNumber() == null ? "" : allotment.getRoomNumber());
+                target.put("name", guest.getName() == null ? "" : guest.getName());
+                targetsByGuestKey.put(key, target);
+            }
+        }
+
+        // Drop these people from any prior rooms in the event so old beds are freed.
+        List<Map<String, Object>> moves = stripGuestsFromEventAllotments(eventId, guestKeys, targetsByGuestKey);
 
         List<Map<String, Object>> created = new ArrayList<>();
         for (StayAllotment allotment : toSave) {
@@ -181,6 +201,42 @@ public class StayAllotmentService {
         Map<String, Object> data = new LinkedHashMap<>();
         data.put("created", created.size());
         data.put("allotments", created);
+        data.put("moves", moves);
+        return data;
+    }
+
+    @Transactional
+    public Map<String, Object> releaseGuests(ReleaseAllotmentsRequest body) {
+        requireViewer(authService.currentPerson());
+        if (body == null) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "VALIDATION", "Release details are required.");
+        }
+        String eventId = body.eventId == null ? "" : body.eventId.trim();
+        if (eventId.isBlank()) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "VALIDATION", "Event id is required.");
+        }
+        List<GuestDto> members = body.members == null ? List.of() : body.members;
+        Set<String> guestKeys = new HashSet<>();
+        for (GuestDto member : members) {
+            if (member == null) {
+                continue;
+            }
+            AllotmentGuest guest = new AllotmentGuest();
+            guest.setName(member.name == null ? "" : member.name.trim());
+            guest.setMobile(PasswordSupport.normalizeMobile(member.mobile));
+            String key = guestIdentityKey(guest, "");
+            if (!key.isBlank()) {
+                guestKeys.add(key);
+            }
+        }
+        if (guestKeys.isEmpty()) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "VALIDATION", "No people to move to wait list.");
+        }
+        List<Map<String, Object>> released =
+                stripGuestsFromEventAllotments(eventId, guestKeys, null);
+        Map<String, Object> data = new LinkedHashMap<>();
+        data.put("released", released.size());
+        data.put("moves", released);
         return data;
     }
 
@@ -200,10 +256,15 @@ public class StayAllotmentService {
         return "n:" + booking + ":" + name;
     }
 
-    private void stripGuestsFromEventAllotments(String eventId, Set<String> guestKeys) {
+    private List<Map<String, Object>> stripGuestsFromEventAllotments(
+            String eventId,
+            Set<String> guestKeys,
+            Map<String, Map<String, String>> targetsByGuestKey) {
+        List<Map<String, Object>> moves = new ArrayList<>();
         if (guestKeys == null || guestKeys.isEmpty()) {
-            return;
+            return moves;
         }
+        Set<String> reportedKeys = new HashSet<>();
         List<StayAllotment> existing = stayAllotmentRepository.findByEventId(eventId);
         for (StayAllotment row : existing) {
             if (row == null || row.getGuests() == null || row.getGuests().isEmpty()) {
@@ -211,10 +272,42 @@ public class StayAllotmentService {
             }
             List<AllotmentGuest> kept = new ArrayList<>();
             boolean changed = false;
+            String fromHotelId = row.getHotelId() == null ? "" : row.getHotelId().trim();
+            String fromHotel = row.getHotelName() == null ? "" : row.getHotelName().trim();
+            String fromRoom = row.getRoomNumber() == null ? "" : row.getRoomNumber().trim();
             for (AllotmentGuest guest : row.getGuests()) {
                 String key = guestIdentityKey(guest, row.getBookingId());
                 if (!key.isBlank() && guestKeys.contains(key)) {
                     changed = true;
+                    Map<String, String> target =
+                            targetsByGuestKey == null ? null : targetsByGuestKey.get(key);
+                    if (!reportedKeys.contains(key)) {
+                        if (target != null) {
+                            String toHotelId = target.getOrDefault("hotelId", "");
+                            String toRoom = target.getOrDefault("roomNumber", "");
+                            boolean sameRoom = fromHotelId.equals(toHotelId) && fromRoom.equals(toRoom);
+                            if (!sameRoom) {
+                                Map<String, Object> move = new LinkedHashMap<>();
+                                move.put("name", target.getOrDefault("name",
+                                        guest.getName() == null ? "" : guest.getName()));
+                                move.put("fromHotel", fromHotel);
+                                move.put("fromRoom", fromRoom);
+                                move.put("toHotel", target.getOrDefault("hotelName", ""));
+                                move.put("toRoom", toRoom);
+                                moves.add(move);
+                                reportedKeys.add(key);
+                            }
+                        } else {
+                            Map<String, Object> move = new LinkedHashMap<>();
+                            move.put("name", guest.getName() == null ? "" : guest.getName());
+                            move.put("fromHotel", fromHotel);
+                            move.put("fromRoom", fromRoom);
+                            move.put("toHotel", "");
+                            move.put("toRoom", "");
+                            moves.add(move);
+                            reportedKeys.add(key);
+                        }
+                    }
                     continue;
                 }
                 kept.add(guest);
@@ -233,6 +326,7 @@ public class StayAllotmentService {
             row.setFamilyFullName(primary.getName());
             stayAllotmentRepository.save(row);
         }
+        return moves;
     }
 
     private PlaceInfo placeFromMap(Map<String, Object> place) {

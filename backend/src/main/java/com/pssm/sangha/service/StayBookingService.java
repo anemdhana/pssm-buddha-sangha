@@ -26,6 +26,7 @@ import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -135,6 +136,7 @@ public class StayBookingService {
                                             String meditation,
                                             String location,
                                             String stayRange,
+                                            String allotment,
                                             Integer pageRaw,
                                             Integer sizeRaw) {
         requireRegistrationViewer(authService.currentPerson());
@@ -144,7 +146,10 @@ public class StayBookingService {
         }
         int page = PageDtos.normalizePage(pageRaw);
         int size = PageDtos.normalizeSize(sizeRaw);
-        BookingFilters filters = new BookingFilters(id, q, gender, ages, meditation, location, stayRange);
+        String allotmentMode = normalizeAllotmentMode(allotment);
+        Set<String> allottedIds = resolveAllottedBookingIds(id);
+        BookingFilters filters = new BookingFilters(
+                id, q, gender, ages, meditation, location, stayRange, allotmentMode, allottedIds);
 
         long total = stayBookingQueryRepository.count(filters);
         List<Map<String, Object>> items = new ArrayList<>();
@@ -152,12 +157,59 @@ public class StayBookingService {
             items.add(safeView(booking));
         }
 
-        Map<String, Object> stats = buildRegistrationStats(filters, total);
+        Map<String, Object> stats = buildRegistrationStats(filters, total, allottedIds);
         Map<String, Object> facets = new LinkedHashMap<>();
         facets.put("locations", stayBookingQueryRepository.locationFacets(filters));
         facets.put("stayRanges", stayBookingQueryRepository.stayRangeFacets(filters));
 
         return PageDtos.page(items, total, page, size, stats, facets);
+    }
+
+    private static String normalizeAllotmentMode(String allotment) {
+        String raw = allotment == null ? "" : allotment.trim().toLowerCase(Locale.ROOT);
+        if ("allotted".equals(raw) || "only".equals(raw) || "true".equals(raw) || "1".equals(raw)) {
+            return "allotted";
+        }
+        return "wait";
+    }
+
+    private Set<String> resolveAllottedBookingIds(String eventId) {
+        Set<String> allottedBookingIds = new HashSet<>();
+        Set<String> allottedMobiles = new HashSet<>();
+        for (StayAllotment allotment :
+                stayAllotmentRepository.findByEventIdOrderByHotelNameAscRoomNumberAsc(eventId)) {
+            if (allotment == null) {
+                continue;
+            }
+            String bookingId = allotment.getBookingId() == null ? "" : allotment.getBookingId().trim();
+            if (!bookingId.isBlank()) {
+                allottedBookingIds.add(bookingId);
+            }
+            String mobile = PasswordSupport.normalizeMobile(allotment.getFamilyMobile());
+            if (!mobile.isBlank()) {
+                allottedMobiles.add(mobile);
+            }
+        }
+        if (allottedMobiles.isEmpty()) {
+            return allottedBookingIds;
+        }
+        BookingFilters eventOnly = new BookingFilters(eventId, "", "", "", "", "", "");
+        long eventTotal = stayBookingQueryRepository.count(eventOnly);
+        int eventLimit = (int) Math.min(Math.max(eventTotal, 0), 5000);
+        for (StayBooking booking :
+                stayBookingQueryRepository.search(eventOnly, 0, Math.max(eventLimit, 1))) {
+            if (booking == null || booking.getId() == null) {
+                continue;
+            }
+            if (allottedBookingIds.contains(booking.getId())) {
+                continue;
+            }
+            String mobile = PasswordSupport.normalizeMobile(booking.getFamilyMobile());
+            if (!mobile.isBlank() && allottedMobiles.contains(mobile)) {
+                allottedBookingIds.add(booking.getId());
+            }
+        }
+        return allottedBookingIds;
     }
 
     private Map<String, Object> safeView(StayBooking booking) {
@@ -186,7 +238,8 @@ public class StayBookingService {
         }
     }
 
-    private Map<String, Object> buildRegistrationStats(BookingFilters filters, long totalFamilies) {
+    private Map<String, Object> buildRegistrationStats(
+            BookingFilters filters, long totalFamilies, Set<String> allottedBookingIds) {
         // Filtered stats from matching docs (cap scan for safety).
         int limit = (int) Math.min(Math.max(totalFamilies, 0), 5000);
         List<StayBooking> matched = stayBookingQueryRepository.search(filters, 0, Math.max(limit, 1));
@@ -204,35 +257,18 @@ public class StayBookingService {
             }
         }
 
-        // Event-wide accommodation (independent of current filters).
+        // Event-wide accommodation (independent of current list filters).
         BookingFilters eventOnly = new BookingFilters(filters.eventId(), "", "", "", "", "", "");
         long eventTotal = stayBookingQueryRepository.count(eventOnly);
         int eventLimit = (int) Math.min(Math.max(eventTotal, 0), 5000);
         List<StayBooking> eventBookings =
                 stayBookingQueryRepository.search(eventOnly, 0, Math.max(eventLimit, 1));
-        Set<String> allottedBookingIds = new HashSet<>();
-        Set<String> allottedMobiles = new HashSet<>();
-        for (StayAllotment allotment :
-                stayAllotmentRepository.findByEventIdOrderByHotelNameAscRoomNumberAsc(filters.eventId())) {
-            if (allotment == null) {
-                continue;
-            }
-            String bookingId = allotment.getBookingId() == null ? "" : allotment.getBookingId().trim();
-            if (!bookingId.isBlank()) {
-                allottedBookingIds.add(bookingId);
-            }
-            String mobile = PasswordSupport.normalizeMobile(allotment.getFamilyMobile());
-            if (!mobile.isBlank()) {
-                allottedMobiles.add(mobile);
-            }
-        }
+        Set<String> allottedIds = allottedBookingIds == null ? Set.of() : allottedBookingIds;
         int waitList = 0;
         int allotted = 0;
         for (StayBooking booking : eventBookings) {
             int count = booking.getGuests() == null ? 0 : booking.getGuests().size();
-            String mobile = PasswordSupport.normalizeMobile(booking.getFamilyMobile());
-            boolean isAllotted = allottedBookingIds.contains(booking.getId())
-                    || (!mobile.isBlank() && allottedMobiles.contains(mobile));
+            boolean isAllotted = booking.getId() != null && allottedIds.contains(booking.getId());
             if (isAllotted) {
                 allotted += count;
             } else {

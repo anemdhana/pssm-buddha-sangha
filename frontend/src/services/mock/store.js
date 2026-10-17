@@ -782,19 +782,61 @@ function allotmentGuestKey(guest, bookingId = '') {
   return '';
 }
 
-/** Remove guests (by mobile/name) from existing event allotments so a person is never in two rooms. */
-function stripGuestsFromEventAllotments(list, eventId, guestKeys) {
+/**
+ * Remove guests from prior rooms and collect old→new moves.
+ * @returns {{ list: object[], moves: object[] }}
+ */
+function stripGuestsFromEventAllotments(list, eventId, guestKeys, targetsByGuestKey = new Map()) {
   const id = String(eventId || '').trim();
-  if (!id || !guestKeys?.size) return Array.isArray(list) ? list.slice() : [];
-  return (Array.isArray(list) ? list : [])
+  const moves = [];
+  const reported = new Set();
+  if (!id || !guestKeys?.size) {
+    return { list: Array.isArray(list) ? list.slice() : [], moves };
+  }
+  const next = (Array.isArray(list) ? list : [])
     .map((row) => {
       if (!row || String(row.eventId || '') !== id) return row;
       const guests = Array.isArray(row.guests) ? row.guests : [];
-      const kept = guests.filter((g) => {
+      const fromHotelId = String(row.hotelId || '').trim();
+      const fromHotel = String(row.hotelName || '').trim();
+      const fromRoom = String(row.roomNumber || '').trim();
+      const kept = [];
+      let changed = false;
+      guests.forEach((g) => {
         const key = allotmentGuestKey(g, row.bookingId);
-        return !key || !guestKeys.has(key);
+        if (key && guestKeys.has(key)) {
+          changed = true;
+          const target = targetsByGuestKey?.get?.(key);
+          if (!reported.has(key)) {
+            if (target) {
+              const toHotelId = String(target.hotelId || '').trim();
+              const toRoom = String(target.roomNumber || '').trim();
+              if (fromHotelId !== toHotelId || fromRoom !== toRoom) {
+                moves.push({
+                  name: target.name || g?.name || '',
+                  fromHotel,
+                  fromRoom,
+                  toHotel: target.hotelName || '',
+                  toRoom
+                });
+                reported.add(key);
+              }
+            } else if (!targetsByGuestKey) {
+              moves.push({
+                name: g?.name || '',
+                fromHotel,
+                fromRoom,
+                toHotel: '',
+                toRoom: ''
+              });
+              reported.add(key);
+            }
+          }
+          return;
+        }
+        kept.push(g);
       });
-      if (kept.length === guests.length) return row;
+      if (!changed) return row;
       if (!kept.length) return null;
       const primary = kept.find((g) => g.primary) || kept[0] || {};
       return {
@@ -806,6 +848,7 @@ function stripGuestsFromEventAllotments(list, eventId, guestKeys) {
       };
     })
     .filter(Boolean);
+  return { list: next, moves };
 }
 
 function allotmentsHaveDuplicatePeople(list) {
@@ -1558,13 +1601,50 @@ export const mockApi = {
     const meditation = String(params.meditation || '').trim().toLowerCase();
     const location = String(params.location || '').trim().toLowerCase();
     const stayRange = String(params.stayRange || '').trim();
+    const allotmentRaw = String(params.allotment || '').trim().toLowerCase();
+    const allotmentMode =
+      allotmentRaw === 'allotted' || allotmentRaw === 'only' || allotmentRaw === 'true' || allotmentRaw === '1'
+        ? 'allotted'
+        : 'wait';
     const page = Math.max(0, Number(params.page) || 0);
     const size = Math.min(100, Math.max(1, Number(params.size) || 24));
+
+    const eventBookings = readStayBookings()
+      .filter((b) => b && b.eventId === id)
+      .map(enrichStayBookingRow);
+    const allotments = readAllotments().filter((a) => a && a.eventId === id);
+    const allottedBookingIds = new Set(
+      allotments.map((a) => String(a.bookingId || '').trim()).filter(Boolean)
+    );
+    const allottedMobiles = new Set(
+      allotments.map((a) => normalizeMobile(a.familyMobile)).filter(Boolean)
+    );
+    eventBookings.forEach((row) => {
+      const mobile = normalizeMobile(row.familyMobile);
+      if (mobile && allottedMobiles.has(mobile) && row.id) {
+        allottedBookingIds.add(String(row.id));
+      }
+    });
+    let waitList = 0;
+    let allotted = 0;
+    eventBookings.forEach((row) => {
+      const count = Number(row.personCount) || (row.guests || []).length;
+      const isAllotted = allottedBookingIds.has(String(row.id || ''));
+      if (isAllotted) allotted += count;
+      else waitList += count;
+    });
 
     const matchesBooking = (b) => {
       if (!b || b.eventId !== id) return false;
       const guests = Array.isArray(b.guests) ? b.guests : [];
       const family = b.family || {};
+      const bookingId = String(b.id || '');
+      const isAllotted = allottedBookingIds.has(bookingId);
+      if (allotmentMode === 'allotted') {
+        if (!isAllotted) return false;
+      } else if (isAllotted) {
+        return false;
+      }
       if (q) {
         const hay = [b.familyFullName, b.familyMobile, ...guests.map((g) => `${g?.name || ''} ${g?.mobile || ''}`)]
           .join(' ')
@@ -1606,27 +1686,6 @@ export const mockApi = {
       people += count;
       if (row.place?.kind === 'rural') rural += count;
       else urban += count;
-    });
-
-    const eventBookings = readStayBookings()
-      .filter((b) => b && b.eventId === id)
-      .map(enrichStayBookingRow);
-    const allotments = readAllotments().filter((a) => a && a.eventId === id);
-    const allottedBookingIds = new Set(
-      allotments.map((a) => String(a.bookingId || '').trim()).filter(Boolean)
-    );
-    const allottedMobiles = new Set(
-      allotments.map((a) => normalizeMobile(a.familyMobile)).filter(Boolean)
-    );
-    let waitList = 0;
-    let allotted = 0;
-    eventBookings.forEach((row) => {
-      const count = Number(row.personCount) || (row.guests || []).length;
-      const mobile = normalizeMobile(row.familyMobile);
-      const isAllotted =
-        allottedBookingIds.has(String(row.id || '')) || (mobile && allottedMobiles.has(mobile));
-      if (isAllotted) allotted += count;
-      else waitList += count;
     });
 
     const locCounts = {};
@@ -1911,6 +1970,33 @@ export const mockApi = {
     return { data: enrichHotel(hotel) };
   },
 
+  async releaseStayAllotments(payload) {
+    requireAllotmentManager();
+    const eventId = String(payload?.eventId || '').trim();
+    if (!eventId) throw apiError(400, 'VALIDATION', 'Event id is required.');
+    const members = Array.isArray(payload?.members) ? payload.members : [];
+    const guestKeys = new Set();
+    members.forEach((m) => {
+      const key = allotmentGuestKey(
+        { name: m?.name, mobile: normalizeMobile(m?.mobile) },
+        ''
+      );
+      if (key) guestKeys.add(key);
+    });
+    if (!guestKeys.size) {
+      throw apiError(400, 'VALIDATION', 'No people to move to wait list.');
+    }
+    const stripped = stripGuestsFromEventAllotments(
+      readAllotments(),
+      eventId,
+      guestKeys,
+      null
+    );
+    writeJson(ALLOTMENTS_KEY, stripped.list);
+    writeJson(ALLOTMENTS_SEED_KEY, ALLOTMENTS_SEED_VERSION);
+    return { data: { released: stripped.moves.length, moves: stripped.moves } };
+  },
+
   async createStayAllotments(payload) {
     requireAllotmentManager();
     const eventId = String(payload?.eventId || '').trim();
@@ -1969,11 +2055,32 @@ export const mockApi = {
       });
     });
 
-    const next = stripGuestsFromEventAllotments(readAllotments(), eventId, guestKeys);
+    const targetsByGuestKey = new Map();
+    prepared.forEach((row) => {
+      (row.guests || []).forEach((g) => {
+        const key = allotmentGuestKey(g, row.bookingId);
+        if (!key || targetsByGuestKey.has(key)) return;
+        targetsByGuestKey.set(key, {
+          hotelId: row.hotelId,
+          hotelName: row.hotelName,
+          roomNumber: row.roomNumber,
+          name: g.name || ''
+        });
+      });
+    });
+    const stripped = stripGuestsFromEventAllotments(
+      readAllotments(),
+      eventId,
+      guestKeys,
+      targetsByGuestKey
+    );
+    const next = stripped.list;
     prepared.forEach((row) => next.unshift(row));
     writeJson(ALLOTMENTS_KEY, next);
     writeJson(ALLOTMENTS_SEED_KEY, ALLOTMENTS_SEED_VERSION);
-    return { data: { created: prepared.length, allotments: prepared } };
+    return {
+      data: { created: prepared.length, allotments: prepared, moves: stripped.moves }
+    };
   },
 
   async createHotel(payload) {

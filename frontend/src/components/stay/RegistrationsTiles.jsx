@@ -33,7 +33,17 @@ function primaryIndex(members) {
   return idx >= 0 ? idx : 0;
 }
 
-function FamilyInterestTile({ members, selectedIds, onToggle }) {
+const ALLOT_DRAG_MIME = 'application/x-pssm-allot-people';
+
+function FamilyInterestTile({
+  members,
+  selectedIds,
+  selectedCount = 0,
+  allotBusy = false,
+  onToggleFamily,
+  onPeopleDragStart,
+  onPeopleDragEnd
+}) {
   const list = Array.isArray(members) ? members.filter(Boolean) : [];
   const selected = selectedIds instanceof Set ? selectedIds : new Set(selectedIds || []);
   const [index, setIndex] = useState(() => primaryIndex(list));
@@ -60,7 +70,10 @@ function FamilyInterestTile({ members, selectedIds, onToggle }) {
   const safeIndex = Math.min(index, list.length - 1);
   const person = list[safeIndex];
   const multi = list.length > 1;
-  const isSelected = selected.has(person.id);
+  const memberIds = list.map((m) => m.id);
+  const selectedInFamily = memberIds.filter((id) => selected.has(id)).length;
+  const someSelected = selectedInFamily > 0 && selectedInFamily < memberIds.length;
+  const personSelected = selected.has(person.id);
   const photo = String(person.livePhoto || '').trim();
   const location = registrationLocationShort(person.place);
   const age = ageGroupLabel(person.age);
@@ -81,12 +94,56 @@ function FamilyInterestTile({ members, selectedIds, onToggle }) {
     setIndex(next);
   }
 
+  function togglePerson() {
+    if (!person?.id) return;
+    onToggleFamily?.([person.id]);
+  }
+
+  const canDrag = !allotBusy && selectedCount > 0 && selectedInFamily > 0;
+
+  function handleDragStart(e) {
+    if (!canDrag) {
+      e.preventDefault();
+      return;
+    }
+    const block = e.target?.closest?.(
+      'a, label, input, .x-interest-tile-nav, .x-interest-tile-check, .x-interest-tile-edit'
+    );
+    if (block) {
+      e.preventDefault();
+      return;
+    }
+    e.dataTransfer.setData(ALLOT_DRAG_MIME, String(selectedCount));
+    e.dataTransfer.setData(
+      'text/plain',
+      `${selectedCount} ${selectedCount === 1 ? 'person' : 'people'}`
+    );
+    e.dataTransfer.effectAllowed = 'move';
+    const ghost = document.createElement('div');
+    ghost.className = 'x-suitable-drag-ghost';
+    ghost.textContent = `${selectedCount} ${selectedCount === 1 ? 'person' : 'people'}`;
+    document.body.appendChild(ghost);
+    e.dataTransfer.setDragImage(ghost, 48, 24);
+    requestAnimationFrame(() => {
+      try {
+        ghost.remove();
+      } catch {
+        /* ignore */
+      }
+    });
+    onPeopleDragStart?.(e);
+  }
+
   return (
     <article
-      className={`x-interest-tile x-interest-family-tile${isSelected ? ' is-selected' : ''}${
-        multi ? ' has-family-nav' : ''
-      }`}
-      aria-selected={isSelected}
+      className={`x-interest-tile x-interest-family-tile${personSelected ? ' is-selected' : ''}${
+        !personSelected && someSelected ? ' is-partial' : ''
+      }${multi ? ' has-family-nav' : ''}${canDrag ? ' is-draggable' : ''}`}
+      aria-selected={personSelected}
+      draggable={canDrag}
+      onDragStart={handleDragStart}
+      onDragEnd={() => onPeopleDragEnd?.()}
+      title={canDrag ? 'Drag onto a suitable hotel to allot' : undefined}
     >
       {multi ? (
         <>
@@ -114,6 +171,7 @@ function FamilyInterestTile({ members, selectedIds, onToggle }) {
           </button>
           <span className="x-interest-tile-nav-count" aria-live="polite">
             {safeIndex + 1}/{list.length}
+            {selectedInFamily > 0 ? ` · ${selectedInFamily} sel` : ''}
           </span>
         </>
       ) : null}
@@ -121,8 +179,8 @@ function FamilyInterestTile({ members, selectedIds, onToggle }) {
       <label className="x-interest-tile-check">
         <input
           type="checkbox"
-          checked={isSelected}
-          onChange={() => onToggle(person.id)}
+          checked={personSelected}
+          onChange={togglePerson}
           aria-label={`Select ${person.name}`}
         />
         <span className="x-interest-tile-check-box" aria-hidden="true" />
@@ -136,15 +194,22 @@ function FamilyInterestTile({ members, selectedIds, onToggle }) {
         Edit
       </Link>
 
-      <button
-        type="button"
+      <div
         className="x-interest-tile-hit"
-        onClick={() => onToggle(person.id)}
-        aria-pressed={isSelected}
+        role="button"
+        tabIndex={0}
+        aria-pressed={personSelected}
+        onClick={togglePerson}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            togglePerson();
+          }
+        }}
       >
         <div key={animKey} className={`x-interest-tile-stage${animClass ? ` ${animClass}` : ''}`}>
           {photo ? (
-            <img className="x-interest-tile-photo" src={photo} alt="" />
+            <img className="x-interest-tile-photo" src={photo} alt="" draggable={false} />
           ) : (
             <div className="x-interest-tile-photo x-interest-tile-fallback" aria-hidden="true">
               {initials(person.name)}
@@ -158,16 +223,9 @@ function FamilyInterestTile({ members, selectedIds, onToggle }) {
             <span className="x-interest-tile-age">{age}</span>
           </div>
         </div>
-      </button>
+      </div>
     </article>
   );
-}
-
-function toggleAgeKey(ageKeys, value) {
-  const next = new Set(ageKeys);
-  if (next.has(value)) next.delete(value);
-  else next.add(value);
-  return Array.from(next);
 }
 
 export function RegistrationsTiles({
@@ -188,8 +246,8 @@ export function RegistrationsTiles({
   nameSearch,
   onNameSearchChange,
   onNameSearchClear,
-  ageKeys,
-  onAgeKeysChange,
+  age,
+  onAgeChange,
   meditation,
   onMeditationChange,
   gender,
@@ -198,8 +256,14 @@ export function RegistrationsTiles({
   onLocationChange,
   stayRange,
   onStayRangeChange,
+  showOnlyAllotted = false,
+  onShowOnlyAllottedChange,
   selectedIds,
-  onToggleSelect
+  onToggleFamily,
+  onSelectAll,
+  allotBusy = false,
+  onPeopleDragStart,
+  onPeopleDragEnd
 }) {
   const locations = Array.isArray(facets?.locations) ? facets.locations : [];
   const stayRanges = (Array.isArray(facets?.stayRanges) ? facets.stayRanges : [])
@@ -214,6 +278,12 @@ export function RegistrationsTiles({
   const selected = selectedIds instanceof Set ? selectedIds : new Set(selectedIds || []);
   const matchTotal = Number(total) || 0;
   const families = useMemo(() => groupTilePeopleByFamily(people), [people]);
+  const visibleIds = useMemo(
+    () => (Array.isArray(people) ? people.map((p) => p.id).filter(Boolean) : []),
+    [people]
+  );
+  const allVisibleSelected =
+    visibleIds.length > 0 && visibleIds.every((id) => selected.has(id));
 
   function pickGender(next) {
     onGenderChange(gender === next ? '' : next);
@@ -303,6 +373,16 @@ export function RegistrationsTiles({
                   Clear filters
                 </button>
               ) : null}
+              {visibleIds.length > 0 ? (
+                <button
+                  type="button"
+                  className="x-interest-text-btn"
+                  disabled={removeBusy}
+                  onClick={() => (allVisibleSelected ? onClearSelection?.() : onSelectAll?.(visibleIds))}
+                >
+                  {allVisibleSelected ? 'Deselect all' : 'Select all'}
+                </button>
+              ) : null}
               {selectedCount > 0 ? (
                 <>
                   <button
@@ -336,7 +416,7 @@ export function RegistrationsTiles({
               />
             </div>
 
-            <div className="x-interest-filter-chips" role="group" aria-label="Gender and age">
+            <div className="x-interest-filter-chips" role="group" aria-label="Gender">
               <button
                 type="button"
                 className={`x-interest-filter-chip${gender === 'male' ? ' is-active' : ''}`}
@@ -353,20 +433,25 @@ export function RegistrationsTiles({
               >
                 Female
               </button>
-              {AGE_FILTER_OPTS.map((opt) => {
-                const active = ageKeys.includes(opt.value);
-                return (
-                  <button
-                    key={opt.value}
-                    type="button"
-                    className={`x-interest-filter-chip${active ? ' is-active' : ''}`}
-                    aria-pressed={active}
-                    onClick={() => onAgeKeysChange(toggleAgeKey(ageKeys, opt.value))}
-                  >
+            </div>
+
+            <div className="x-field uk-margin-remove x-interest-age-filter">
+              <label className="x-label" htmlFor="interest-age">
+                Age
+              </label>
+              <select
+                className="uk-select uk-form-small"
+                id="interest-age"
+                value={age || ''}
+                onChange={(e) => onAgeChange?.(e.target.value)}
+              >
+                <option value="">Any age</option>
+                {AGE_FILTER_OPTS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
                     {opt.label}
-                  </button>
-                );
-              })}
+                  </option>
+                ))}
+              </select>
             </div>
 
             <div className="x-field uk-margin-remove x-interest-meditation-filter">
@@ -387,6 +472,17 @@ export function RegistrationsTiles({
                 ))}
               </select>
             </div>
+
+            <label className="x-interest-allotted-toggle" htmlFor="interest-show-allotted">
+              <input
+                id="interest-show-allotted"
+                type="checkbox"
+                className="uk-checkbox"
+                checked={Boolean(showOnlyAllotted)}
+                onChange={(e) => onShowOnlyAllottedChange?.(e.target.checked)}
+              />
+              <span>Show only Allotted</span>
+            </label>
           </div>
         </section>
 
@@ -402,7 +498,11 @@ export function RegistrationsTiles({
                   <FamilyInterestTile
                     members={family.members}
                     selectedIds={selected}
-                    onToggle={onToggleSelect}
+                    selectedCount={selectedCount}
+                    allotBusy={allotBusy}
+                    onToggleFamily={onToggleFamily}
+                    onPeopleDragStart={onPeopleDragStart}
+                    onPeopleDragEnd={onPeopleDragEnd}
                   />
                 </div>
               ))}

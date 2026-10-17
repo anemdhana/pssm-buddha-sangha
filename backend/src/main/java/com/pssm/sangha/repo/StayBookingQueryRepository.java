@@ -33,8 +33,22 @@ public class StayBookingQueryRepository {
             String ages,
             String meditation,
             String location,
-            String stayRange
+            String stayRange,
+            /** {@code wait} = exclude allotted (default); {@code allotted} = only allotted. */
+            String allotment,
+            /** Booking ids resolved against stay_allotments for the event (may be empty). */
+            java.util.Collection<String> allotmentBookingIds
     ) {
+        public BookingFilters(
+                String eventId,
+                String q,
+                String gender,
+                String ages,
+                String meditation,
+                String location,
+                String stayRange) {
+            this(eventId, q, gender, ages, meditation, location, stayRange, "wait", java.util.List.of());
+        }
     }
 
     public long count(BookingFilters filters) {
@@ -214,6 +228,21 @@ public class StayBookingQueryRepository {
                                 .and("stayStartDate").is(start)
                                 .and("stayEndDate").is(end)
                 ));
+            }
+        }
+        if (!"allotment".equals(omitField)) {
+            String mode = filters.allotment() == null ? "wait" : filters.allotment().trim().toLowerCase(Locale.ROOT);
+            java.util.Collection<String> ids = filters.allotmentBookingIds() == null
+                    ? java.util.List.of()
+                    : filters.allotmentBookingIds();
+            if ("allotted".equals(mode)) {
+                if (ids.isEmpty()) {
+                    parts.add(Criteria.where("_id").is("__no_allotted_bookings__"));
+                } else {
+                    parts.add(Criteria.where("_id").in(ids));
+                }
+            } else if (!ids.isEmpty()) {
+                parts.add(Criteria.where("_id").nin(ids));
             }
         }
 

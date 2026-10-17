@@ -71,6 +71,7 @@ export function useEventRegistrations(eventId, enabled, filters = {}) {
         meditation: filters.meditation || undefined,
         location: filters.location || undefined,
         stayRange: filters.stayRange || undefined,
+        allotment: filters.allotment || 'wait',
         page: filters.page ?? 0,
         size: filters.size ?? 24
       });
@@ -97,6 +98,7 @@ export function useEventRegistrations(eventId, enabled, filters = {}) {
     filters.meditation,
     filters.location,
     filters.stayRange,
+    filters.allotment,
     filters.page,
     filters.size
   ]);

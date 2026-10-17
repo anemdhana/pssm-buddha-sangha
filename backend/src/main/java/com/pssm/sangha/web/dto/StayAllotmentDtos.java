@@ -15,6 +15,12 @@ public final class StayAllotmentDtos {
         public List<PlacementDto> placements = new ArrayList<>();
     }
 
+    /** Remove guests from hotel rooms (return them to wait list). */
+    public static class ReleaseAllotmentsRequest {
+        public String eventId;
+        public List<GuestDto> members = new ArrayList<>();
+    }
+
     public static class PlacementDto {
         public String bookingId;
         public String plan;

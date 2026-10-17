@@ -8,9 +8,14 @@ import { useEventRegistrations } from '../hooks/useEventRegistrations.js';
 import { useAuth } from '../hooks/useAuth.jsx';
 import { api } from '../services/api.js';
 import { openAllotmentConfirmDialog } from '../utils/allotmentConfirmDialog.js';
-import { suggestHotelsForSelection } from '../utils/stayAllotmentSuggest.js';
+import {
+  formatAllotmentMovesMessage,
+  suggestHotelsForSelection,
+  suggestPlacementsForHotel
+} from '../utils/stayAllotmentSuggest.js';
 import { applySelectedRegistrationRemovals } from '../utils/stayRegistrationRemove.js';
 import { registrationTilePeople } from '../utils/stayRegistrations.js';
+import { uikitDialogChoice } from '../utils/uikitDialog.js';
 
 function Gate({ title, message, children }) {
   return (
@@ -38,31 +43,34 @@ export function StayRegistrationsPage() {
   const [removeBusy, setRemoveBusy] = useState(false);
   const [allotBusy, setAllotBusy] = useState(false);
   const [actionError, setActionError] = useState('');
-  const [ageKeys, setAgeKeys] = useState([]);
+  const [age, setAge] = useState('');
   const [meditation, setMeditation] = useState('');
   const [gender, setGender] = useState('');
   const [location, setLocation] = useState('');
   const [stayRange, setStayRange] = useState('');
+  const [showOnlyAllotted, setShowOnlyAllotted] = useState(false);
   const [page, setPage] = useState(0);
   const [selectedIds, setSelectedIds] = useState(() => new Set());
   const [hotels, setHotels] = useState([]);
   const [allotments, setAllotments] = useState([]);
   const [hotelPage, setHotelPage] = useState(0);
+  const [peopleDragging, setPeopleDragging] = useState(false);
 
   const debouncedQ = useDebouncedValue(nameSearch, 300);
 
   const filtersActive = Boolean(
     String(nameSearch || '').trim() ||
-      ageKeys.length ||
+      age ||
       meditation ||
       gender ||
       location ||
-      stayRange
+      stayRange ||
+      showOnlyAllotted
   );
 
   useEffect(() => {
     setPage(0);
-  }, [debouncedQ, ageKeys, meditation, gender, location, stayRange, picked.id]);
+  }, [debouncedQ, age, meditation, gender, location, stayRange, showOnlyAllotted, picked.id]);
 
   useEffect(() => {
     setHotelPage(0);
@@ -72,15 +80,20 @@ export function StayRegistrationsPage() {
     useEventRegistrations(picked.id, signedIn && canView && Boolean(picked.id), {
       q: debouncedQ,
       gender,
-      ages: ageKeys,
+      ages: age || undefined,
       meditation,
       location,
       stayRange,
+      allotment: showOnlyAllotted ? 'allotted' : 'wait',
       page,
       size: 24
     });
 
   const allPeople = useMemo(() => registrationTilePeople(rows), [rows]);
+  const selectedPeople = useMemo(
+    () => allPeople.filter((p) => p && selectedIds.has(p.id)),
+    [allPeople, selectedIds]
+  );
 
   async function loadHotelsAndAllotments() {
     if (!picked.id || !signedIn || !canView) {
@@ -119,22 +132,35 @@ export function StayRegistrationsPage() {
     [hotels, allotments, selectedIds, allPeople, location]
   );
 
-  function toggleSelect(id) {
+  function toggleFamilyMembers(ids) {
+    const list = Array.isArray(ids) ? ids.filter(Boolean) : [];
+    if (!list.length) return;
     setSelectedIds((prev) => {
       const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
+      const allOn = list.every((id) => next.has(id));
+      if (allOn) list.forEach((id) => next.delete(id));
+      else list.forEach((id) => next.add(id));
+      return next;
+    });
+  }
+
+  function selectAllVisible(ids) {
+    const list = Array.isArray(ids) ? ids.filter(Boolean) : [];
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      list.forEach((id) => next.add(id));
       return next;
     });
   }
 
   function clearFilters() {
     setNameSearch('');
-    setAgeKeys([]);
+    setAge('');
     setMeditation('');
     setGender('');
     setLocation('');
     setStayRange('');
+    setShowOnlyAllotted(false);
     setPage(0);
   }
 
@@ -182,12 +208,112 @@ export function StayRegistrationsPage() {
     }
   }
 
+  function membersPayload(people) {
+    return (Array.isArray(people) ? people : [])
+      .filter(Boolean)
+      .map((p) => ({
+        name: p.name || '',
+        mobile: p.mobile || '',
+        primary: Boolean(p.primary)
+      }));
+  }
+
+  async function releasePeopleToWaitList(people, { clearSelection = false } = {}) {
+    const list = Array.isArray(people) ? people.filter(Boolean) : [];
+    if (!list.length || !picked.id) return;
+    setAllotBusy(true);
+    setActionError('');
+    try {
+      const res = await api.releaseStayAllotments({
+        eventId: picked.id,
+        members: membersPayload(list)
+      });
+      const released = Number(res?.data?.released) || 0;
+      if (clearSelection) setSelectedIds(new Set());
+      else {
+        setSelectedIds((prev) => {
+          const next = new Set(prev);
+          list.forEach((p) => next.delete(p.id));
+          return next;
+        });
+      }
+      await loadHotelsAndAllotments();
+      await refresh();
+      if (window.UIkit) {
+        window.UIkit.notification({
+          message:
+            released > 0
+              ? `Moved ${released} ${released === 1 ? 'person' : 'people'} to Wait List.`
+              : 'No hotel allotment found for the selected people.',
+          status: released > 0 ? 'success' : 'warning',
+          pos: 'top-center',
+          timeout: 3200
+        });
+      }
+    } catch (err) {
+      setActionError(err.message || 'Could not move to wait list.');
+      if (window.UIkit) {
+        window.UIkit.notification({
+          message: err.message || 'Could not move to wait list.',
+          status: 'danger',
+          pos: 'top-center',
+          timeout: 4000
+        });
+      }
+    } finally {
+      setAllotBusy(false);
+    }
+  }
+
+  async function moveFocusedToWaitList(person) {
+    if (!person) return;
+    await releasePeopleToWaitList([person]);
+  }
+
+  async function moveAllSelectedToWaitList(people) {
+    const list = Array.isArray(people) ? people.filter(Boolean) : [];
+    if (!list.length) return;
+    const names = list
+      .slice(0, 3)
+      .map((p) => p.name || 'Guest')
+      .join(', ');
+    const extra = list.length > 3 ? ` and ${list.length - 3} more` : '';
+    const choice = await uikitDialogChoice(
+      `<p class="uk-margin-remove-top">Move <strong>${list.length}</strong> selected ${
+        list.length === 1 ? 'person' : 'people'
+      } to Wait List?</p>` +
+        `<p class="uk-text-meta uk-margin-small-top">${names}${extra} will be removed from their current hotel room(s).</p>`,
+      [{ id: 'ok', label: 'Move to Wait List', buttonClass: 'uk-button-primary' }]
+    );
+    if (choice !== 'ok') return;
+    await releasePeopleToWaitList(list, { clearSelection: true });
+  }
+
   async function confirmAllotment(hotel) {
     const focusHotelId = hotel?.hotelId || '';
-    const basePlacements = focusHotelId
+    let basePlacements = focusHotelId
       ? (suggestion.placements || []).filter((p) => p.hotelId === focusHotelId)
       : suggestion.placements || [];
-    if (!basePlacements.length) return;
+    if (!basePlacements.length && focusHotelId) {
+      basePlacements = suggestPlacementsForHotel({
+        hotelId: focusHotelId,
+        hotels,
+        allotments,
+        selectedIds,
+        people: allPeople
+      });
+    }
+    if (!basePlacements.length) {
+      if (window.UIkit) {
+        window.UIkit.notification({
+          message: 'Could not fit the selected people into rooms at this hotel.',
+          status: 'warning',
+          pos: 'top-center',
+          timeout: 3500
+        });
+      }
+      return;
+    }
 
     const chosenPlacements = await openAllotmentConfirmDialog({
       suggestion: { ...suggestion, placements: basePlacements },
@@ -200,7 +326,7 @@ export function StayRegistrationsPage() {
     setAllotBusy(true);
     setActionError('');
     try {
-      await api.createStayAllotments({
+      const saveRes = await api.createStayAllotments({
         eventId: picked.id,
         eventName: picked.name,
         placements: chosenPlacements.map((p) => ({
@@ -226,11 +352,15 @@ export function StayRegistrationsPage() {
       await loadHotelsAndAllotments();
       await refresh();
       if (window.UIkit) {
+        const peopleCount = chosenPlacements.reduce((n, p) => n + (p.members?.length || 0), 0);
+        const moveText = formatAllotmentMovesMessage(saveRes?.data?.moves || []);
         window.UIkit.notification({
-          message: `Allotted ${chosenPlacements.reduce((n, p) => n + (p.members?.length || 0), 0)} people.`,
+          message: moveText
+            ? `Allotted ${peopleCount}. ${moveText}`
+            : `Allotted ${peopleCount} people.`,
           status: 'success',
           pos: 'top-center',
-          timeout: 2800
+          timeout: moveText ? 5500 : 2800
         });
       }
     } catch (err) {
@@ -285,6 +415,7 @@ export function StayRegistrationsPage() {
   }
 
   const emptyUnfiltered = !loading && total === 0 && !filtersActive;
+  const emptyWaitButAllotted = emptyUnfiltered && (stats?.allotted ?? 0) > 0;
   const showTiles = !loading || filtersActive || rows.length > 0;
 
   return (
@@ -321,10 +452,25 @@ export function StayRegistrationsPage() {
 
           {emptyUnfiltered ? (
             <div className="x-interest-empty">
-              <p>No registrations yet for this event.</p>
-              <Link className="uk-button uk-button-primary" to="/stay?plan=free&from=interest">
-                Register a family
-              </Link>
+              {emptyWaitButAllotted ? (
+                <>
+                  <p>No one left on the wait list — registered people are already allotted.</p>
+                  <button
+                    type="button"
+                    className="uk-button uk-button-primary"
+                    onClick={() => setShowOnlyAllotted(true)}
+                  >
+                    Show only Allotted
+                  </button>
+                </>
+              ) : (
+                <>
+                  <p>No registrations yet for this event.</p>
+                  <Link className="uk-button uk-button-primary" to="/stay?plan=free&from=interest">
+                    Register a family
+                  </Link>
+                </>
+              )}
             </div>
           ) : null}
 
@@ -348,8 +494,8 @@ export function StayRegistrationsPage() {
               nameSearch={nameSearch}
               onNameSearchChange={setNameSearch}
               onNameSearchClear={() => setNameSearch('')}
-              ageKeys={ageKeys}
-              onAgeKeysChange={setAgeKeys}
+              age={age}
+              onAgeChange={setAge}
               meditation={meditation}
               onMeditationChange={setMeditation}
               gender={gender}
@@ -358,8 +504,14 @@ export function StayRegistrationsPage() {
               onLocationChange={setLocation}
               stayRange={stayRange}
               onStayRangeChange={setStayRange}
+              showOnlyAllotted={showOnlyAllotted}
+              onShowOnlyAllottedChange={setShowOnlyAllotted}
               selectedIds={selectedIds}
-              onToggleSelect={toggleSelect}
+              onToggleFamily={toggleFamilyMembers}
+              onSelectAll={selectAllVisible}
+              allotBusy={allotBusy}
+              onPeopleDragStart={() => setPeopleDragging(true)}
+              onPeopleDragEnd={() => setPeopleDragging(false)}
             />
           ) : null}
 
@@ -368,9 +520,13 @@ export function StayRegistrationsPage() {
               suggestion={suggestion}
               pageIndex={hotelPage}
               onPageChange={setHotelPage}
-              onHotelClick={confirmAllotment}
+              onHotelDrop={confirmAllotment}
               allotBusy={allotBusy}
               selectedCount={selectedIds.size}
+              dragging={peopleDragging}
+              selectedPeople={selectedPeople}
+              onMoveToWaitList={moveFocusedToWaitList}
+              onMoveAllToWaitList={moveAllSelectedToWaitList}
             />
           ) : null}
         </div>

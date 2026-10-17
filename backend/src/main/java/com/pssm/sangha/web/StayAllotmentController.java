@@ -3,6 +3,7 @@ package com.pssm.sangha.web;
 import com.pssm.sangha.common.ApiResponses;
 import com.pssm.sangha.service.StayAllotmentService;
 import com.pssm.sangha.web.dto.StayAllotmentDtos.CreateAllotmentsRequest;
+import com.pssm.sangha.web.dto.StayAllotmentDtos.ReleaseAllotmentsRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -42,5 +43,10 @@ public class StayAllotmentController {
     public ResponseEntity<?> create(@RequestBody CreateAllotmentsRequest body) {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponses.data(stayAllotmentService.createBatch(body)));
+    }
+
+    @PostMapping("/release")
+    public ResponseEntity<?> release(@RequestBody ReleaseAllotmentsRequest body) {
+        return ResponseEntity.ok(ApiResponses.data(stayAllotmentService.releaseGuests(body)));
     }
 }

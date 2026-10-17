@@ -160,6 +160,59 @@ function pickBestRoom(rooms, people) {
   return bestScore > -Infinity ? best : null;
 }
 
+/**
+ * Place selected parties into rooms of one hotel (greedy, most suitable rooms first).
+ * Used when dropping people onto any Suitable-hotels card.
+ */
+export function suggestPlacementsForHotel({
+  hotelId,
+  hotels,
+  allotments,
+  selectedIds,
+  people
+} = {}) {
+  const hid = String(hotelId || '').trim();
+  if (!hid) return [];
+  const parties = partiesFromSelectedPeople(selectedIds, people).filter((p) => p.size > 0);
+  if (!parties.length) return [];
+  const availability = buildRoomAvailability(hotels, allotments);
+  if (!availability.has(hid)) return [];
+  const sim = cloneAvailability(availability);
+  const entry = sim.get(hid);
+  if (!entry) return [];
+
+  const ordered = [...parties].sort((a, b) => {
+    if (Number(b.needsClose) !== Number(a.needsClose)) return Number(b.needsClose) - Number(a.needsClose);
+    return b.size - a.size;
+  });
+
+  const placements = [];
+  ordered.forEach((party) => {
+    const room = pickBestRoom(entry.rooms, party.members);
+    if (!room) return;
+    const usedBefore = Number(room.used) || 0;
+    placements.push({
+      bookingId: party.bookingId,
+      plan: party.plan,
+      hotelId: hid,
+      hotelName: entry.hotel?.name || '',
+      distanceKm: entry.distanceKm,
+      roomNumber: room.roomNumber,
+      roomType: room.ac ? 'ac' : 'non_ac',
+      roomKind: room.kind,
+      capacity: room.capacity,
+      usedBefore,
+      freeBefore: Number(room.free) || 0,
+      roomStatusBefore: usedBefore <= 0 ? 'free' : room.free > 0 ? 'partial' : 'full',
+      exactMatch: room.empty && room.capacity === party.size,
+      members: party.members,
+      placeLabel: party.placeLabel
+    });
+    applyPlacement(sim, hid, room.roomNumber, party.size);
+  });
+  return placements;
+}
+
 /** Smart-ranked eligible rooms in one hotel for a party (most suitable first). */
 export function listSmartRoomOptions(hotelId, members, hotels, allotments) {
   const availability = buildRoomAvailability(hotels, allotments);
@@ -656,6 +709,110 @@ export function allotPersonStripHtml(people, { kind = 'incoming', page = 0 } = {
   );
 }
 
+function normalizeAllotmentMobile(value) {
+  return String(value || '').replace(/\D/g, '');
+}
+
+function allotmentPersonKey(person, bookingId = '') {
+  const mobile = normalizeAllotmentMobile(person?.mobile);
+  if (mobile) return `m:${mobile}`;
+  const name = String(person?.name || '')
+    .trim()
+    .toLowerCase();
+  if (name) return `n:${String(bookingId || '').trim()}:${name}`;
+  return '';
+}
+
+function roomMoveLabel(hotelName, roomNumber) {
+  const room = String(roomNumber || '').trim();
+  const hotel = String(hotelName || '').trim();
+  if (hotel && room) return `${hotel} #${room}`;
+  if (room) return `Room ${room}`;
+  return hotel || 'previous room';
+}
+
+/**
+ * Prior room assignments for people about to be placed (old room freed on save).
+ */
+export function priorAllotmentMoves(placement, allotments = []) {
+  const toHotelId = String(placement?.hotelId || '').trim();
+  const toHotel = String(placement?.hotelName || '').trim();
+  const toRoom = String(placement?.roomNumber || '').trim();
+  const bookingId = String(placement?.bookingId || '').trim();
+  const members = Array.isArray(placement?.members) ? placement.members : [];
+  const moves = [];
+  const seen = new Set();
+  members.forEach((member) => {
+    const key = allotmentPersonKey(member, bookingId);
+    if (!key || seen.has(key)) return;
+    const prior = (Array.isArray(allotments) ? allotments : []).find((row) => {
+      if (!row) return false;
+      const sameRoom =
+        String(row.hotelId || '') === toHotelId && String(row.roomNumber || '') === toRoom;
+      if (sameRoom) return false;
+      return (Array.isArray(row.guests) ? row.guests : []).some(
+        (g) => allotmentPersonKey(g, row.bookingId) === key
+      );
+    });
+    if (!prior) return;
+    seen.add(key);
+    moves.push({
+      name: member?.name || prior.familyFullName || 'Guest',
+      fromHotel: prior.hotelName || '',
+      fromRoom: prior.roomNumber || '',
+      toHotel: toHotel || prior.hotelName || '',
+      toRoom
+    });
+  });
+  return moves;
+}
+
+/** Plain text summary for notifications / confirm copy. */
+export function formatAllotmentMovesMessage(moves) {
+  const list = Array.isArray(moves) ? moves.filter(Boolean) : [];
+  if (!list.length) return '';
+  if (list.length === 1) {
+    const m = list[0];
+    return `${m.name || 'Guest'}: ${roomMoveLabel(m.fromHotel, m.fromRoom)} → ${roomMoveLabel(
+      m.toHotel,
+      m.toRoom
+    )}`;
+  }
+  return list
+    .map(
+      (m) =>
+        `${m.name || 'Guest'}: ${roomMoveLabel(m.fromHotel, m.fromRoom)} → ${roomMoveLabel(
+          m.toHotel,
+          m.toRoom
+        )}`
+    )
+    .join(' · ');
+}
+
+function allotMoveNoticeHtml(moves) {
+  const list = Array.isArray(moves) ? moves.filter(Boolean) : [];
+  if (!list.length) return '';
+  const lines = list
+    .map((m) => {
+      const from = roomMoveLabel(m.fromHotel, m.fromRoom);
+      const to = roomMoveLabel(m.toHotel, m.toRoom);
+      return (
+        `<li><strong>${escapeHtml(m.name || 'Guest')}</strong>: ` +
+        `<span class="x-allot-move-from">${escapeHtml(from)}</span>` +
+        `<span class="x-allot-move-arrow" aria-hidden="true"> → </span>` +
+        `<span class="x-allot-move-to">${escapeHtml(to)}</span>` +
+        ` <em>(old room freed)</em></li>`
+      );
+    })
+    .join('');
+  return (
+    `<div class="x-allot-move-notice" role="status">` +
+    `<p class="x-allot-move-notice-title">Moving from previous room</p>` +
+    `<ul class="x-allot-move-notice-list">${lines}</ul>` +
+    `</div>`
+  );
+}
+
 /** Inner HTML for one room recommendation panel (supports smart next/prev). */
 export function allotRoomPanelInnerHtml(placement, { altIndex = 0, altTotal = 1, allotments = [] } = {}) {
   const status = placement.roomStatusBefore || (placement.usedBefore > 0 ? 'partial' : 'free');
@@ -691,11 +848,13 @@ export function allotRoomPanelInnerHtml(placement, { altIndex = 0, altTotal = 1,
     name: m?.name || 'Guest',
     livePhoto: m?.livePhoto || '',
     age: m?.age || '',
-    location: registrationLocationShort(m?.place) || ''
+    location: registrationLocationShort(m?.place) || '',
+    mobile: m?.mobile || ''
   }));
 
   const occupiedStrip = allotPersonStripHtml(occupiedPeople, { kind: 'occupied' });
   const incomingStrip = allotPersonStripHtml(incomingMembers, { kind: 'incoming' });
+  const moveNotice = allotMoveNoticeHtml(priorAllotmentMoves(placement, allotments));
 
   const occupiedGroup = occupiedStrip
     ? `<section class="x-allot-room-group is-occupied" aria-label="Already here">${occupiedStrip}</section>`
@@ -706,6 +865,7 @@ export function allotRoomPanelInnerHtml(placement, { altIndex = 0, altTotal = 1,
     : '';
 
   return (
+    moveNotice +
     `<div class="x-allot-room-layout">` +
     `<aside class="x-allot-room-rail">` +
     `<div class="x-allot-room-number">${escapeHtml(placement.roomNumber)}</div>` +
@@ -758,23 +918,33 @@ export function allotmentConfirmHtml(
       : '');
 
   const panels = Array.isArray(panelStates) && panelStates.length ? panelStates : null;
-  const roomBlocks = (panels || rows.map((p) => ({ placement: p, altIndex: 0, alternatives: [p] })))
+  const panelList = panels || rows.map((p) => ({ placement: p, altIndex: 0, alternatives: [p] }));
+  const panelTotal = panelList.length;
+  const multiPanel = panelTotal > 1;
+  const roomBlocks = panelList
     .map((panel, index) => {
       const placement = panels
         ? mergePlacementRoomOption(panel.placement, panel.alternatives[panel.altIndex])
         : panel.placement || panel;
       const altTotal = panels ? panel.alternatives.length : 1;
       const altIndex = panels ? panel.altIndex : 0;
+      const hidden = index === 0 ? '' : ' is-hidden';
       return (
-        `<div class="x-allot-room-panel" data-panel-index="${index}" data-booking-id="${escapeHtml(placement.bookingId || '')}">` +
+        `<div class="x-allot-room-panel${hidden}" data-panel-index="${index}" data-booking-id="${escapeHtml(placement.bookingId || '')}">` +
         allotRoomPanelInnerHtml(placement, { altIndex, altTotal, allotments }) +
         `</div>`
       );
     })
     .join('');
 
+  const panelCount = multiPanel
+    ? `<p class="x-allot-panel-count" aria-live="polite">` +
+      `<span class="js-panel-count-current">1</span> of ${panelTotal} rooms` +
+      `</p>`
+    : '';
+
   return (
-    `<div class="x-allot-confirm">` +
+    `<div class="x-allot-confirm${multiPanel ? ' has-panel-nav' : ''}" data-panel-total="${panelTotal}">` +
     `<div class="x-allot-hotel-head">` +
     thumb +
     `<div class="x-allot-hotel-copy">` +
@@ -782,7 +952,10 @@ export function allotmentConfirmHtml(
     (address ? `<p class="x-allot-confirm-summary">${escapeHtml(address)}</p>` : '') +
     `<div class="x-allot-chip-row" role="group" aria-label="Hotel facts">${chips}</div>` +
     `</div></div>` +
-    roomBlocks +
+    `<div class="x-allot-panel-stage" data-active="0" data-total="${panelTotal}">` +
+    `<div class="x-allot-panel-viewport">${roomBlocks}</div>` +
+    `</div>` +
+    panelCount +
     `</div>`
   );
 }
