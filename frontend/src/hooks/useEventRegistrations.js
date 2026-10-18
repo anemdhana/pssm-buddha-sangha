@@ -8,7 +8,7 @@ const emptyPage = {
   size: 24,
   totalPages: 0,
   stats: { families: 0, people: 0, rural: 0, urban: 0, waitList: 0, allotted: 0 },
-  facets: { locations: [], stayRanges: [] }
+  facets: { locations: [], stayRanges: [], familySizes: [] }
 };
 
 function normalizePage(payload) {
@@ -71,6 +71,7 @@ export function useEventRegistrations(eventId, enabled, filters = {}) {
         meditation: filters.meditation || undefined,
         location: filters.location || undefined,
         stayRange: filters.stayRange || undefined,
+        familySize: filters.familySize || undefined,
         allotment: filters.allotment || 'wait',
         page: filters.page ?? 0,
         size: filters.size ?? 24
@@ -98,6 +99,7 @@ export function useEventRegistrations(eventId, enabled, filters = {}) {
     filters.meditation,
     filters.location,
     filters.stayRange,
+    filters.familySize,
     filters.allotment,
     filters.page,
     filters.size

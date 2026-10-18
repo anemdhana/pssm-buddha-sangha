@@ -97,101 +97,46 @@ export function AllotmentsTiles({
   }
 
   return (
-    <div className="x-interest-layout">
-      <aside className="x-interest-side x-interest-panel" aria-label="Stay allotment filters">
-        <h2 className="x-interest-panel-title">
-          <span uk-icon="icon: settings; ratio: 0.75" /> Filter
-        </h2>
-
-        <p className="x-interest-side-label">Status</p>
-        <div className="x-interest-filter-chips">
-          <Chip active={status === 'allotted'} onClick={() => pick(status, 'allotted', onStatusChange)}>
-            Allotted
-          </Chip>
-          <Chip
-            active={status === 'checked_in'}
-            onClick={() => pick(status, 'checked_in', onStatusChange)}
-          >
-            Checked in
-          </Chip>
+    <div className="x-interest-layout x-allot-layout">
+      <aside className="x-interest-side x-interest-panel x-allot-filter-side" aria-label="Hotels">
+        <div className="x-allot-filter-head">
+          <h2 className="x-interest-panel-title">
+            <span uk-icon="icon: home; ratio: 0.7" /> Hotels
+          </h2>
+          {hotelId ? (
+            <button
+              type="button"
+              className="x-interest-text-btn"
+              onClick={() => onHotelIdChange?.('')}
+            >
+              Clear
+            </button>
+          ) : null}
         </div>
-
-        <p className="x-interest-side-label">Gender</p>
-        <div className="x-interest-gender-tabs" role="tablist" aria-label="Gender">
-          <button
-            type="button"
-            className={`x-interest-gender-tab${gender === 'male' ? ' is-active' : ''}`}
-            onClick={() => pick(gender, 'male', onGenderChange)}
-          >
-            Gents
-          </button>
-          <button
-            type="button"
-            className={`x-interest-gender-tab${gender === 'female' ? ' is-active' : ''}`}
-            onClick={() => pick(gender, 'female', onGenderChange)}
-          >
-            Ladies
-          </button>
-        </div>
-
-        <p className="x-interest-side-label">Room type</p>
-        <div className="x-interest-filter-chips">
-          <Chip active={roomType === 'ac'} onClick={() => pick(roomType, 'ac', onRoomTypeChange)}>
-            AC
-          </Chip>
-          <Chip
-            active={roomType === 'non_ac'}
-            onClick={() => pick(roomType, 'non_ac', onRoomTypeChange)}
-          >
-            Non-AC
-          </Chip>
-        </div>
-
-        <p className="x-interest-side-label">Kind</p>
-        <div className="x-interest-filter-chips">
-          <Chip
-            active={roomKind === 'regular'}
-            onClick={() => pick(roomKind, 'regular', onRoomKindChange)}
-          >
-            Regular
-          </Chip>
-          <Chip
-            active={roomKind === 'dormitory'}
-            onClick={() => pick(roomKind, 'dormitory', onRoomKindChange)}
-          >
-            Dormitory
-          </Chip>
-          <Chip active={roomKind === 'hall'} onClick={() => pick(roomKind, 'hall', onRoomKindChange)}>
-            Hall
-          </Chip>
-        </div>
-
         {hotels.length > 0 ? (
-          <>
-            <p className="x-interest-side-label">Hotel</p>
-            <ul className="x-interest-location-list">
-              {hotels.map((facet) => (
-                <li key={facet.key}>
-                  <button
-                    type="button"
-                    className={`x-interest-location-item${hotelId === facet.key ? ' is-active' : ''}`}
-                    onClick={() => pick(hotelId, facet.key, onHotelIdChange)}
-                  >
-                    <span className="x-interest-location-name">{facet.label}</span>
-                    <span className="x-interest-location-count">{facet.count}</span>
-                  </button>
-                </li>
-              ))}
-            </ul>
-          </>
+          <ul className="x-interest-location-list x-allot-hotel-list">
+            {hotels.map((facet) => (
+              <li key={facet.key}>
+                <button
+                  type="button"
+                  className={`x-interest-location-item${hotelId === facet.key ? ' is-active' : ''}`}
+                  title={facet.label}
+                  onClick={() => pick(hotelId, facet.key, onHotelIdChange)}
+                >
+                  <span className="x-interest-location-name">{facet.label}</span>
+                  <span className="x-interest-location-count">{facet.count}</span>
+                </button>
+              </li>
+            ))}
+          </ul>
         ) : (
-          <p className="x-interest-side-empty">No hotels in this filter set.</p>
+          <p className="x-interest-side-empty">No hotels</p>
         )}
       </aside>
 
       <div className={`x-interest-tiles-wrap${refreshing ? ' is-refreshing' : ''}`}>
-        <div className="x-interest-panel x-interest-toolbar-panel">
-          <div className="x-hotel-toolbar">
+        <div className="x-interest-panel x-interest-toolbar-panel x-allot-toolbar-panel">
+          <div className="x-allot-toolbar-row">
             <div className="uk-inline x-hotel-toolbar-input">
               <span className="uk-form-icon" uk-icon="icon: search" />
               <input
@@ -213,7 +158,75 @@ export function AllotmentsTiles({
                 </button>
               ) : null}
             </div>
+
+            <div className="x-allot-toolbar-filters" aria-label="Quick filters">
+              <div className="x-allot-filter-group" role="group" aria-label="Status">
+                <span className="x-allot-filter-group-label">Status</span>
+                <div className="x-interest-filter-chips x-allot-filter-chips">
+                  <Chip active={status === 'allotted'} onClick={() => pick(status, 'allotted', onStatusChange)}>
+                    Allotted
+                  </Chip>
+                  <Chip
+                    active={status === 'checked_in'}
+                    onClick={() => pick(status, 'checked_in', onStatusChange)}
+                  >
+                    In
+                  </Chip>
+                </div>
+              </div>
+              <div className="x-allot-filter-group" role="group" aria-label="Gender">
+                <span className="x-allot-filter-group-label">Gender</span>
+                <div className="x-interest-filter-chips x-allot-filter-chips">
+                  <Chip active={gender === 'male'} onClick={() => pick(gender, 'male', onGenderChange)}>
+                    Gents
+                  </Chip>
+                  <Chip active={gender === 'female'} onClick={() => pick(gender, 'female', onGenderChange)}>
+                    Ladies
+                  </Chip>
+                </div>
+              </div>
+              <div className="x-allot-filter-group" role="group" aria-label="Room type">
+                <span className="x-allot-filter-group-label">Type</span>
+                <div className="x-interest-filter-chips x-allot-filter-chips">
+                  <Chip active={roomType === 'ac'} onClick={() => pick(roomType, 'ac', onRoomTypeChange)}>
+                    AC
+                  </Chip>
+                  <Chip
+                    active={roomType === 'non_ac'}
+                    onClick={() => pick(roomType, 'non_ac', onRoomTypeChange)}
+                  >
+                    Non-AC
+                  </Chip>
+                </div>
+              </div>
+              <div className="x-allot-filter-group" role="group" aria-label="Room kind">
+                <span className="x-allot-filter-group-label">Kind</span>
+                <div className="x-interest-filter-chips x-allot-filter-chips">
+                  <Chip
+                    active={roomKind === 'regular'}
+                    onClick={() => pick(roomKind, 'regular', onRoomKindChange)}
+                  >
+                    Regular
+                  </Chip>
+                  <Chip
+                    active={roomKind === 'dormitory'}
+                    onClick={() => pick(roomKind, 'dormitory', onRoomKindChange)}
+                  >
+                    Dorm
+                  </Chip>
+                  <Chip active={roomKind === 'hall'} onClick={() => pick(roomKind, 'hall', onRoomKindChange)}>
+                    Hall
+                  </Chip>
+                </div>
+              </div>
+              {filtersActive ? (
+                <button type="button" className="x-interest-text-btn x-allot-filter-clear" onClick={onClearFilters}>
+                  Clear filters
+                </button>
+              ) : null}
+            </div>
           </div>
+
           <div className="x-allot-stats-row" aria-label="People by hometown">
             <span className="x-hotel-stat is-open">
               <span className="x-hotel-stat-value">{peopleTotal}</span>
@@ -239,15 +252,10 @@ export function AllotmentsTiles({
             })}
           </div>
           {filtersActive ? (
-            <div className="x-hotel-toolbar-meta">
-              <p className="x-hotel-filter-note">
-                {total} part{total === 1 ? 'y' : 'ies'} match · page {page + 1}
-                {totalPages ? ` of ${totalPages}` : ''}
-              </p>
-              <button type="button" className="x-interest-text-btn" onClick={onClearFilters}>
-                Clear filters
-              </button>
-            </div>
+            <p className="x-hotel-filter-note x-allot-filter-note">
+              {total} part{total === 1 ? 'y' : 'ies'} match · page {page + 1}
+              {totalPages ? ` of ${totalPages}` : ''}
+            </p>
           ) : null}
         </div>
 

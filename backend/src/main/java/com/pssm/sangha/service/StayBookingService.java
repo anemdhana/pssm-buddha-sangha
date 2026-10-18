@@ -136,6 +136,7 @@ public class StayBookingService {
                                             String meditation,
                                             String location,
                                             String stayRange,
+                                            String familySize,
                                             String allotment,
                                             Integer pageRaw,
                                             Integer sizeRaw) {
@@ -149,7 +150,7 @@ public class StayBookingService {
         String allotmentMode = normalizeAllotmentMode(allotment);
         Set<String> allottedIds = resolveAllottedBookingIds(id);
         BookingFilters filters = new BookingFilters(
-                id, q, gender, ages, meditation, location, stayRange, allotmentMode, allottedIds);
+                id, q, gender, ages, meditation, location, stayRange, familySize, allotmentMode, allottedIds);
 
         long total = stayBookingQueryRepository.count(filters);
         List<Map<String, Object>> items = new ArrayList<>();
@@ -161,6 +162,7 @@ public class StayBookingService {
         Map<String, Object> facets = new LinkedHashMap<>();
         facets.put("locations", stayBookingQueryRepository.locationFacets(filters));
         facets.put("stayRanges", stayBookingQueryRepository.stayRangeFacets(filters));
+        facets.put("familySizes", stayBookingQueryRepository.familySizeFacets(filters));
 
         return PageDtos.page(items, total, page, size, stats, facets);
     }

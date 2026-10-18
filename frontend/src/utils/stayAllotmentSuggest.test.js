@@ -10,6 +10,7 @@ import {
   hotelSuggestionPage,
   listSmartRoomOptions,
   partiesFromSelectedPeople,
+  staysOverlap,
   suggestHotelsForSelection,
   suggestPlacementsForHotel
 } from './stayAllotmentSuggest.js';
@@ -67,6 +68,89 @@ describe('stayAllotmentSuggest', () => {
     const parties = partiesFromSelectedPeople(new Set(['b1:primary', 'b1:member:0']), people);
     expect(parties).toHaveLength(1);
     expect(parties[0].size).toBe(2);
+  });
+
+  it('treats checkout day as free for same-day check-in', () => {
+    expect(staysOverlap('2026-10-01', '2026-10-05', '2026-10-05', '2026-10-08')).toBe(false);
+    expect(staysOverlap('2026-10-01', '2026-10-05', '2026-10-04', '2026-10-08')).toBe(true);
+    expect(staysOverlap('2026-10-01', '2026-10-03', '2026-10-03', '2026-10-05')).toBe(false);
+  });
+
+  it('can allot into a room freed by same-day checkout', () => {
+    const waitPeople = [
+      {
+        id: 'b2:primary',
+        bookingId: 'b2',
+        name: 'Kiran',
+        gender: 'male',
+        age: 'adult',
+        primary: true,
+        stayStartDate: '2026-10-05',
+        stayEndDate: '2026-10-08',
+        place: { kind: 'urban', city: 'Hyderabad' }
+      }
+    ];
+    const allotments = [
+      {
+        hotelId: 'h_near',
+        roomNumber: '101',
+        checkInDate: '2026-10-01',
+        checkOutDate: '2026-10-05',
+        guests: [
+          { name: 'Leaving', gender: 'male', primary: true },
+          { name: 'Leaving2', gender: 'female' }
+        ]
+      }
+    ];
+    const placements = suggestPlacementsForHotel({
+      hotelId: 'h_near',
+      hotels,
+      allotments,
+      selectedIds: new Set(['b2:primary']),
+      people: waitPeople
+    });
+    expect(placements).toHaveLength(1);
+    expect(placements[0]).toMatchObject({
+      hotelId: 'h_near',
+      roomNumber: '101',
+      usedBefore: 0
+    });
+  });
+
+  it('keeps the room blocked when stays overlap the checkout night', () => {
+    const waitPeople = [
+      {
+        id: 'b3:primary',
+        bookingId: 'b3',
+        name: 'Arun',
+        gender: 'male',
+        age: 'adult',
+        primary: true,
+        stayStartDate: '2026-10-04',
+        stayEndDate: '2026-10-08',
+        place: { kind: 'urban', city: 'Hyderabad' }
+      }
+    ];
+    const allotments = [
+      {
+        hotelId: 'h_near',
+        roomNumber: '101',
+        checkInDate: '2026-10-01',
+        checkOutDate: '2026-10-05',
+        guests: [
+          { name: 'Staying', gender: 'male', primary: true },
+          { name: 'Staying2', gender: 'female' }
+        ]
+      }
+    ];
+    const placements = suggestPlacementsForHotel({
+      hotelId: 'h_near',
+      hotels,
+      allotments,
+      selectedIds: new Set(['b3:primary']),
+      people: waitPeople
+    });
+    expect(placements).toHaveLength(0);
   });
 
   it('places selection into a chosen hotel on drop', () => {

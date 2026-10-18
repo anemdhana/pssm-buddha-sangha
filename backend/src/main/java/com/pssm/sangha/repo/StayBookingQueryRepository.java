@@ -34,6 +34,8 @@ public class StayBookingQueryRepository {
             String meditation,
             String location,
             String stayRange,
+            /** Exact party size (primary + family members), e.g. {@code "3"}. */
+            String familySize,
             /** {@code wait} = exclude allotted (default); {@code allotted} = only allotted. */
             String allotment,
             /** Booking ids resolved against stay_allotments for the event (may be empty). */
@@ -47,7 +49,7 @@ public class StayBookingQueryRepository {
                 String meditation,
                 String location,
                 String stayRange) {
-            this(eventId, q, gender, ages, meditation, location, stayRange, "wait", java.util.List.of());
+            this(eventId, q, gender, ages, meditation, location, stayRange, "", "wait", java.util.List.of());
         }
     }
 
@@ -124,6 +126,32 @@ public class StayBookingQueryRepository {
         List<Map<String, Object>> rows = new ArrayList<>(counts.values());
         rows.sort((a, b) -> String.valueOf(a.getOrDefault("key", ""))
                 .compareTo(String.valueOf(b.getOrDefault("key", ""))));
+        return rows;
+    }
+
+    /** Party-size facets: [{ size, count }] sorted high → low by size. */
+    public List<Map<String, Object>> familySizeFacets(BookingFilters filters) {
+        Criteria criteria = buildCriteria(filters, "familySize");
+        Query query = Query.query(criteria);
+        query.fields().include("guests", "familyDetail");
+        List<StayBooking> bookings = mongoTemplate.find(query, StayBooking.class);
+        Map<Integer, Integer> counts = new LinkedHashMap<>();
+        for (StayBooking booking : bookings) {
+            int size = personCount(booking);
+            if (size <= 0) {
+                continue;
+            }
+            counts.merge(size, 1, Integer::sum);
+        }
+        List<Map<String, Object>> rows = new ArrayList<>();
+        counts.entrySet().stream()
+                .sorted((a, b) -> Integer.compare(b.getKey(), a.getKey()))
+                .forEach(entry -> {
+                    Map<String, Object> row = new LinkedHashMap<>();
+                    row.put("size", entry.getKey());
+                    row.put("count", entry.getValue());
+                    rows.add(row);
+                });
         return rows;
     }
 
@@ -230,6 +258,12 @@ public class StayBookingQueryRepository {
                 ));
             }
         }
+        if (include(filters.familySize(), omitField, "familySize")) {
+            int size = parseFamilySize(filters.familySize());
+            if (size > 0) {
+                parts.add(partySizeCriteria(size));
+            }
+        }
         if (!"allotment".equals(omitField)) {
             String mode = filters.allotment() == null ? "wait" : filters.allotment().trim().toLowerCase(Locale.ROOT);
             java.util.Collection<String> ids = filters.allotmentBookingIds() == null
@@ -254,6 +288,43 @@ public class StayBookingQueryRepository {
 
     private static boolean include(String value, String omitField, String field) {
         return value != null && !value.isBlank() && !field.equals(omitField);
+    }
+
+    private static int parseFamilySize(String raw) {
+        if (raw == null || raw.isBlank()) {
+            return 0;
+        }
+        try {
+            return Integer.parseInt(raw.trim());
+        } catch (NumberFormatException ignored) {
+            return 0;
+        }
+    }
+
+    /**
+     * Match bookings whose party size equals {@code size}, aligning with {@link #personCount}:
+     * guests array length, or familyDetail.members + 1 when guests are empty.
+     */
+    private static Criteria partySizeCriteria(int size) {
+        Criteria guestsExact = Criteria.where("guests").size(size);
+        if (size <= 1) {
+            return new Criteria().orOperator(
+                    guestsExact,
+                    Criteria.where("guests").size(0),
+                    Criteria.where("guests").exists(false),
+                    Criteria.where("guests").is(null)
+            );
+        }
+        Criteria emptyGuests = new Criteria().orOperator(
+                Criteria.where("guests").size(0),
+                Criteria.where("guests").exists(false),
+                Criteria.where("guests").is(null)
+        );
+        Criteria fromFamilyDetail = new Criteria().andOperator(
+                emptyGuests,
+                Criteria.where("familyDetail.members").size(size - 1)
+        );
+        return new Criteria().orOperator(guestsExact, fromFamilyDetail);
     }
 
     private static String locationLabel(PlaceInfo place) {

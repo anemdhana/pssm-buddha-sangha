@@ -1,9 +1,15 @@
-export function RegistrationNameSearch({ value, onChange, onClear }) {
+export function RegistrationNameSearch({ value, onChange, onClear, compact = false }) {
   return (
-    <div className="x-field uk-margin-remove">
-      <label className="x-label uk-text-meta" htmlFor="reg-name-search">
-        Search by name
-      </label>
+    <div className={`x-field uk-margin-remove${compact ? ' x-interest-search-compact' : ''}`}>
+      {compact ? (
+        <label className="uk-hidden" htmlFor="reg-name-search">
+          Search by name
+        </label>
+      ) : (
+        <label className="x-label uk-text-meta" htmlFor="reg-name-search">
+          Search by name
+        </label>
+      )}
       <div className="uk-inline uk-width-1-1">
         <span className="uk-form-icon" uk-icon="icon: search" />
         <input
@@ -11,7 +17,8 @@ export function RegistrationNameSearch({ value, onChange, onClear }) {
           id="reg-name-search"
           type="search"
           autoComplete="off"
-          placeholder="Letters anywhere in the name"
+          aria-label={compact ? 'Search by name' : undefined}
+          placeholder={compact ? 'Search name' : 'Letters anywhere in the name'}
           value={value}
           onChange={(e) => onChange(e.target.value)}
         />

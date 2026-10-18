@@ -1601,6 +1601,8 @@ export const mockApi = {
     const meditation = String(params.meditation || '').trim().toLowerCase();
     const location = String(params.location || '').trim().toLowerCase();
     const stayRange = String(params.stayRange || '').trim();
+    const familySizeRaw = String(params.familySize || '').trim();
+    const familySize = familySizeRaw ? Number(familySizeRaw) : 0;
     const allotmentRaw = String(params.allotment || '').trim().toLowerCase();
     const allotmentMode =
       allotmentRaw === 'allotted' || allotmentRaw === 'only' || allotmentRaw === 'true' || allotmentRaw === '1'
@@ -1608,6 +1610,17 @@ export const mockApi = {
         : 'wait';
     const page = Math.max(0, Number(params.page) || 0);
     const size = Math.min(100, Math.max(1, Number(params.size) || 24));
+
+    function bookingPersonCount(row) {
+      const guests = Array.isArray(row?.guests) ? row.guests.filter(Boolean) : [];
+      const members = Array.isArray(row?.family?.members) ? row.family.members.filter(Boolean) : [];
+      return Math.max(
+        Number(row?.personCount) || 0,
+        guests.length,
+        members.length > 0 ? members.length + 1 : 0,
+        1
+      );
+    }
 
     const eventBookings = readStayBookings()
       .filter((b) => b && b.eventId === id)
@@ -1666,6 +1679,7 @@ export const mockApi = {
         const primary = guests.find((g) => g?.primary) || guests[0];
         if (!primary || primary.stayStartDate !== start || primary.stayEndDate !== end) return false;
       }
+      if (familySize > 0 && bookingPersonCount(b) !== familySize) return false;
       return true;
     };
 
@@ -1690,15 +1704,10 @@ export const mockApi = {
 
     const locCounts = {};
     const rangeCounts = {};
+    const familySizeCounts = {};
     matched.forEach((row) => {
       const guests = Array.isArray(row.guests) ? row.guests.filter(Boolean) : [];
-      const members = Array.isArray(row.family?.members) ? row.family.members.filter(Boolean) : [];
-      const personCount = Math.max(
-        Number(row.personCount) || 0,
-        guests.length,
-        members.length > 0 ? members.length + 1 : 0,
-        1
-      );
+      const personCount = bookingPersonCount(row);
       const place = row.place || {};
       const loc =
         place.kind === 'rural'
@@ -1730,6 +1739,48 @@ export const mockApi = {
       }
     });
 
+    // Family-size facets omit the familySize filter so other sizes stay visible.
+    readStayBookings()
+      .filter((b) => {
+        if (!b || b.eventId !== id) return false;
+        const guests = Array.isArray(b.guests) ? b.guests : [];
+        const family = b.family || {};
+        const bookingId = String(b.id || '');
+        const isAllotted = allottedBookingIds.has(bookingId);
+        if (allotmentMode === 'allotted') {
+          if (!isAllotted) return false;
+        } else if (isAllotted) {
+          return false;
+        }
+        if (q) {
+          const hay = [b.familyFullName, b.familyMobile, ...guests.map((g) => `${g?.name || ''} ${g?.mobile || ''}`)]
+            .join(' ')
+            .toLowerCase();
+          if (!hay.includes(q)) return false;
+        }
+        if (gender && !guests.some((g) => String(g?.gender || '').toLowerCase() === gender)) return false;
+        if (ages.length && !guests.some((g) => ages.includes(String(g?.age || '').toLowerCase()))) return false;
+        if (meditation && String(family.meditation || '').toLowerCase() !== meditation) return false;
+        if (location) {
+          const place = b.place || family.place || {};
+          const labels = [place.city, place.district, place.name, place.village]
+            .map((v) => String(v || '').trim().toLowerCase())
+            .filter(Boolean);
+          if (!labels.includes(location)) return false;
+        }
+        if (stayRange) {
+          const [start, end] = stayRange.split('|');
+          const primary = guests.find((g) => g?.primary) || guests[0];
+          if (!primary || primary.stayStartDate !== start || primary.stayEndDate !== end) return false;
+        }
+        return true;
+      })
+      .map(enrichStayBookingRow)
+      .forEach((row) => {
+        const personCount = bookingPersonCount(row);
+        familySizeCounts[personCount] = (familySizeCounts[personCount] || 0) + 1;
+      });
+
     return {
       data: {
         items,
@@ -1744,7 +1795,10 @@ export const mockApi = {
             .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name)),
           stayRanges: Object.values(rangeCounts).sort((a, b) =>
             String(a.key || '').localeCompare(String(b.key || ''))
-          )
+          ),
+          familySizes: Object.entries(familySizeCounts)
+            .map(([size, count]) => ({ size: Number(size), count }))
+            .sort((a, b) => b.size - a.size)
         }
       }
     };
@@ -1843,7 +1897,7 @@ export const mockApi = {
     const status = String(params.status || '').trim().toLowerCase();
     const location = String(params.location || '').trim().toLowerCase();
     const page = Math.max(0, Number(params.page) || 0);
-    const size = Math.min(100, Math.max(1, Number(params.size) || 24));
+    const size = Math.min(500, Math.max(1, Number(params.size) || 24));
 
     function hometownLabel(place) {
       const p = place || {};

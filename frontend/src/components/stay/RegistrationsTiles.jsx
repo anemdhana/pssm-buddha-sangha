@@ -72,8 +72,8 @@ function FamilyInterestTile({
   const multi = list.length > 1;
   const memberIds = list.map((m) => m.id);
   const selectedInFamily = memberIds.filter((id) => selected.has(id)).length;
-  const someSelected = selectedInFamily > 0 && selectedInFamily < memberIds.length;
-  const personSelected = selected.has(person.id);
+  const allSelected = selectedInFamily === memberIds.length;
+  const someSelected = selectedInFamily > 0 && !allSelected;
   const photo = String(person.livePhoto || '').trim();
   const location = registrationLocationShort(person.place);
   const age = ageGroupLabel(person.age);
@@ -94,9 +94,8 @@ function FamilyInterestTile({
     setIndex(next);
   }
 
-  function togglePerson() {
-    if (!person?.id) return;
-    onToggleFamily?.([person.id]);
+  function toggleFamily() {
+    onToggleFamily?.(memberIds);
   }
 
   const canDrag = !allotBusy && selectedCount > 0 && selectedInFamily > 0;
@@ -136,10 +135,10 @@ function FamilyInterestTile({
 
   return (
     <article
-      className={`x-interest-tile x-interest-family-tile${personSelected ? ' is-selected' : ''}${
-        !personSelected && someSelected ? ' is-partial' : ''
+      className={`x-interest-tile x-interest-family-tile${allSelected ? ' is-selected' : ''}${
+        someSelected ? ' is-partial' : ''
       }${multi ? ' has-family-nav' : ''}${canDrag ? ' is-draggable' : ''}`}
-      aria-selected={personSelected}
+      aria-selected={allSelected}
       draggable={canDrag}
       onDragStart={handleDragStart}
       onDragEnd={() => onPeopleDragEnd?.()}
@@ -171,7 +170,6 @@ function FamilyInterestTile({
           </button>
           <span className="x-interest-tile-nav-count" aria-live="polite">
             {safeIndex + 1}/{list.length}
-            {selectedInFamily > 0 ? ` · ${selectedInFamily} sel` : ''}
           </span>
         </>
       ) : null}
@@ -179,9 +177,16 @@ function FamilyInterestTile({
       <label className="x-interest-tile-check">
         <input
           type="checkbox"
-          checked={personSelected}
-          onChange={togglePerson}
-          aria-label={`Select ${person.name}`}
+          checked={allSelected}
+          ref={(el) => {
+            if (el) el.indeterminate = someSelected;
+          }}
+          onChange={toggleFamily}
+          aria-label={
+            multi
+              ? `Select all ${list.length} family members`
+              : `Select ${person.name}`
+          }
         />
         <span className="x-interest-tile-check-box" aria-hidden="true" />
       </label>
@@ -198,12 +203,12 @@ function FamilyInterestTile({
         className="x-interest-tile-hit"
         role="button"
         tabIndex={0}
-        aria-pressed={personSelected}
-        onClick={togglePerson}
+        aria-pressed={allSelected}
+        onClick={toggleFamily}
         onKeyDown={(e) => {
           if (e.key === 'Enter' || e.key === ' ') {
             e.preventDefault();
-            togglePerson();
+            toggleFamily();
           }
         }}
       >
@@ -256,6 +261,8 @@ export function RegistrationsTiles({
   onLocationChange,
   stayRange,
   onStayRangeChange,
+  familySize = '',
+  onFamilySizeChange,
   showOnlyAllotted = false,
   onShowOnlyAllottedChange,
   selectedIds,
@@ -275,6 +282,13 @@ export function RegistrationsTiles({
       };
     })
     .sort((a, b) => compareStayRangeKeys(a.key, b.key));
+  const familySizes = (Array.isArray(facets?.familySizes) ? facets.familySizes : [])
+    .map((row) => ({
+      size: Number(row?.size) || 0,
+      count: Number(row?.count) || 0
+    }))
+    .filter((row) => row.size > 0)
+    .sort((a, b) => b.size - a.size);
   const selected = selectedIds instanceof Set ? selectedIds : new Set(selectedIds || []);
   const matchTotal = Number(total) || 0;
   const families = useMemo(() => groupTilePeopleByFamily(people), [people]);
@@ -284,6 +298,7 @@ export function RegistrationsTiles({
   );
   const allVisibleSelected =
     visibleIds.length > 0 && visibleIds.every((id) => selected.has(id));
+  const familySizeKey = familySize ? String(familySize) : '';
 
   function pickGender(next) {
     onGenderChange(gender === next ? '' : next);
@@ -295,6 +310,11 @@ export function RegistrationsTiles({
 
   function pickStayRange(key) {
     onStayRangeChange(stayRange === key ? '' : key);
+  }
+
+  function pickFamilySize(size) {
+    const next = String(size);
+    onFamilySizeChange?.(familySizeKey === next ? '' : next);
   }
 
   return (
@@ -364,9 +384,18 @@ export function RegistrationsTiles({
       <div className={`x-interest-tiles-wrap${refreshing ? ' is-refreshing' : ''}`}>
         <section className="x-interest-panel x-interest-toolbar-panel" aria-label="Search and age filters">
           <div className="x-interest-panel-head">
-            <h2 className="x-interest-panel-title">
-              <span uk-icon="icon: search; ratio: 0.75" /> Find people
-            </h2>
+            <div className="x-interest-panel-head-main">
+              <h2 className="x-interest-panel-title">
+                <span uk-icon="icon: search; ratio: 0.7" /> Find people
+              </h2>
+              <p className="x-interest-stats-line">
+                {stats?.families ?? matchTotal} {(stats?.families ?? matchTotal) === 1 ? 'family' : 'families'} ·{' '}
+                {stats?.people ?? 0} {(stats?.people ?? 0) === 1 ? 'person' : 'people'}
+                {(stats?.people ?? 0) > 0 ? ` · ${stats.rural || 0} rural · ${stats.urban || 0} urban` : ''}
+                {filtersActive ? ` · page ${page + 1}${totalPages ? ` of ${totalPages}` : ''}` : ''}
+                {selectedCount > 0 ? ` · ${selectedCount} selected` : ''}
+              </p>
+            </div>
             <div className="x-interest-panel-actions">
               {filtersActive ? (
                 <button type="button" className="x-interest-text-btn" onClick={onClearFilters}>
@@ -400,19 +429,13 @@ export function RegistrationsTiles({
               ) : null}
             </div>
           </div>
-          <p className="x-interest-stats-line">
-            {stats?.families ?? matchTotal} {(stats?.families ?? matchTotal) === 1 ? 'family' : 'families'} ·{' '}
-            {stats?.people ?? 0} {(stats?.people ?? 0) === 1 ? 'person' : 'people'}
-            {(stats?.people ?? 0) > 0 ? ` · ${stats.rural || 0} rural · ${stats.urban || 0} urban` : ''}
-            {filtersActive ? ` · page ${page + 1}${totalPages ? ` of ${totalPages}` : ''}` : ''}
-            {selectedCount > 0 ? ` · ${selectedCount} selected` : ''}
-          </p>
           <div className="x-interest-tiles-toolbar">
             <div className="x-interest-tiles-search">
               <RegistrationNameSearch
                 value={nameSearch}
                 onChange={onNameSearchChange}
                 onClear={onNameSearchClear}
+                compact
               />
             </div>
 
@@ -436,16 +459,17 @@ export function RegistrationsTiles({
             </div>
 
             <div className="x-field uk-margin-remove x-interest-age-filter">
-              <label className="x-label" htmlFor="interest-age">
+              <label className="uk-hidden" htmlFor="interest-age">
                 Age
               </label>
               <select
                 className="uk-select uk-form-small"
                 id="interest-age"
+                aria-label="Age"
                 value={age || ''}
                 onChange={(e) => onAgeChange?.(e.target.value)}
               >
-                <option value="">Any age</option>
+                <option value="">Age</option>
                 {AGE_FILTER_OPTS.map((opt) => (
                   <option key={opt.value} value={opt.value}>
                     {opt.label}
@@ -455,16 +479,17 @@ export function RegistrationsTiles({
             </div>
 
             <div className="x-field uk-margin-remove x-interest-meditation-filter">
-              <label className="x-label" htmlFor="interest-meditation">
+              <label className="uk-hidden" htmlFor="interest-meditation">
                 Meditation
               </label>
               <select
                 className="uk-select uk-form-small"
                 id="interest-meditation"
+                aria-label="Meditation"
                 value={meditation || ''}
                 onChange={(e) => onMeditationChange(e.target.value)}
               >
-                <option value="">Any length</option>
+                <option value="">Meditation</option>
                 {MEDITATION_OPTS.map((opt) => (
                   <option key={opt.value} value={opt.value}>
                     {opt.label}
@@ -481,8 +506,36 @@ export function RegistrationsTiles({
                 checked={Boolean(showOnlyAllotted)}
                 onChange={(e) => onShowOnlyAllottedChange?.(e.target.checked)}
               />
-              <span>Show only Allotted</span>
+              <span>Allotted</span>
             </label>
+
+            {familySizes.length > 0 ? (
+              <div
+                className="x-interest-family-size-group"
+                role="group"
+                aria-label="Filter by family size"
+              >
+                <span className="x-interest-family-size-label">Size</span>
+                <div className="x-interest-family-size-chips">
+                  {familySizes.map((row) => {
+                    const key = String(row.size);
+                    const active = familySizeKey === key;
+                    return (
+                      <button
+                        key={key}
+                        type="button"
+                        className={`x-interest-family-size-chip${active ? ' is-active' : ''}`}
+                        aria-pressed={active}
+                        title={`${row.size} ${row.size === 1 ? 'person' : 'people'}`}
+                        onClick={() => pickFamilySize(row.size)}
+                      >
+                        {row.size}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            ) : null}
           </div>
         </section>
 

@@ -2,6 +2,49 @@ import { ageGroupLabel, registrationLocationShort } from './stayRegistrations.js
 
 export const ALLOTMENT_TILE_DISPLAY_LIMIT = 48;
 
+const ALLOTMENT_FETCH_PAGE_SIZE = 500;
+
+/**
+ * Load every allotment for an event (paged) so free-bed math sees full occupancy.
+ */
+export async function fetchAllStayAllotments(api, eventId, params = {}) {
+  const id = String(eventId || '').trim();
+  if (!id || !api?.listStayAllotments) return [];
+
+  const pageSize = ALLOTMENT_FETCH_PAGE_SIZE;
+  const all = [];
+  let page = 0;
+  let totalPages = 1;
+
+  while (page < totalPages && page < 40) {
+    const res = await api.listStayAllotments(id, {
+      ...params,
+      page,
+      size: pageSize
+    });
+    const data = res?.data;
+    const items = Array.isArray(data?.items)
+      ? data.items
+      : Array.isArray(data)
+        ? data
+        : [];
+    all.push(...items);
+    const reportedTotal = Number(data?.total);
+    const reportedPages = Number(data?.totalPages);
+    if (Number.isFinite(reportedPages) && reportedPages > 0) {
+      totalPages = reportedPages;
+    } else if (Number.isFinite(reportedTotal) && reportedTotal >= 0) {
+      totalPages = Math.max(1, Math.ceil(reportedTotal / pageSize));
+    } else {
+      totalPages = items.length < pageSize ? page + 1 : page + 2;
+    }
+    if (items.length === 0) break;
+    page += 1;
+  }
+
+  return all;
+}
+
 export function allotmentPersonCount(row) {
   if (row?.personCount != null) return Number(row.personCount) || 0;
   return Array.isArray(row?.guests) ? row.guests.length : 0;

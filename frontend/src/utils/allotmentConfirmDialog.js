@@ -54,8 +54,16 @@ function stepPersonStrip(strip, direction) {
   const next = page + direction;
   if (next < 0 || next > maxPage) return false;
   const kind = strip.getAttribute('data-kind') || 'incoming';
+  const parent = strip.parentElement;
   const html = allotPersonStripHtml(people, { kind, page: next });
   strip.outerHTML = html;
+  if (parent && window.UIkit?.update) {
+    try {
+      window.UIkit.update(parent);
+    } catch {
+      /* ignore */
+    }
+  }
   return true;
 }
 
@@ -137,7 +145,7 @@ function buildPanelState(placements, hotels, allotments) {
 
 /**
  * Interactive allot confirm: prev/next cycles smart room recommendations
- * and paginates person strips (max 3 tiles visible).
+ * and paginates person strips (max 5 tiles visible).
  * Same-room bookings share one panel; confirm still returns one placement per booking.
  * Resolves to final placements array, or null if cancelled.
  */
@@ -168,17 +176,8 @@ export function openAllotmentConfirmDialog({
     return Promise.resolve(state.flatMap((panel) => expandGroupedPlacementChoice(panel)));
   }
 
-  const multiPanel = state.length > 1;
-  const edgeNav = multiPanel
-    ? `<button type="button" class="x-allot-panel-edge x-allot-panel-edge-prev js-panel-prev" aria-label="Previous room allotment">` +
-      `<span uk-icon="icon: chevron-left; ratio: 1.5"></span></button>` +
-      `<button type="button" class="x-allot-panel-edge x-allot-panel-edge-next js-panel-next" aria-label="Next room allotment">` +
-      `<span uk-icon="icon: chevron-right; ratio: 1.5"></span></button>`
-    : '';
-
   const html =
     `<button class="uk-modal-close-default" type="button" uk-close aria-label="Close"></button>` +
-    edgeNav +
     `<div class="uk-modal-body x-allot-confirm-body">${bodyHtml}</div>` +
     `<div class="uk-modal-footer uk-text-right">` +
     `<button type="button" class="uk-button uk-button-default uk-modal-close">Cancel</button>` +
@@ -191,7 +190,6 @@ export function openAllotmentConfirmDialog({
     const dialog = el.querySelector('.uk-modal-dialog');
     if (dialog) {
       dialog.classList.add('x-allot-confirm-dialog', 'uk-margin-auto-vertical');
-      if (multiPanel) dialog.classList.add('has-panel-nav');
     }
     if (typeof UIkit.update === 'function') {
       try {

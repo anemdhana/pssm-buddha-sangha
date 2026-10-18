@@ -7,7 +7,8 @@ import java.util.Map;
 public final class PageDtos {
 
     public static final int DEFAULT_SIZE = 24;
-    public static final int MAX_SIZE = 100;
+    /** Allow large pulls for occupancy (e.g. Friends suitable-hotels free beds). */
+    public static final int MAX_SIZE = 500;
 
     private PageDtos() {
     }

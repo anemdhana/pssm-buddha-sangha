@@ -13,6 +13,7 @@ import {
   suggestHotelsForSelection,
   suggestPlacementsForHotel
 } from '../utils/stayAllotmentSuggest.js';
+import { fetchAllStayAllotments } from '../utils/stayAllotments.js';
 import { applySelectedRegistrationRemovals } from '../utils/stayRegistrationRemove.js';
 import { registrationTilePeople } from '../utils/stayRegistrations.js';
 import { uikitDialogChoice } from '../utils/uikitDialog.js';
@@ -48,6 +49,7 @@ export function StayRegistrationsPage() {
   const [gender, setGender] = useState('');
   const [location, setLocation] = useState('');
   const [stayRange, setStayRange] = useState('');
+  const [familySize, setFamilySize] = useState('');
   const [showOnlyAllotted, setShowOnlyAllotted] = useState(false);
   const [page, setPage] = useState(0);
   const [selectedIds, setSelectedIds] = useState(() => new Set());
@@ -65,12 +67,13 @@ export function StayRegistrationsPage() {
       gender ||
       location ||
       stayRange ||
+      familySize ||
       showOnlyAllotted
   );
 
   useEffect(() => {
     setPage(0);
-  }, [debouncedQ, age, meditation, gender, location, stayRange, showOnlyAllotted, picked.id]);
+  }, [debouncedQ, age, meditation, gender, location, stayRange, familySize, showOnlyAllotted, picked.id]);
 
   useEffect(() => {
     setHotelPage(0);
@@ -84,6 +87,7 @@ export function StayRegistrationsPage() {
       meditation,
       location,
       stayRange,
+      familySize: familySize || undefined,
       allotment: showOnlyAllotted ? 'allotted' : 'wait',
       page,
       size: 24
@@ -102,13 +106,12 @@ export function StayRegistrationsPage() {
       return;
     }
     try {
-      const [hotelRes, allotRes] = await Promise.all([
+      const [hotelRes, allotments] = await Promise.all([
         api.listHotels(picked.id),
-        api.listStayAllotments(picked.id, { size: 500 })
+        fetchAllStayAllotments(api, picked.id)
       ]);
       setHotels(Array.isArray(hotelRes.data) ? hotelRes.data : []);
-      const allotData = allotRes.data;
-      setAllotments(Array.isArray(allotData?.items) ? allotData.items : Array.isArray(allotData) ? allotData : []);
+      setAllotments(Array.isArray(allotments) ? allotments : []);
     } catch {
       setHotels([]);
       setAllotments([]);
@@ -160,6 +163,7 @@ export function StayRegistrationsPage() {
     setGender('');
     setLocation('');
     setStayRange('');
+    setFamilySize('');
     setShowOnlyAllotted(false);
     setPage(0);
   }
@@ -504,6 +508,8 @@ export function StayRegistrationsPage() {
               onLocationChange={setLocation}
               stayRange={stayRange}
               onStayRangeChange={setStayRange}
+              familySize={familySize}
+              onFamilySizeChange={setFamilySize}
               showOnlyAllotted={showOnlyAllotted}
               onShowOnlyAllottedChange={setShowOnlyAllotted}
               selectedIds={selectedIds}

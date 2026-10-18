@@ -58,19 +58,101 @@ function partySize(people) {
   return Array.isArray(people) ? people.length : 0;
 }
 
-/** Free beds per hotel room after existing allotments. */
-export function buildRoomAvailability(hotels, allotments) {
+/** YYYY-MM-DD only; empty when missing/invalid. */
+export function parseStayDay(value) {
+  const s = String(value || '')
+    .trim()
+    .slice(0, 10);
+  return /^\d{4}-\d{2}-\d{2}$/.test(s) ? s : '';
+}
+
+/**
+ * Stay ranges use half-open [start, end):
+ * checkout day frees the bed for a same-day check-in.
+ * Missing either side → treat as overlapping (conservative).
+ */
+export function staysOverlap(startA, endA, startB, endB) {
+  const a0 = parseStayDay(startA);
+  const a1 = parseStayDay(endA);
+  const b0 = parseStayDay(startB);
+  const b1 = parseStayDay(endB);
+  if (!a0 || !a1 || !b0 || !b1) return true;
+  return a0 < b1 && b0 < a1;
+}
+
+export function allotmentStayWindow(row) {
+  const checkIn = parseStayDay(row?.checkInDate);
+  const checkOut = parseStayDay(row?.checkOutDate);
+  if (checkIn && checkOut) return { start: checkIn, end: checkOut };
+  let start = '';
+  let end = '';
+  (Array.isArray(row?.guests) ? row.guests : []).forEach((guest) => {
+    const s = parseStayDay(guest?.stayStartDate);
+    const e = parseStayDay(guest?.stayEndDate);
+    if (s && (!start || s < start)) start = s;
+    if (e && (!end || e > end)) end = e;
+  });
+  return { start, end };
+}
+
+export function peopleStayWindow(people) {
+  let start = '';
+  let end = '';
+  (Array.isArray(people) ? people : []).forEach((person) => {
+    const s = parseStayDay(person?.stayStartDate);
+    const e = parseStayDay(person?.stayEndDate);
+    if (s && (!start || s < start)) start = s;
+    if (e && (!end || e > end)) end = e;
+  });
+  return { start, end };
+}
+
+function mergeStayWindows(windows) {
+  let start = '';
+  let end = '';
+  (Array.isArray(windows) ? windows : []).forEach((w) => {
+    const s = parseStayDay(w?.start);
+    const e = parseStayDay(w?.end);
+    if (s && (!start || s < start)) start = s;
+    if (e && (!end || e > end)) end = e;
+  });
+  return { start, end };
+}
+
+/**
+ * Free beds per hotel room after existing allotments.
+ * @param {object|null} stayWindow optional { start, end }; only overlapping allotments count
+ * @param {object[]} extraOccupancies optional pending placements
+ *   [{ hotelId, roomNumber, count, start, end }]
+ */
+export function buildRoomAvailability(hotels, allotments, stayWindow = null, extraOccupancies = []) {
+  const windowStart = parseStayDay(stayWindow?.start);
+  const windowEnd = parseStayDay(stayWindow?.end);
+  const hasWindow = Boolean(windowStart && windowEnd);
+
   const occupied = new Map();
+  function addOccupancy(hotelId, roomNumber, count, start, end) {
+    const hid = String(hotelId || '');
+    const room = String(roomNumber || '');
+    const n = Math.max(0, Number(count) || 0);
+    if (!hid || !room || n <= 0) return;
+    if (hasWindow && !staysOverlap(start, end, windowStart, windowEnd)) return;
+    const key = `${hid}|${room}`;
+    occupied.set(key, (occupied.get(key) || 0) + n);
+  }
+
   (Array.isArray(allotments) ? allotments : []).forEach((row) => {
     if (!row) return;
-    const hotelId = String(row.hotelId || '');
-    const roomNumber = String(row.roomNumber || '');
-    if (!hotelId || !roomNumber) return;
-    const key = `${hotelId}|${roomNumber}`;
+    const stay = allotmentStayWindow(row);
     const count = Array.isArray(row.guests)
       ? row.guests.length
       : Number(row.personCount) || 0;
-    occupied.set(key, (occupied.get(key) || 0) + count);
+    addOccupancy(row.hotelId, row.roomNumber, count, stay.start, stay.end);
+  });
+
+  (Array.isArray(extraOccupancies) ? extraOccupancies : []).forEach((row) => {
+    if (!row) return;
+    addOccupancy(row.hotelId, row.roomNumber, row.count, row.start, row.end);
   });
 
   const byHotel = new Map();
@@ -175,19 +257,21 @@ export function suggestPlacementsForHotel({
   if (!hid) return [];
   const parties = partiesFromSelectedPeople(selectedIds, people).filter((p) => p.size > 0);
   if (!parties.length) return [];
-  const availability = buildRoomAvailability(hotels, allotments);
-  if (!availability.has(hid)) return [];
-  const sim = cloneAvailability(availability);
-  const entry = sim.get(hid);
-  if (!entry) return [];
 
   const ordered = [...parties].sort((a, b) => {
     if (Number(b.needsClose) !== Number(a.needsClose)) return Number(b.needsClose) - Number(a.needsClose);
     return b.size - a.size;
   });
 
+  const pending = [];
   const placements = [];
   ordered.forEach((party) => {
+    const stay = party.stayStartDate
+      ? { start: party.stayStartDate, end: party.stayEndDate }
+      : peopleStayWindow(party.members);
+    const availability = buildRoomAvailability(hotels, allotments, stay, pending);
+    const entry = availability.get(hid);
+    if (!entry) return;
     const room = pickBestRoom(entry.rooms, party.members);
     if (!room) return;
     const usedBefore = Number(room.used) || 0;
@@ -206,16 +290,25 @@ export function suggestPlacementsForHotel({
       roomStatusBefore: usedBefore <= 0 ? 'free' : room.free > 0 ? 'partial' : 'full',
       exactMatch: room.empty && room.capacity === party.size,
       members: party.members,
-      placeLabel: party.placeLabel
+      placeLabel: party.placeLabel,
+      stayStartDate: stay.start || '',
+      stayEndDate: stay.end || ''
     });
-    applyPlacement(sim, hid, room.roomNumber, party.size);
+    pending.push({
+      hotelId: hid,
+      roomNumber: room.roomNumber,
+      count: party.size,
+      start: stay.start,
+      end: stay.end
+    });
   });
   return placements;
 }
 
 /** Smart-ranked eligible rooms in one hotel for a party (most suitable first). */
 export function listSmartRoomOptions(hotelId, members, hotels, allotments) {
-  const availability = buildRoomAvailability(hotels, allotments);
+  const stay = peopleStayWindow(members);
+  const availability = buildRoomAvailability(hotels, allotments, stay);
   const entry = availability.get(String(hotelId || ''));
   if (!entry) return [];
   const size = partySize(members);
@@ -331,6 +424,7 @@ export function partiesFromSelectedPeople(selectedIds, people) {
   return Array.from(map.entries()).map(([bookingId, members]) => {
     const ordered = [...members].sort((a, b) => Number(b.primary) - Number(a.primary));
     const primary = ordered.find((m) => m.primary) || ordered[0];
+    const stay = peopleStayWindow(ordered);
     return {
       bookingId,
       plan: primary?.plan === 'paid' ? 'paid' : 'free',
@@ -338,7 +432,9 @@ export function partiesFromSelectedPeople(selectedIds, people) {
       members: ordered,
       size: ordered.length,
       needsClose: hasSeniorOrSpecial(ordered),
-      mixed: isMixedGender(ordered)
+      mixed: isMixedGender(ordered),
+      stayStartDate: stay.start || '',
+      stayEndDate: stay.end || ''
     };
   });
 }
@@ -389,7 +485,10 @@ export function suggestHotelsForSelection({
   };
   if (!parties.length) return empty;
 
-  const availability = buildRoomAvailability(hotels, allotments);
+  const selectionWindow = mergeStayWindows(
+    parties.map((p) => ({ start: p.stayStartDate, end: p.stayEndDate }))
+  );
+  const availability = buildRoomAvailability(hotels, allotments, selectionWindow);
   if (!availability.size) return empty;
 
   const ranked = Array.from(availability.values())
@@ -425,11 +524,16 @@ export function suggestHotelsForSelection({
     return b.size - a.size;
   });
 
-  const sim = cloneAvailability(availability);
+  const pending = [];
   const placements = [];
   const uncovered = [];
 
   orderedParties.forEach((party) => {
+    const stay = {
+      start: party.stayStartDate || '',
+      end: party.stayEndDate || ''
+    };
+    const partyAvailability = buildRoomAvailability(hotels, allotments, stay, pending);
     // Prefer closer hotels when needsClose; else follow ranked order
     const hotelOrder = [...ranked].sort((a, b) => {
       if (party.needsClose) return a.distanceKm - b.distanceKm || b.score - a.score;
@@ -438,7 +542,7 @@ export function suggestHotelsForSelection({
 
     let placed = false;
     for (const h of hotelOrder) {
-      const entry = sim.get(h.hotelId);
+      const entry = partyAvailability.get(h.hotelId);
       if (!entry) continue;
       const room = pickBestRoom(entry.rooms, party.members);
       if (!room) continue;
@@ -458,9 +562,17 @@ export function suggestHotelsForSelection({
         roomStatusBefore: usedBefore <= 0 ? 'free' : room.free > 0 ? 'partial' : 'full',
         exactMatch: room.empty && room.capacity === party.size,
         members: party.members,
-        placeLabel: party.placeLabel
+        placeLabel: party.placeLabel,
+        stayStartDate: stay.start || '',
+        stayEndDate: stay.end || ''
       });
-      applyPlacement(sim, h.hotelId, room.roomNumber, party.size);
+      pending.push({
+        hotelId: h.hotelId,
+        roomNumber: room.roomNumber,
+        count: party.size,
+        start: stay.start,
+        end: stay.end
+      });
       placed = true;
       break;
     }
@@ -572,13 +684,21 @@ export function roomCurrentOccupants(hotelId, roomNumber, allotments) {
   );
 }
 
-/** Occupant families already in a room (one allotment row = one family tile). */
-export function roomCurrentOccupantFamilies(hotelId, roomNumber, allotments) {
+/**
+ * Occupant families already in a room (one allotment row = one family tile).
+ * @param {{ start?: string, end?: string }|null} stayWindow when set, skip non-overlapping stays
+ */
+export function roomCurrentOccupantFamilies(hotelId, roomNumber, allotments, stayWindow = null) {
   const hid = String(hotelId || '');
   const room = String(roomNumber || '');
+  const windowStart = parseStayDay(stayWindow?.start);
+  const windowEnd = parseStayDay(stayWindow?.end);
+  const hasWindow = Boolean(windowStart && windowEnd);
   const families = [];
   (Array.isArray(allotments) ? allotments : []).forEach((row) => {
     if (!row || String(row.hotelId || '') !== hid || String(row.roomNumber || '') !== room) return;
+    const allotStay = allotmentStayWindow(row);
+    if (hasWindow && !staysOverlap(allotStay.start, allotStay.end, windowStart, windowEnd)) return;
     const location = registrationLocationShort(row.place) || '—';
     const stay = stayRangeLabel(row.checkInDate, row.checkOutDate) || '—';
     const statusRaw = String(row.status || 'allotted').toLowerCase();
@@ -645,7 +765,7 @@ export function allotPersonStageHtml(person) {
 }
 
 /** Max visible person tiles per group before pager. */
-export const ALLOT_PERSON_PAGE_SIZE = 3;
+export const ALLOT_PERSON_PAGE_SIZE = 5;
 
 /**
  * One person photo tile (no in-tile family cycling).
@@ -670,7 +790,7 @@ export function allotPersonTileHtml(person, { kind = 'incoming', status = '' } =
 }
 
 /**
- * Up to 3 person tiles; previous/next links when more people exist.
+ * Up to 5 person tiles; prev/next edge controls when more people exist.
  * @param {'occupied'|'incoming'} kind
  */
 export function allotPersonStripHtml(people, { kind = 'incoming', page = 0 } = {}) {
@@ -687,16 +807,19 @@ export function allotPersonStripHtml(people, { kind = 'incoming', page = 0 } = {
     .join('');
   const from = start + 1;
   const to = start + slice.length;
+  const hasPager = total > pageSize;
   const pager =
-    total > pageSize
+    hasPager
       ? `<div class="x-allot-person-pager" role="navigation" aria-label="More people">` +
         `<button type="button" class="x-allot-person-pager-btn js-person-prev" ${
           safePage <= 0 ? 'disabled ' : ''
-        }aria-label="Previous people">Previous</button>` +
+        }aria-label="Previous people">` +
+        `<span uk-icon="icon: chevron-left; ratio: 1"></span></button>` +
         `<span class="x-allot-person-pager-count" aria-live="polite">${from}–${to} of ${total}</span>` +
         `<button type="button" class="x-allot-person-pager-btn js-person-next" ${
           safePage >= maxPage ? 'disabled ' : ''
-        }aria-label="Next people">Next</button>` +
+        }aria-label="Next people">` +
+        `<span uk-icon="icon: chevron-right; ratio: 1"></span></button>` +
         `</div>`
       : '';
 
@@ -816,11 +939,17 @@ function allotMoveNoticeHtml(moves) {
 /** Inner HTML for one room recommendation panel (supports smart next/prev). */
 export function allotRoomPanelInnerHtml(placement, { altIndex = 0, altTotal = 1, allotments = [] } = {}) {
   const status = placement.roomStatusBefore || (placement.usedBefore > 0 ? 'partial' : 'free');
+  const incoming = Array.isArray(placement.members) ? placement.members : [];
+  const incomingStay = peopleStayWindow(incoming);
   const families =
     Number(placement.usedBefore) > 0 || status === 'partial' || status === 'full'
-      ? roomCurrentOccupantFamilies(placement.hotelId, placement.roomNumber, allotments)
+      ? roomCurrentOccupantFamilies(
+          placement.hotelId,
+          placement.roomNumber,
+          allotments,
+          incomingStay
+        )
       : [];
-  const incoming = Array.isArray(placement.members) ? placement.members : [];
   const multi = altTotal > 1;
   const nav =
     `<div class="x-allot-room-nav">` +
@@ -938,9 +1067,15 @@ export function allotmentConfirmHtml(
     .join('');
 
   const panelCount = multiPanel
-    ? `<p class="x-allot-panel-count" aria-live="polite">` +
+    ? `<div class="x-allot-panel-count" role="navigation" aria-label="Room allotments">` +
+      `<button type="button" class="x-allot-panel-count-btn js-panel-prev" disabled aria-label="Previous room allotment">` +
+      `<span uk-icon="icon: chevron-left; ratio: 1.1"></span></button>` +
+      `<span class="x-allot-panel-count-label" aria-live="polite">` +
       `<span class="js-panel-count-current">1</span> of ${panelTotal} rooms` +
-      `</p>`
+      `</span>` +
+      `<button type="button" class="x-allot-panel-count-btn js-panel-next" aria-label="Next room allotment">` +
+      `<span uk-icon="icon: chevron-right; ratio: 1.1"></span></button>` +
+      `</div>`
     : '';
 
   return (
