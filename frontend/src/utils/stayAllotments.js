@@ -2,6 +2,40 @@ import { ageGroupLabel, registrationLocationShort } from './stayRegistrations.js
 
 export const ALLOTMENT_TILE_DISPLAY_LIMIT = 48;
 
+/** Distinct marks so same-family guests share a color on “Who is staying where”. */
+const FAMILY_MARK_COLORS = [
+  '#e11d48',
+  '#ea580c',
+  '#ca8a04',
+  '#16a34a',
+  '#0d9488',
+  '#0891b2',
+  '#2563eb',
+  '#4f46e5',
+  '#7c3aed',
+  '#c026d3',
+  '#db2777',
+  '#b45309',
+  '#15803d',
+  '#1d4ed8',
+  '#9333ea'
+];
+
+/**
+ * Stable color for a family key (bookingId preferred).
+ * Empty key → empty string (no mark).
+ */
+export function familyMarkColor(familyKey) {
+  const key = String(familyKey || '').trim();
+  if (!key) return '';
+  let hash = 2166136261;
+  for (let i = 0; i < key.length; i += 1) {
+    hash ^= key.charCodeAt(i);
+    hash = Math.imul(hash, 16777619);
+  }
+  return FAMILY_MARK_COLORS[Math.abs(hash) % FAMILY_MARK_COLORS.length];
+}
+
 const ALLOTMENT_FETCH_PAGE_SIZE = 500;
 
 /**

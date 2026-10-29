@@ -1,4 +1,5 @@
 import { hotelRoomStats } from './stayHotels.js';
+import { familyMarkColor } from './stayAllotments.js';
 import {
   ageGroupLabel,
   familyStayCohortKey,
@@ -854,12 +855,14 @@ export function roomCurrentOccupantFamilies(hotelId, roomNumber, allotments, sta
     const statusRaw = String(row.status || 'allotted').toLowerCase();
     const status = statusRaw === 'checked_in' ? 'checked_in' : 'allotted';
     const guests = Array.isArray(row.guests) ? row.guests : [];
+    const familyKey = String(row.bookingId || row.id || '').trim();
     const members = guests.length
       ? guests.map((g) => ({
           name: g?.name || row.familyFullName || 'Guest',
           livePhoto: g?.livePhoto || '',
           age: g?.age || '',
           location,
+          familyKey,
           stay:
             stayRangeLabel(g?.stayStartDate || row.checkInDate, g?.stayEndDate || row.checkOutDate) ||
             stay
@@ -870,10 +873,11 @@ export function roomCurrentOccupantFamilies(hotelId, roomNumber, allotments, sta
             livePhoto: '',
             age: '',
             location,
+            familyKey,
             stay
           }
         ];
-    families.push({ status, members });
+    families.push({ status, members, familyKey });
   });
   return families;
 }
@@ -930,10 +934,17 @@ export function allotPersonTileHtml(person, { kind = 'incoming', status = '' } =
         ? `<span class="x-allot-person-badge is-checked-in">Checked in</span>`
         : `<span class="x-allot-person-badge is-allotted">Allotted</span>`
       : `<span class="x-allot-person-badge is-incoming">To allot</span>`;
+  const markColor = familyMarkColor(
+    person.familyKey || person.bookingId || person.allotmentId || ''
+  );
+  const familyMark = markColor
+    ? `<span class="x-allot-person-family-mark" style="color:${escapeHtml(markColor)}" title="Same color = same family" aria-hidden="true"></span>`
+    : '';
 
   return (
     `<article class="x-allot-person-tile is-${kind}">` +
     badge +
+    familyMark +
     `<div class="x-allot-person-stage">${allotPersonStageHtml(person)}</div>` +
     `</article>`
   );
@@ -1119,16 +1130,20 @@ export function allotRoomPanelInnerHtml(placement, { altIndex = 0, altTotal = 1,
   const occupiedPeople = families.flatMap((family) =>
     (Array.isArray(family.members) ? family.members : []).map((member) => ({
       ...member,
-      status: family.status
+      status: family.status,
+      familyKey: member.familyKey || family.familyKey || ''
     }))
   );
 
+  const incomingFamilyKey = String(placement?.bookingId || '').trim();
   const incomingMembers = incoming.map((m) => ({
     name: m?.name || 'Guest',
     livePhoto: m?.livePhoto || '',
     age: m?.age || '',
     location: registrationLocationShort(m?.place) || '',
-    mobile: m?.mobile || ''
+    mobile: m?.mobile || '',
+    bookingId: m?.bookingId || incomingFamilyKey,
+    familyKey: m?.bookingId || incomingFamilyKey
   }));
 
   const occupiedStrip = allotPersonStripHtml(occupiedPeople, { kind: 'occupied' });

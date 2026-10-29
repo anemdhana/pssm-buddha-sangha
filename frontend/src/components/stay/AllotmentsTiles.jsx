@@ -5,6 +5,7 @@ import {
   allotmentRoomKindLabel,
   allotmentRoomTypeLabel,
   allotmentStatusLabel,
+  familyMarkColor,
   registrationLocationShort
 } from '../../utils/stayAllotments.js';
 import { stayRangeLabel } from '../../utils/stayRegistrations.js';
@@ -45,9 +46,18 @@ function AllotmentTile({ person, onOpen }) {
   const age = ageGroupLabel(person.age);
   const stayLabel = stayRangeLabel(person.checkInDate, person.checkOutDate);
   const nights = stayNightCount(person.checkInDate, person.checkOutDate);
+  const familyColor = familyMarkColor(person.bookingId || person.allotmentId);
 
   return (
     <article className={`x-interest-tile x-allot-tile${person.status === 'checked_in' ? ' is-checked-in' : ''}`}>
+      {familyColor ? (
+        <span
+          className="x-allot-family-mark"
+          style={{ color: familyColor }}
+          title="Same color = same family"
+          aria-hidden="true"
+        />
+      ) : null}
       <button
         type="button"
         className="x-interest-tile-hit x-allot-tile-hit"
