@@ -1,0 +1,5 @@
+Done
+1. if one of family member has different stay date, how to handle it?
+   -> Stay cohort = bookingId + stay dates (display + allotment packing unit).
+1.1. can we keep that family member out of the family tile and allow to display separate tile, but still linked to family?
+   -> Yes: sibling tiles with "Same family" cue; parties/allotments use cohort stay window.

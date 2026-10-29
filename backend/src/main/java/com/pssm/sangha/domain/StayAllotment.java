@@ -184,6 +184,10 @@ public class StayAllotment {
         private String gender;
         private String age;
         private String livePhoto;
+        private String idProofPhoto;
+        private String idType;
+        private String stayStartDate;
+        private String stayEndDate;
         private boolean primary;
 
         public String getName() {
@@ -232,6 +236,38 @@ public class StayAllotment {
 
         public void setLivePhoto(String livePhoto) {
             this.livePhoto = livePhoto;
+        }
+
+        public String getIdProofPhoto() {
+            return idProofPhoto;
+        }
+
+        public void setIdProofPhoto(String idProofPhoto) {
+            this.idProofPhoto = idProofPhoto;
+        }
+
+        public String getIdType() {
+            return idType;
+        }
+
+        public void setIdType(String idType) {
+            this.idType = idType;
+        }
+
+        public String getStayStartDate() {
+            return stayStartDate;
+        }
+
+        public void setStayStartDate(String stayStartDate) {
+            this.stayStartDate = stayStartDate;
+        }
+
+        public String getStayEndDate() {
+            return stayEndDate;
+        }
+
+        public void setStayEndDate(String stayEndDate) {
+            this.stayEndDate = stayEndDate;
         }
 
         public boolean isPrimary() {

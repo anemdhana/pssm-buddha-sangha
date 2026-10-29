@@ -21,6 +21,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import org.springframework.http.HttpStatus;
@@ -57,6 +58,7 @@ public class StayAllotmentService {
                                             String gender,
                                             String status,
                                             String location,
+                                            String stayRange,
                                             Integer pageRaw,
                                             Integer sizeRaw) {
         requireViewer(authService.currentPerson());
@@ -67,7 +69,7 @@ public class StayAllotmentService {
         int page = PageDtos.normalizePage(pageRaw);
         int size = PageDtos.normalizeSize(sizeRaw);
         AllotmentFilters filters = new AllotmentFilters(
-                id, q, hotelId, roomType, roomKind, gender, status, location);
+                id, q, hotelId, roomType, roomKind, gender, status, location, stayRange);
 
         long total = allotmentQueryRepository.count(filters);
         List<Map<String, Object>> items = new ArrayList<>();
@@ -79,6 +81,7 @@ public class StayAllotmentService {
         Map<String, Object> facets = new LinkedHashMap<>();
         facets.put("hotels", allotmentQueryRepository.hotelFacets(filters));
         facets.put("locations", allotmentQueryRepository.locationFacets(filters));
+        facets.put("stayRanges", allotmentQueryRepository.stayRangeFacets(filters));
 
         return PageDtos.page(items, total, page, size, stats, facets);
     }
@@ -132,8 +135,8 @@ public class StayAllotmentService {
             allotment.setRoomType("non_ac".equalsIgnoreCase(placement.roomType) ? "non_ac" : "ac");
             allotment.setRoomKind(placement.roomKind == null || placement.roomKind.isBlank()
                     ? "regular" : placement.roomKind.trim());
-            allotment.setCheckInDate(placement.checkInDate == null ? "" : placement.checkInDate.trim());
-            allotment.setCheckOutDate(placement.checkOutDate == null ? "" : placement.checkOutDate.trim());
+            String checkIn = placement.checkInDate == null ? "" : placement.checkInDate.trim();
+            String checkOut = placement.checkOutDate == null ? "" : placement.checkOutDate.trim();
             allotment.setPlace(placeFromMap(placement.place));
             allotment.setCreatedAt(Instant.now());
 
@@ -151,6 +154,18 @@ public class StayAllotmentService {
                 guest.setGender(member.gender == null ? "" : member.gender.trim());
                 guest.setAge(member.age == null ? "" : member.age.trim());
                 guest.setLivePhoto(member.livePhoto == null ? "" : member.livePhoto);
+                guest.setIdProofPhoto(member.idProofPhoto == null ? "" : member.idProofPhoto);
+                guest.setIdType(member.idType == null ? "" : member.idType.trim());
+                String guestStart = member.stayStartDate == null ? "" : member.stayStartDate.trim();
+                String guestEnd = member.stayEndDate == null ? "" : member.stayEndDate.trim();
+                if (guestStart.isBlank()) {
+                    guestStart = checkIn;
+                }
+                if (guestEnd.isBlank()) {
+                    guestEnd = checkOut;
+                }
+                guest.setStayStartDate(guestStart);
+                guest.setStayEndDate(guestEnd);
                 guest.setPrimary(Boolean.TRUE.equals(member.primary) || (i == 0 && guests.isEmpty()));
                 guests.add(guest);
                 String key = guestIdentityKey(guest, allotment.getBookingId());
@@ -162,6 +177,24 @@ public class StayAllotmentService {
                 throw new ApiException(HttpStatus.BAD_REQUEST, "VALIDATION",
                         "Each placement needs at least one person.");
             }
+            if (checkIn.isBlank() || checkOut.isBlank()) {
+                for (AllotmentGuest guest : guests) {
+                    String start = guest.getStayStartDate() == null ? "" : guest.getStayStartDate().trim();
+                    String end = guest.getStayEndDate() == null ? "" : guest.getStayEndDate().trim();
+                    if (checkIn.isBlank() && !start.isBlank()) {
+                        checkIn = start;
+                    } else if (!start.isBlank() && start.compareTo(checkIn) < 0) {
+                        checkIn = start;
+                    }
+                    if (checkOut.isBlank() && !end.isBlank()) {
+                        checkOut = end;
+                    } else if (!end.isBlank() && end.compareTo(checkOut) > 0) {
+                        checkOut = end;
+                    }
+                }
+            }
+            allotment.setCheckInDate(checkIn);
+            allotment.setCheckOutDate(checkOut);
             AllotmentGuest primary = guests.stream().filter(AllotmentGuest::isPrimary).findFirst()
                     .orElse(guests.get(0));
             allotment.setFamilyMobile(primary.getMobile());
@@ -217,27 +250,53 @@ public class StayAllotmentService {
         }
         List<GuestDto> members = body.members == null ? List.of() : body.members;
         Set<String> guestKeys = new HashSet<>();
+        Set<String> bookingIds = new HashSet<>();
+        if (body.bookingIds != null) {
+            for (String raw : body.bookingIds) {
+                if (raw == null) {
+                    continue;
+                }
+                String id = raw.trim();
+                if (!id.isBlank()) {
+                    bookingIds.add(id);
+                }
+            }
+        }
         for (GuestDto member : members) {
             if (member == null) {
                 continue;
             }
-            AllotmentGuest guest = new AllotmentGuest();
-            guest.setName(member.name == null ? "" : member.name.trim());
-            guest.setMobile(PasswordSupport.normalizeMobile(member.mobile));
-            String key = guestIdentityKey(guest, "");
-            if (!key.isBlank()) {
-                guestKeys.add(key);
+            String bookingId = member.bookingId == null ? "" : member.bookingId.trim();
+            String name = member.name == null ? "" : member.name.trim();
+            String mobile = PasswordSupport.normalizeMobile(member.mobile);
+            // Always add booking+name — tiles often inherit family mobile, while allotment
+            // guests without a personal mobile are stored under n:bookingId:name.
+            String nameKey = guestNameKey(name, bookingId);
+            if (!nameKey.isBlank()) {
+                guestKeys.add(nameKey);
+            }
+            if (!mobile.isBlank()) {
+                guestKeys.add("m:" + mobile);
             }
         }
-        if (guestKeys.isEmpty()) {
+        if (guestKeys.isEmpty() && bookingIds.isEmpty()) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "VALIDATION", "No people to move to wait list.");
         }
         List<Map<String, Object>> released =
-                stripGuestsFromEventAllotments(eventId, guestKeys, null);
+                stripGuestsFromEventAllotments(eventId, guestKeys, bookingIds, null);
         Map<String, Object> data = new LinkedHashMap<>();
         data.put("released", released.size());
         data.put("moves", released);
         return data;
+    }
+
+    private static String guestNameKey(String name, String bookingId) {
+        String n = name == null ? "" : name.trim().toLowerCase(Locale.ROOT);
+        if (n.isBlank()) {
+            return "";
+        }
+        String booking = bookingId == null ? "" : bookingId.trim();
+        return "n:" + booking + ":" + n;
     }
 
     private static String guestIdentityKey(AllotmentGuest guest, String bookingId) {
@@ -248,22 +307,29 @@ public class StayAllotmentService {
         if (!mobile.isBlank()) {
             return "m:" + mobile;
         }
-        String name = guest.getName() == null ? "" : guest.getName().trim().toLowerCase();
-        if (name.isBlank()) {
-            return "";
-        }
-        String booking = bookingId == null ? "" : bookingId.trim();
-        return "n:" + booking + ":" + name;
+        return guestNameKey(guest.getName(), bookingId);
     }
 
     private List<Map<String, Object>> stripGuestsFromEventAllotments(
             String eventId,
             Set<String> guestKeys,
             Map<String, Map<String, String>> targetsByGuestKey) {
+        return stripGuestsFromEventAllotments(eventId, guestKeys, Set.of(), targetsByGuestKey);
+    }
+
+    private List<Map<String, Object>> stripGuestsFromEventAllotments(
+            String eventId,
+            Set<String> guestKeys,
+            Set<String> bookingIds,
+            Map<String, Map<String, String>> targetsByGuestKey) {
         List<Map<String, Object>> moves = new ArrayList<>();
-        if (guestKeys == null || guestKeys.isEmpty()) {
+        boolean hasKeys = guestKeys != null && !guestKeys.isEmpty();
+        boolean hasBookings = bookingIds != null && !bookingIds.isEmpty();
+        if (!hasKeys && !hasBookings) {
             return moves;
         }
+        Set<String> keys = guestKeys == null ? Set.of() : guestKeys;
+        Set<String> bookings = bookingIds == null ? Set.of() : bookingIds;
         Set<String> reportedKeys = new HashSet<>();
         List<StayAllotment> existing = stayAllotmentRepository.findByEventId(eventId);
         for (StayAllotment row : existing) {
@@ -272,16 +338,32 @@ public class StayAllotmentService {
             }
             List<AllotmentGuest> kept = new ArrayList<>();
             boolean changed = false;
+            String rowBookingId = row.getBookingId() == null ? "" : row.getBookingId().trim();
+            boolean wipeBooking = !rowBookingId.isBlank() && bookings.contains(rowBookingId);
             String fromHotelId = row.getHotelId() == null ? "" : row.getHotelId().trim();
             String fromHotel = row.getHotelName() == null ? "" : row.getHotelName().trim();
             String fromRoom = row.getRoomNumber() == null ? "" : row.getRoomNumber().trim();
             for (AllotmentGuest guest : row.getGuests()) {
-                String key = guestIdentityKey(guest, row.getBookingId());
-                if (!key.isBlank() && guestKeys.contains(key)) {
+                String key = guestIdentityKey(guest, rowBookingId);
+                String nameKey = guestNameKey(guest.getName(), rowBookingId);
+                String mobileOrBare = guestIdentityKey(guest, "");
+                boolean matched = wipeBooking
+                        || (!key.isBlank() && keys.contains(key))
+                        || (!nameKey.isBlank() && keys.contains(nameKey))
+                        || (!mobileOrBare.isBlank() && keys.contains(mobileOrBare));
+                if (matched) {
                     changed = true;
-                    Map<String, String> target =
-                            targetsByGuestKey == null ? null : targetsByGuestKey.get(key);
-                    if (!reportedKeys.contains(key)) {
+                    String reportKey = !key.isBlank() ? key : mobileOrBare;
+                    Map<String, String> target = null;
+                    if (targetsByGuestKey != null) {
+                        if (!key.isBlank()) {
+                            target = targetsByGuestKey.get(key);
+                        }
+                        if (target == null && !mobileOrBare.isBlank()) {
+                            target = targetsByGuestKey.get(mobileOrBare);
+                        }
+                    }
+                    if (!reportKey.isBlank() && !reportedKeys.contains(reportKey)) {
                         if (target != null) {
                             String toHotelId = target.getOrDefault("hotelId", "");
                             String toRoom = target.getOrDefault("roomNumber", "");
@@ -295,7 +377,7 @@ public class StayAllotmentService {
                                 move.put("toHotel", target.getOrDefault("hotelName", ""));
                                 move.put("toRoom", toRoom);
                                 moves.add(move);
-                                reportedKeys.add(key);
+                                reportedKeys.add(reportKey);
                             }
                         } else {
                             Map<String, Object> move = new LinkedHashMap<>();
@@ -305,7 +387,7 @@ public class StayAllotmentService {
                             move.put("toHotel", "");
                             move.put("toRoom", "");
                             moves.add(move);
-                            reportedKeys.add(key);
+                            reportedKeys.add(reportKey);
                         }
                     }
                     continue;
@@ -395,6 +477,10 @@ public class StayAllotmentService {
             row.put("gender", guest.getGender());
             row.put("age", guest.getAge());
             row.put("livePhoto", guest.getLivePhoto());
+            row.put("idProofPhoto", guest.getIdProofPhoto());
+            row.put("idType", guest.getIdType());
+            row.put("stayStartDate", guest.getStayStartDate());
+            row.put("stayEndDate", guest.getStayEndDate());
             row.put("primary", guest.isPrimary());
             guests.add(row);
         }

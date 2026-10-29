@@ -423,6 +423,7 @@ public class StayBookingService {
             return false;
         }
         return actor.getRoles().contains(SanghaRole.ACCOMMODATION_VOLUNTEER)
+                || actor.getRoles().contains(SanghaRole.ACCOMMODATION_ADMIN)
                 || actor.getRoles().contains(SanghaRole.PSSM_ADMIN)
                 || actor.getRoles().contains(SanghaRole.EVENT_ORGANIZER);
     }

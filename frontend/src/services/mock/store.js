@@ -786,11 +786,26 @@ function allotmentGuestKey(guest, bookingId = '') {
  * Remove guests from prior rooms and collect old→new moves.
  * @returns {{ list: object[], moves: object[] }}
  */
-function stripGuestsFromEventAllotments(list, eventId, guestKeys, targetsByGuestKey = new Map()) {
+function stripGuestsFromEventAllotments(
+  list,
+  eventId,
+  guestKeys,
+  targetsByGuestKey = new Map(),
+  bookingIds = null
+) {
   const id = String(eventId || '').trim();
   const moves = [];
   const reported = new Set();
-  if (!id || !guestKeys?.size) {
+  const keys = guestKeys instanceof Set ? guestKeys : new Set();
+  const wipeBookings =
+    bookingIds instanceof Set
+      ? bookingIds
+      : new Set(
+          (Array.isArray(bookingIds) ? bookingIds : [])
+            .map((x) => String(x || '').trim())
+            .filter(Boolean)
+        );
+  if (!id || (!keys.size && !wipeBookings.size)) {
     return { list: Array.isArray(list) ? list.slice() : [], moves };
   }
   const next = (Array.isArray(list) ? list : [])
@@ -800,14 +815,30 @@ function stripGuestsFromEventAllotments(list, eventId, guestKeys, targetsByGuest
       const fromHotelId = String(row.hotelId || '').trim();
       const fromHotel = String(row.hotelName || '').trim();
       const fromRoom = String(row.roomNumber || '').trim();
+      const rowBookingId = String(row.bookingId || '').trim();
+      const wipeBooking = Boolean(rowBookingId && wipeBookings.has(rowBookingId));
       const kept = [];
       let changed = false;
       guests.forEach((g) => {
         const key = allotmentGuestKey(g, row.bookingId);
-        if (key && guestKeys.has(key)) {
+        const bare = allotmentGuestKey(g, '');
+        const name = String(g?.name || '')
+          .trim()
+          .toLowerCase();
+        const nameKey = rowBookingId && name ? `n:${rowBookingId}:${name}` : '';
+        const matched =
+          wipeBooking ||
+          (key && keys.has(key)) ||
+          (bare && keys.has(bare)) ||
+          (nameKey && keys.has(nameKey));
+        if (matched) {
           changed = true;
-          const target = targetsByGuestKey?.get?.(key);
-          if (!reported.has(key)) {
+          const reportKey = key || bare;
+          const target =
+            (key && targetsByGuestKey?.get?.(key)) ||
+            (bare && targetsByGuestKey?.get?.(bare)) ||
+            null;
+          if (reportKey && !reported.has(reportKey)) {
             if (target) {
               const toHotelId = String(target.hotelId || '').trim();
               const toRoom = String(target.roomNumber || '').trim();
@@ -819,7 +850,7 @@ function stripGuestsFromEventAllotments(list, eventId, guestKeys, targetsByGuest
                   toHotel: target.hotelName || '',
                   toRoom
                 });
-                reported.add(key);
+                reported.add(reportKey);
               }
             } else if (!targetsByGuestKey) {
               moves.push({
@@ -829,7 +860,7 @@ function stripGuestsFromEventAllotments(list, eventId, guestKeys, targetsByGuest
                 toHotel: '',
                 toRoom: ''
               });
-              reported.add(key);
+              reported.add(reportKey);
             }
           }
           return;
@@ -1676,8 +1707,10 @@ export const mockApi = {
       }
       if (stayRange) {
         const [start, end] = stayRange.split('|');
-        const primary = guests.find((g) => g?.primary) || guests[0];
-        if (!primary || primary.stayStartDate !== start || primary.stayEndDate !== end) return false;
+        const hit = guests.some(
+          (g) => g && g.stayStartDate === start && g.stayEndDate === end
+        );
+        if (!hit) return false;
       }
       if (familySize > 0 && bookingPersonCount(b) !== familySize) return false;
       return true;
@@ -1770,8 +1803,10 @@ export const mockApi = {
         }
         if (stayRange) {
           const [start, end] = stayRange.split('|');
-          const primary = guests.find((g) => g?.primary) || guests[0];
-          if (!primary || primary.stayStartDate !== start || primary.stayEndDate !== end) return false;
+          const hit = guests.some(
+            (g) => g && g.stayStartDate === start && g.stayEndDate === end
+          );
+          if (!hit) return false;
         }
         return true;
       })
@@ -1810,6 +1845,7 @@ export const mockApi = {
     const roles = rolesForMobile(session.mobile);
     const allowed =
       roles.indexOf('accommodation_volunteer') >= 0 ||
+      roles.indexOf('accommodation_admin') >= 0 ||
       roles.indexOf('pssm_admin') >= 0 ||
       roles.indexOf('event_organizer') >= 0;
     if (!allowed) throw apiError(403, 'FORBIDDEN', 'Not allowed to view event registrations.');
@@ -1896,6 +1932,7 @@ export const mockApi = {
     const gender = String(params.gender || '').trim().toLowerCase();
     const status = String(params.status || '').trim().toLowerCase();
     const location = String(params.location || '').trim().toLowerCase();
+    const stayRange = String(params.stayRange || '').trim();
     const page = Math.max(0, Number(params.page) || 0);
     const size = Math.min(500, Math.max(1, Number(params.size) || 24));
 
@@ -1906,7 +1943,7 @@ export const mockApi = {
         : String(p.city || p.name || 'Urban');
     }
 
-    function matchesRow(row, { omitLocation = false } = {}) {
+    function matchesRow(row, { omitLocation = false, omitStayRange = false } = {}) {
       if (!row || row.eventId !== id) return false;
       const guests = Array.isArray(row.guests) ? row.guests : [];
       if (q) {
@@ -1932,6 +1969,15 @@ export const mockApi = {
       if (!omitLocation && location) {
         if (hometownLabel(row.place).toLowerCase() !== location) return false;
       }
+      if (!omitStayRange && stayRange) {
+        const [start, end] = stayRange.split('|');
+        if (
+          String(row.checkInDate || '').trim() !== String(start || '').trim() ||
+          String(row.checkOutDate || '').trim() !== String(end || '').trim()
+        ) {
+          return false;
+        }
+      }
       return true;
     }
 
@@ -1954,6 +2000,9 @@ export const mockApi = {
 
     const facetBase = readAllotments()
       .filter((row) => matchesRow(row, { omitLocation: true }))
+      .map(enrich);
+    const stayFacetBase = readAllotments()
+      .filter((row) => matchesRow(row, { omitStayRange: true }))
       .map(enrich);
 
     const total = matched.length;
@@ -1978,6 +2027,16 @@ export const mockApi = {
       if (loc) locCounts[loc] = (locCounts[loc] || 0) + (row.personCount || 1);
     });
 
+    const rangeCounts = {};
+    stayFacetBase.forEach((row) => {
+      const start = String(row.checkInDate || '').trim();
+      const end = String(row.checkOutDate || '').trim();
+      if (!start || !end) return;
+      const key = `${start}|${end}`;
+      rangeCounts[key] = rangeCounts[key] || { key, start, end, count: 0 };
+      rangeCounts[key].count += row.personCount || 1;
+    });
+
     return {
       data: {
         items,
@@ -1996,7 +2055,10 @@ export const mockApi = {
           hotels: Object.values(hotelCounts).sort((a, b) => a.label.localeCompare(b.label)),
           locations: Object.entries(locCounts)
             .map(([name, count]) => ({ name, count }))
-            .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name))
+            .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name)),
+          stayRanges: Object.values(rangeCounts).sort((a, b) =>
+            String(a.start).localeCompare(String(b.start))
+          )
         }
       }
     };
@@ -2030,21 +2092,28 @@ export const mockApi = {
     if (!eventId) throw apiError(400, 'VALIDATION', 'Event id is required.');
     const members = Array.isArray(payload?.members) ? payload.members : [];
     const guestKeys = new Set();
+    const bookingIds = new Set(
+      (Array.isArray(payload?.bookingIds) ? payload.bookingIds : [])
+        .map((id) => String(id || '').trim())
+        .filter(Boolean)
+    );
     members.forEach((m) => {
-      const key = allotmentGuestKey(
-        { name: m?.name, mobile: normalizeMobile(m?.mobile) },
-        ''
-      );
-      if (key) guestKeys.add(key);
+      const bookingId = String(m?.bookingId || '').trim();
+      const name = String(m?.name || '').trim().toLowerCase();
+      const mobile = normalizeMobile(m?.mobile);
+      // Always keep booking+name keys (tiles may share family mobile).
+      if (bookingId && name) guestKeys.add(`n:${bookingId}:${name}`);
+      if (mobile) guestKeys.add(`m:${mobile}`);
     });
-    if (!guestKeys.size) {
+    if (!guestKeys.size && !bookingIds.size) {
       throw apiError(400, 'VALIDATION', 'No people to move to wait list.');
     }
     const stripped = stripGuestsFromEventAllotments(
       readAllotments(),
       eventId,
       guestKeys,
-      null
+      null,
+      bookingIds
     );
     writeJson(ALLOTMENTS_KEY, stripped.list);
     writeJson(ALLOTMENTS_SEED_KEY, ALLOTMENTS_SEED_VERSION);
@@ -2069,17 +2138,37 @@ export const mockApi = {
       }
       const bookingId = String(p?.bookingId || '').trim();
       const members = Array.isArray(p?.members) ? p.members : [];
-      const guests = members.map((m, i) => ({
-        name: m.name || '',
-        relation: m.relation || '',
-        mobile: normalizeMobile(m.mobile),
-        gender: m.gender || '',
-        age: m.age || '',
-        livePhoto: m.livePhoto || '',
-        primary: Boolean(m.primary) || i === 0
-      }));
+      let checkInDate = String(p?.checkInDate || '').trim();
+      let checkOutDate = String(p?.checkOutDate || '').trim();
+      const guests = members.map((m, i) => {
+        const stayStartDate = String(m?.stayStartDate || checkInDate || '').trim();
+        const stayEndDate = String(m?.stayEndDate || checkOutDate || '').trim();
+        return {
+          name: m.name || '',
+          relation: m.relation || '',
+          mobile: normalizeMobile(m.mobile),
+          gender: m.gender || '',
+          age: m.age || '',
+          livePhoto: m.livePhoto || '',
+          idProofPhoto: m.idProofPhoto || '',
+          idType: m.idType || '',
+          stayStartDate,
+          stayEndDate,
+          primary: Boolean(m.primary) || i === 0
+        };
+      });
       if (!guests.length) {
         throw apiError(400, 'VALIDATION', 'Each placement needs at least one person.');
+      }
+      if (!checkInDate || !checkOutDate) {
+        guests.forEach((g) => {
+          if (!checkInDate || (g.stayStartDate && g.stayStartDate < checkInDate)) {
+            checkInDate = g.stayStartDate || checkInDate;
+          }
+          if (!checkOutDate || (g.stayEndDate && g.stayEndDate > checkOutDate)) {
+            checkOutDate = g.stayEndDate || checkOutDate;
+          }
+        });
       }
       guests.forEach((g) => {
         const key = allotmentGuestKey(g, bookingId);
@@ -2103,8 +2192,8 @@ export const mockApi = {
         place: p?.place || {},
         guests,
         personCount: guests.length,
-        checkInDate: p?.checkInDate || '',
-        checkOutDate: p?.checkOutDate || '',
+        checkInDate,
+        checkOutDate,
         createdAt: new Date().toISOString()
       });
     });

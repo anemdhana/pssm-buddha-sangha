@@ -1,3 +1,5 @@
+import { api } from '../../services/api.js';
+import { openAllotmentPersonDetailDialog } from '../../utils/allotmentPersonDetailDialog.js';
 import {
   ageGroupLabel,
   allotmentRoomKindLabel,
@@ -5,6 +7,7 @@ import {
   allotmentStatusLabel,
   registrationLocationShort
 } from '../../utils/stayAllotments.js';
+import { stayRangeLabel } from '../../utils/stayRegistrations.js';
 
 function initials(name) {
   const parts = String(name || '')
@@ -14,6 +17,13 @@ function initials(name) {
   if (parts.length === 0) return '?';
   if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
   return `${parts[0][0] || ''}${parts[1][0] || ''}`.toUpperCase();
+}
+
+function stayNightCount(start, end) {
+  const a = Date.parse(String(start || '').trim());
+  const b = Date.parse(String(end || '').trim());
+  if (!Number.isFinite(a) || !Number.isFinite(b) || b <= a) return 0;
+  return Math.round((b - a) / 86400000);
 }
 
 function Chip({ active, onClick, children }) {
@@ -29,14 +39,21 @@ function Chip({ active, onClick, children }) {
   );
 }
 
-function AllotmentTile({ person }) {
+function AllotmentTile({ person, onOpen }) {
   const photo = String(person.livePhoto || '').trim();
   const location = registrationLocationShort(person.place);
   const age = ageGroupLabel(person.age);
+  const stayLabel = stayRangeLabel(person.checkInDate, person.checkOutDate);
+  const nights = stayNightCount(person.checkInDate, person.checkOutDate);
 
   return (
     <article className={`x-interest-tile x-allot-tile${person.status === 'checked_in' ? ' is-checked-in' : ''}`}>
-      <div className="x-interest-tile-hit x-allot-tile-hit">
+      <button
+        type="button"
+        className="x-interest-tile-hit x-allot-tile-hit"
+        aria-label={`View details for ${person.name || 'guest'}`}
+        onClick={() => onOpen?.(person)}
+      >
         {photo ? (
           <img className="x-interest-tile-photo" src={photo} alt="" />
         ) : (
@@ -53,10 +70,16 @@ function AllotmentTile({ person }) {
           <span className="x-interest-tile-meta">
             {allotmentRoomKindLabel(person.roomKind)} · {allotmentStatusLabel(person.status)}
           </span>
+          {stayLabel ? (
+            <span className="x-interest-tile-meta">
+              {stayLabel}
+              {nights > 0 ? ` · ${nights} ${nights === 1 ? 'night' : 'nights'}` : ''}
+            </span>
+          ) : null}
           <span className="x-interest-tile-meta">{location}</span>
           <span className="x-interest-tile-age">{age}</span>
         </div>
-      </div>
+      </button>
     </article>
   );
 }
@@ -86,56 +109,109 @@ export function AllotmentsTiles({
   status,
   onStatusChange,
   location,
-  onLocationChange
+  onLocationChange,
+  stayRange = '',
+  onStayRangeChange
 }) {
   const hotels = Array.isArray(facets?.hotels) ? facets.hotels : [];
   const locations = Array.isArray(facets?.locations) ? facets.locations : [];
+  const stayRanges = (Array.isArray(facets?.stayRanges) ? facets.stayRanges : [])
+    .map((row) => {
+      const start = row.start || String(row.key || '').split('|')[0] || '';
+      const end = row.end || String(row.key || '').split('|')[1] || '';
+      const nights = stayNightCount(start, end);
+      const label = stayRangeLabel(start, end) || row.label || row.key || '';
+      const nightBit =
+        nights > 0 ? ` · ${nights} ${nights === 1 ? 'night' : 'nights'}` : '';
+      return {
+        key: row.key || (start && end ? `${start}|${end}` : ''),
+        label: label ? `${label}${nightBit}` : '',
+        count: Number(row.count) || 0
+      };
+    })
+    .filter((row) => row.key && row.label);
   const peopleTotal = stats?.people ?? 0;
 
   function pick(current, next, setter) {
     setter(current === next ? '' : next);
   }
 
+  function openPerson(person) {
+    openAllotmentPersonDetailDialog(person, { api });
+  }
+
   return (
     <div className="x-interest-layout x-allot-layout">
-      <aside className="x-interest-side x-interest-panel x-allot-filter-side" aria-label="Hotels">
-        <div className="x-allot-filter-head">
-          <h2 className="x-interest-panel-title">
-            <span uk-icon="icon: home; ratio: 0.7" /> Hotels
-          </h2>
-          {hotelId ? (
-            <button
-              type="button"
-              className="x-interest-text-btn"
-              onClick={() => onHotelIdChange?.('')}
-            >
-              Clear
-            </button>
-          ) : null}
-        </div>
-        {hotels.length > 0 ? (
-          <ul className="x-interest-location-list x-allot-hotel-list">
-            {hotels.map((facet) => (
-              <li key={facet.key}>
-                <button
-                  type="button"
-                  className={`x-interest-location-item${hotelId === facet.key ? ' is-active' : ''}`}
-                  title={facet.label}
-                  onClick={() => pick(hotelId, facet.key, onHotelIdChange)}
-                >
-                  <span className="x-interest-location-name">{facet.label}</span>
-                  <span className="x-interest-location-count">{facet.count}</span>
-                </button>
-              </li>
+      <aside className="x-interest-side x-interest-panel x-allot-filter-side" aria-label="Stay dates and hotels">
+        <div className="x-allot-stay-block">
+          <label className="x-interest-side-label" htmlFor="allotment-stay-range">
+            Stay dates
+          </label>
+          <select
+            className="uk-select uk-form-small x-allot-stay-select"
+            id="allotment-stay-range"
+            aria-label="Stay dates"
+            value={stayRange || ''}
+            onChange={(e) => onStayRangeChange?.(e.target.value)}
+          >
+            <option value="">All dates</option>
+            {stayRanges.map((row) => (
+              <option key={row.key} value={row.key}>
+                {row.label}
+                {row.count ? ` (${row.count})` : ''}
+              </option>
             ))}
-          </ul>
-        ) : (
-          <p className="x-interest-side-empty">No hotels</p>
-        )}
+          </select>
+        </div>
+
+        <div className="x-allot-hotel-block">
+          <div className="x-allot-filter-head">
+            <h2 className="x-interest-panel-title">
+              <span uk-icon="icon: home; ratio: 0.7" /> Hotels
+            </h2>
+            {hotelId ? (
+              <button
+                type="button"
+                className="x-interest-text-btn"
+                onClick={() => onHotelIdChange?.('')}
+              >
+                Clear
+              </button>
+            ) : null}
+          </div>
+          {hotels.length > 0 ? (
+            <ul className="x-interest-location-list x-allot-hotel-list">
+              {hotels.map((facet) => (
+                <li key={facet.key}>
+                  <button
+                    type="button"
+                    className={`x-interest-location-item${hotelId === facet.key ? ' is-active' : ''}`}
+                    title={facet.label}
+                    onClick={() => pick(hotelId, facet.key, onHotelIdChange)}
+                  >
+                    <span className="x-interest-location-name">{facet.label}</span>
+                    <span className="x-interest-location-count">{facet.count}</span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="x-interest-side-empty">No hotels</p>
+          )}
+        </div>
       </aside>
 
       <div className={`x-interest-tiles-wrap${refreshing ? ' is-refreshing' : ''}`}>
         <div className="x-interest-panel x-interest-toolbar-panel x-allot-toolbar-panel">
+          {filtersActive ? (
+            <button
+              type="button"
+              className="x-interest-text-btn x-allot-filter-clear"
+              onClick={onClearFilters}
+            >
+              Clear filters
+            </button>
+          ) : null}
           <div className="x-allot-toolbar-row">
             <div className="uk-inline x-hotel-toolbar-input">
               <span className="uk-form-icon" uk-icon="icon: search" />
@@ -219,11 +295,6 @@ export function AllotmentsTiles({
                   </Chip>
                 </div>
               </div>
-              {filtersActive ? (
-                <button type="button" className="x-interest-text-btn x-allot-filter-clear" onClick={onClearFilters}>
-                  Clear filters
-                </button>
-              ) : null}
             </div>
           </div>
 
@@ -273,7 +344,7 @@ export function AllotmentsTiles({
             <div className="x-interest-tiles" role="list">
               {people.map((person) => (
                 <div key={person.id} role="listitem">
-                  <AllotmentTile person={person} />
+                  <AllotmentTile person={person} onOpen={openPerson} />
                 </div>
               ))}
             </div>

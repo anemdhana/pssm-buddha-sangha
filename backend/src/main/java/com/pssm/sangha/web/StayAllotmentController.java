@@ -33,10 +33,11 @@ public class StayAllotmentController {
             @RequestParam(value = "gender", required = false) String gender,
             @RequestParam(value = "status", required = false) String status,
             @RequestParam(value = "location", required = false) String location,
+            @RequestParam(value = "stayRange", required = false) String stayRange,
             @RequestParam(value = "page", required = false) Integer page,
             @RequestParam(value = "size", required = false) Integer size) {
         return ResponseEntity.ok(ApiResponses.data(stayAllotmentService.listForEvent(
-                eventId, q, hotelId, roomType, roomKind, gender, status, location, page, size)));
+                eventId, q, hotelId, roomType, roomKind, gender, status, location, stayRange, page, size)));
     }
 
     @PostMapping

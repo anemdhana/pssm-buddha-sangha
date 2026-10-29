@@ -202,6 +202,95 @@ def _initials_svg_data_url(label: str) -> str:
     return "data:image/svg+xml;base64," + base64.b64encode(svg.encode("utf-8")).decode("ascii")
 
 
+# skin, hair, shirt, accent
+_PORTRAIT_PALETTES = (
+    ("#d8b49a", "#5a3d2b", "#2f4f4f", "#1b2a6b"),
+    ("#c9957a", "#3b2a22", "#4a5d73", "#6b3a2a"),
+    ("#e0c2a8", "#6e4a32", "#355c4a", "#1f3a5f"),
+    ("#cbb09a", "#2a211c", "#5c4a3a", "#3d2a6b"),
+    ("#d2a888", "#7a4e2e", "#25405a", "#8a3a2e"),
+    ("#e8cbb4", "#4a3428", "#3a5a48", "#2a4a6b"),
+)
+
+
+def _sample_portrait_data_url(name: str, *, gender: str = "") -> str:
+    """Simple illustrated face placeholder (not a real photo)."""
+    label = (name or "Guest").strip() or "Guest"
+    safe = html.escape(label[:22])
+    dig = int(hashlib.sha1(label.encode("utf-8")).hexdigest()[:6], 16)
+    skin, hair, shirt, accent = _PORTRAIT_PALETTES[dig % len(_PORTRAIT_PALETTES)]
+    is_female = (gender or "").lower() == "female"
+    if is_female:
+        hair_path = (
+            f'<ellipse cx="128" cy="92" rx="78" ry="70" fill="{hair}"/>'
+            f'<ellipse cx="128" cy="118" rx="70" ry="58" fill="{skin}"/>'
+        )
+    else:
+        hair_path = (
+            f'<ellipse cx="128" cy="78" rx="62" ry="42" fill="{hair}"/>'
+            f'<ellipse cx="128" cy="118" rx="58" ry="64" fill="{skin}"/>'
+        )
+    svg = (
+        f'<svg xmlns="http://www.w3.org/2000/svg" width="320" height="400" viewBox="0 0 320 400">'
+        f'<defs><linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">'
+        f'<stop offset="0%" stop-color="#eef2f8"/><stop offset="100%" stop-color="#d7dee9"/>'
+        f'</linearGradient></defs>'
+        f'<rect width="320" height="400" fill="url(#bg)"/>'
+        f'<rect x="18" y="18" width="284" height="364" rx="16" fill="#fff" stroke="{accent}" stroke-width="3"/>'
+        f'<g transform="translate(32,36)">'
+        f'{hair_path}'
+        f'<circle cx="108" cy="118" r="5" fill="#2a211c"/><circle cx="148" cy="118" r="5" fill="#2a211c"/>'
+        f'<path d="M112 148 Q128 160 144 148" fill="none" stroke="#8a5a45" stroke-width="3" stroke-linecap="round"/>'
+        f'<ellipse cx="128" cy="250" rx="90" ry="70" fill="{shirt}"/>'
+        f'</g>'
+        f'<rect x="18" y="330" width="284" height="52" fill="{accent}"/>'
+        f'<text x="160" y="362" text-anchor="middle" font-family="Arial,sans-serif" '
+        f'font-size="18" font-weight="700" fill="#fff">{safe}</text>'
+        f'</svg>'
+    )
+    return "data:image/svg+xml;base64," + base64.b64encode(svg.encode("utf-8")).decode("ascii")
+
+
+def _sample_id_card_data_url(name: str, *, id_type: str = "aadhaar", mobile: str = "") -> str:
+    """Sample ID-card placeholder (not a real government ID)."""
+    label = (name or "Guest").strip() or "Guest"
+    safe = html.escape(label[:28])
+    kind = (id_type or "aadhaar").strip().lower()
+    title = {
+        "aadhaar": "SAMPLE AADHAAR",
+        "passport": "SAMPLE PASSPORT",
+        "voter": "SAMPLE VOTER ID",
+        "driving": "SAMPLE DL",
+    }.get(kind, "SAMPLE ID")
+    dig = int(hashlib.sha1((label + mobile).encode("utf-8")).hexdigest()[:8], 16)
+    num = f"{dig % 9000 + 1000} {dig // 9000 % 9000 + 1000} {dig // 81000000 % 9000 + 1000}"
+    safe_title = html.escape(title)
+    safe_num = html.escape(num)
+    skin, hair, shirt, accent = _PORTRAIT_PALETTES[dig % len(_PORTRAIT_PALETTES)]
+    svg = (
+        f'<svg xmlns="http://www.w3.org/2000/svg" width="480" height="300" viewBox="0 0 480 300">'
+        f'<rect width="480" height="300" rx="14" fill="#f7f9fc" stroke="#c5cedc" stroke-width="2"/>'
+        f'<rect width="480" height="48" rx="14" fill="{accent}"/>'
+        f'<rect y="28" width="480" height="20" fill="{accent}"/>'
+        f'<text x="24" y="32" font-family="Arial,sans-serif" font-size="18" font-weight="700" fill="#fff">{safe_title}</text>'
+        f'<text x="456" y="32" text-anchor="end" font-family="Arial,sans-serif" font-size="12" fill="#dce6ff">DEMO ONLY</text>'
+        f'<rect x="24" y="72" width="110" height="140" rx="8" fill="#e8eef5" stroke="#b8c4d6"/>'
+        f'<ellipse cx="79" cy="118" rx="28" ry="32" fill="{skin}"/>'
+        f'<ellipse cx="79" cy="98" rx="30" ry="16" fill="{hair}"/>'
+        f'<ellipse cx="79" cy="188" rx="40" ry="28" fill="{shirt}"/>'
+        f'<text x="154" y="100" font-family="Arial,sans-serif" font-size="13" fill="#667086">Name</text>'
+        f'<text x="154" y="124" font-family="Arial,sans-serif" font-size="20" font-weight="700" fill="#1b2437">{safe}</text>'
+        f'<text x="154" y="164" font-family="Arial,sans-serif" font-size="13" fill="#667086">ID No.</text>'
+        f'<text x="154" y="188" font-family="Arial,sans-serif" font-size="18" font-weight="700" fill="#1b2437">{safe_num}</text>'
+        f'<text x="154" y="228" font-family="Arial,sans-serif" font-size="12" fill="#889">{html.escape(kind.upper())} · seed sample</text>'
+        f'<rect x="24" y="236" width="432" height="40" rx="8" fill="#eef2f8"/>'
+        f'<text x="36" y="261" font-family="Arial,sans-serif" font-size="13" fill="#4a5d73">'
+        f'Not a real identity document — for UI demo only</text>'
+        f'</svg>'
+    )
+    return "data:image/svg+xml;base64," + base64.b64encode(svg.encode("utf-8")).decode("ascii")
+
+
 def _hotel_image_data_url(name: str) -> str:
     letters = "".join(ch for ch in (name or "H") if ch.isalpha())[:2].upper() or "H"
     safe = html.escape(letters)
@@ -279,6 +368,10 @@ def read_occupants() -> list[dict]:
                 mobile = "0" + mobile
             start = (row.get("stay_start") or "").strip() or EVT_START.isoformat()
             end = (row.get("stay_end") or "").strip() or EVT_END.isoformat()
+            city = (row.get("city") or "").strip() or "Hyderabad"
+            state = (row.get("state") or "").strip()
+            if not state:
+                state = "Telangana" if city.lower() == "hyderabad" else "Andhra Pradesh"
             rows.append(
                 {
                     "hotel_name": (row.get("hotel_name") or "").strip(),
@@ -289,9 +382,15 @@ def read_occupants() -> list[dict]:
                     "stay_start": start,
                     "stay_end": end,
                     "stay_label": (row.get("stay_label") or "").strip(),
+                    "city": city,
+                    "state": state,
+                    "profession": (row.get("profession") or "").strip(),
+                    "meditation": (row.get("meditation") or "").strip() or "new",
+                    "gender": (row.get("gender") or "").strip().lower(),
                 }
             )
-    return [r for r in rows if r["hotel_name"] and r["mobile"]]
+    # Wait-list parties may omit hotel/room; still need a mobile.
+    return [r for r in rows if r["mobile"]]
 
 
 def export_csv_from_xlsx(xlsx_path: Path) -> None:
@@ -482,7 +581,9 @@ def build_people_from_occupants() -> list[dict]:
             if len(occ["guest_name"]) > len(by_mobile[mobile]["person"]["fullName"]):
                 by_mobile[mobile]["person"]["fullName"] = occ["guest_name"]
             continue
-        gender = _guess_gender(occ["guest_name"])
+        gender = occ.get("gender") if occ.get("gender") in {"male", "female"} else _guess_gender(
+            occ["guest_name"]
+        )
         # Deterministic birth day/month from mobile so passwords stay stable.
         day = f"{(int(mobile[-2:]) % 28) + 1:02d}"
         month = f"{(int(mobile[-4:-2]) % 12) + 1:02d}"
@@ -494,20 +595,27 @@ def build_people_from_occupants() -> list[dict]:
                 "altMobile": "",
                 "gender": gender,
                 "ageGroup": "adult",
-                "meditation": "new",
-                "profession": "",
+                "meditation": occ.get("meditation") or "new",
+                "profession": occ.get("profession") or "",
                 "birthDate": day,
                 "birthMonth": month,
                 "language": "Telugu",
                 "pyramidCenter": "",
                 "sinceYear": "",
                 "idType": "aadhaar",
-                "livePhoto": _initials_svg_data_url(occ["guest_name"]),
-                "idProofPhoto": "",
+                "livePhoto": _sample_portrait_data_url(occ["guest_name"], gender=gender),
+                "idProofPhoto": _sample_id_card_data_url(
+                    occ["guest_name"], id_type="aadhaar", mobile=mobile
+                ),
                 "place": {
                     "kind": "urban",
-                    "city": "Hyderabad",
-                    "state": "Telangana",
+                    "city": occ.get("city") or "Hyderabad",
+                    "state": occ.get("state")
+                    or (
+                        "Telangana"
+                        if str(occ.get("city") or "").lower() == "hyderabad"
+                        else "Andhra Pradesh"
+                    ),
                     "country": "India",
                 },
                 "seedSource": SEED_SOURCE,
@@ -518,27 +626,66 @@ def build_people_from_occupants() -> list[dict]:
     return list(by_mobile.values())
 
 
-def _party_members(primary_name: str, primary_gender: str, party_size: int) -> list[dict]:
+_MEMBER_FIRST_M = (
+    "Arjun", "Karthik", "Nikhil", "Rohit", "Vamsi", "Abhinav", "Sathish", "Pradeep"
+)
+_MEMBER_FIRST_F = (
+    "Sneha", "Pooja", "Ananya", "Keerthana", "Manasa", "Shreya", "Nandini", "Harika"
+)
+_MEMBER_RELATIONS = ("spouse", "child", "parent", "sibling", "family")
+
+
+def _party_members(
+    primary_name: str,
+    primary_gender: str,
+    party_size: int,
+    *,
+    with_sample_photos: bool = True,
+    stay_start: str = "",
+    stay_end: str = "",
+) -> list[dict]:
     members = []
+    surname = (primary_name or "Guest").split()[-1]
     for i in range(2, party_size + 1):
         gender = "female" if (primary_gender == "male" and i % 2 == 0) else (
             "male" if primary_gender == "female" and i % 2 == 0 else primary_gender
         )
+        first = _MEMBER_FIRST_F[(i - 2) % len(_MEMBER_FIRST_F)] if gender == "female" else (
+            _MEMBER_FIRST_M[(i - 2) % len(_MEMBER_FIRST_M)]
+        )
+        member_name = f"{first} {surname}"
+        age_group = "child" if i == party_size and party_size >= 4 and i % 5 == 0 else (
+            "senior" if i == 3 and party_size >= 3 and primary_gender == "male" else "adult"
+        )
+        relation = _MEMBER_RELATIONS[min(i - 2, len(_MEMBER_RELATIONS) - 1)]
+        # ~1 in 5 multi-member parties: last member arrives/leaves on a different window.
+        member_start, member_end = stay_start, stay_end
+        if (
+            with_sample_photos
+            and party_size >= 3
+            and i == party_size
+            and stay_start == "2026-10-01"
+            and stay_end == "2026-10-05"
+            and (i % 5 == 0)
+        ):
+            member_start, member_end = "2026-10-03", "2026-10-05"
         members.append(
             {
-                "name": f"{primary_name} member {i}",
-                "relation": "family",
+                "name": member_name,
+                "relation": relation,
                 "mobile": "",
                 "gender": gender,
-                "ageGroup": "adult",
-                "age": "adult",
+                "ageGroup": age_group,
+                "age": age_group,
                 "meditation": "new",
                 "profession": "",
                 "addrMode": "same",
-                "idType": "",
-                "livePhoto": _initials_svg_data_url(f"M{i}"),
-                "idProofPhoto": "",
+                "idType": "aadhaar",
+                "livePhoto": _sample_portrait_data_url(member_name, gender=gender),
+                "idProofPhoto": _sample_id_card_data_url(member_name, id_type="aadhaar"),
                 "place": {},
+                "stayStartDate": member_start,
+                "stayEndDate": member_end,
             }
         )
     return members
@@ -554,7 +701,14 @@ def build_bookings() -> list[dict]:
         if not person_wrap:
             continue
         person = person_wrap["person"]
-        members = _party_members(person["fullName"], person.get("gender") or "male", occ["party_size"])
+        members = _party_members(
+            person["fullName"],
+            person.get("gender") or "male",
+            occ["party_size"],
+            with_sample_photos=True,
+            stay_start=occ["stay_start"],
+            stay_end=occ["stay_end"],
+        )
         guests = [
             {
                 "name": person["fullName"],
@@ -575,8 +729,8 @@ def build_bookings() -> list[dict]:
                     "mobile": member.get("mobile") or "",
                     "gender": member.get("gender") or "adult",
                     "age": member.get("ageGroup") or member.get("age") or "adult",
-                    "stayStartDate": occ["stay_start"],
-                    "stayEndDate": occ["stay_end"],
+                    "stayStartDate": member.get("stayStartDate") or occ["stay_start"],
+                    "stayEndDate": member.get("stayEndDate") or occ["stay_end"],
                     "primary": False,
                 }
             )
@@ -612,8 +766,8 @@ def build_bookings() -> list[dict]:
                     "livePhoto": m.get("livePhoto") or "",
                     "idProofPhoto": m.get("idProofPhoto") or "",
                     "place": m.get("place") or {},
-                    "stayStartDate": occ["stay_start"],
-                    "stayEndDate": occ["stay_end"],
+                    "stayStartDate": m.get("stayStartDate") or occ["stay_start"],
+                    "stayEndDate": m.get("stayEndDate") or occ["stay_end"],
                 }
                 for m in members
             ],
@@ -633,12 +787,12 @@ def build_bookings() -> list[dict]:
                 "familyFullName": person["fullName"],
                 "registeredFamily": False,
                 "place": person.get("place") or {},
+                "hotelName": occ.get("hotel_name") or "",
+                "roomNumber": occ.get("room_number") or "",
                 "guests": guests,
                 "familyDetail": family,
                 "createdAt": now,
                 "seedSource": SEED_SOURCE,
-                "hotelName": occ["hotel_name"],
-                "roomNumber": occ["room_number"],
             }
         )
     return rows
@@ -662,9 +816,25 @@ def build_allotments(bookings: list[dict]) -> list[dict]:
         if not hotel or not room:
             print(f"  skip allotment — missing hotel/room for {booking['_id']}: {hotel_name} #{room_number}")
             continue
-        family_photo = (booking.get("familyDetail") or {}).get("livePhoto") or ""
+        family = booking.get("familyDetail") or {}
+        family_photo = family.get("livePhoto") or ""
+        family_id = family.get("idProofPhoto") or ""
+        member_by_name = {
+            str(m.get("name") or "").strip().lower(): m for m in (family.get("members") or [])
+        }
         guests = []
         for guest in booking.get("guests") or []:
+            if guest.get("primary"):
+                live = family_photo
+                id_proof = family_id
+                stay_start = guest.get("stayStartDate") or family.get("stayStartDate") or ""
+                stay_end = guest.get("stayEndDate") or family.get("stayEndDate") or ""
+            else:
+                member = member_by_name.get(str(guest.get("name") or "").strip().lower()) or {}
+                live = member.get("livePhoto") or ""
+                id_proof = member.get("idProofPhoto") or ""
+                stay_start = guest.get("stayStartDate") or member.get("stayStartDate") or ""
+                stay_end = guest.get("stayEndDate") or member.get("stayEndDate") or ""
             guests.append(
                 {
                     "name": guest.get("name") or "",
@@ -672,7 +842,10 @@ def build_allotments(bookings: list[dict]) -> list[dict]:
                     "mobile": guest.get("mobile") or "",
                     "gender": guest.get("gender") or "",
                     "age": guest.get("age") or "",
-                    "livePhoto": family_photo if guest.get("primary") else "",
+                    "livePhoto": live,
+                    "idProofPhoto": id_proof,
+                    "stayStartDate": stay_start,
+                    "stayEndDate": stay_end,
                     "primary": bool(guest.get("primary")),
                 }
             )
@@ -714,16 +887,23 @@ def build_allotments(bookings: list[dict]) -> list[dict]:
 
 
 def clear_event_data(db) -> None:
+    staff_mobiles = {item["person"]["mobile"] for item in STAFF_PEOPLE}
     deleted_allot = db["stay_allotments"].delete_many({"eventId": EVT_ID})
     deleted_book = db["stay_bookings"].delete_many({"eventId": EVT_ID})
     deleted_hotels = db["hotels"].delete_many(
         {"$or": [{"eventId": EVT_ID}, {"_id": {"$regex": f"^htl_{ID_PREFIX}_"}}]}
     )
-    deleted_event = db["events"].delete_many({"_id": EVT_ID})
+    deleted_people = db["people"].delete_many(
+        {
+            "seedSource": SEED_SOURCE,
+            "mobile": {"$nin": list(staff_mobiles)},
+        }
+    )
+    # Keep the event document; --events upserts it. Drop only if explicitly re-seeded alone.
     print(
         f"Cleared event data: allotments={deleted_allot.deleted_count} "
         f"bookings={deleted_book.deleted_count} hotels={deleted_hotels.deleted_count} "
-        f"events={deleted_event.deleted_count}"
+        f"seedPeople={deleted_people.deleted_count} (staff kept)"
     )
 
 
@@ -764,14 +944,7 @@ def seed_people(db) -> None:
         plain = composed_password(p["fullName"], p["birthDate"], p["birthMonth"])
         upsert_person(db, p, item["roles"], plain, item.get("members"))
         seeded += 1
-    turn_seeded = 0
-    for item in build_turnover_demo_people():
-        p = item["person"]
-        plain = composed_password(p["fullName"], p["birthDate"], p["birthMonth"])
-        upsert_person(db, p, item["roles"], plain, item.get("members"))
-        turn_seeded += 1
     print(f"Occupant people seeded/updated: {seeded} (unique mobiles from CSV)")
-    print(f"Turnover demo people seeded/updated: {turn_seeded}")
 
 
 TURNOVER_HOTEL_ID = f"htl_{ID_PREFIX}_turnover_demo"
@@ -1143,7 +1316,6 @@ def build_turnover_demo_bookings_and_allotments() -> tuple[list[dict], list[dict
 
 def seed_hotels(db) -> None:
     rows = build_hotels()
-    rows.append(build_turnover_demo_hotel())
     db["hotels"].delete_many({"$or": [{"eventId": EVT_ID}, {"_id": {"$regex": f"^htl_{ID_PREFIX}_"}}]})
     for row in rows:
         db["hotels"].replace_one({"_id": row["_id"]}, row, upsert=True)
@@ -1153,14 +1325,12 @@ def seed_hotels(db) -> None:
 
 def seed_bookings(db) -> None:
     rows = build_bookings()
-    turn_bookings, _ = build_turnover_demo_bookings_and_allotments()
-    rows.extend(turn_bookings)
     db["stay_bookings"].delete_many({"eventId": EVT_ID})
     for row in rows:
         # hotelName/roomNumber only used when building allotments; strip if present
         clean = {k: v for k, v in row.items() if k not in {"hotelName", "roomNumber"}}
         db["stay_bookings"].replace_one({"_id": clean["_id"]}, clean, upsert=True)
-    print(f"Stay bookings seeded: {len(rows)} (includes {len(turn_bookings)} turnover demo)")
+    print(f"Stay bookings seeded: {len(rows)}")
 
 
 def seed_allotments(db) -> None:
@@ -1172,12 +1342,10 @@ def seed_allotments(db) -> None:
         seed_hotels(db)
 
     allot_rows = build_allotments(booking_rows)
-    _, turn_allots = build_turnover_demo_bookings_and_allotments()
-    allot_rows.extend(turn_allots)
     db["stay_allotments"].delete_many({"eventId": EVT_ID})
     for row in allot_rows:
         db["stay_allotments"].replace_one({"_id": row["_id"]}, row, upsert=True)
-    print(f"Stay allotments seeded: {len(allot_rows)} (includes {len(turn_allots)} turnover demo)")
+    print(f"Stay allotments seeded: {len(allot_rows)}")
 
 
 def parse_args():
@@ -1297,11 +1465,6 @@ Staff logins (password = up to 5 letters of name + DDMM):
   7780254680 / Subha1402     Accommodation Admin
 
 CSV source: {DATA_DIR}
-
-Turnover demo (Friends wait list -> Suitable hotels):
-  Same Day Arrival / Couple After Checkout  stay 5-5 Oct (after room checkout on 5th)
-  Mid Event Arrival                         stay 3-5 Oct (after room 101 checkout on 3rd)
-  Hotel: Turnover Demo Lodge
 """
     )
     return 0

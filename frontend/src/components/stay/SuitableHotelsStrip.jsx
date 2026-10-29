@@ -1,12 +1,28 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
+  buildRoomAvailability,
   hotelSuggestionPage,
-  pageNeedsMoreHotels
+  pageNeedsMoreHotels,
+  peopleStayWindow
 } from '../../utils/stayAllotmentSuggest.js';
 import { registrationLocationShort } from '../../utils/stayRegistrations.js';
 
+function toHotelOption(row) {
+  if (!row) return null;
+  const hotelId = String(row.hotelId || row.id || '').trim();
+  if (!hotelId) return null;
+  return {
+    hotelId,
+    hotelName: row.hotelName || row.name || 'Hotel',
+    distanceKm: Number(row.distanceKm) >= 0 ? Number(row.distanceKm) : 999,
+    freeBeds: Number(row.freeBeds) || 0
+  };
+}
+
 export function SuitableHotelsStrip({
   suggestion,
+  hotels = [],
+  allotments = [],
   pageIndex = 0,
   onPageChange,
   onHotelDrop,
@@ -14,8 +30,7 @@ export function SuitableHotelsStrip({
   selectedCount = 0,
   dragging = false,
   selectedPeople = [],
-  onMoveToWaitList,
-  onMoveAllToWaitList
+  onMoveToWaitList
 }) {
   const ranked = suggestion?.ranked || [];
   const { items, page, totalPages, total } = hotelSuggestionPage(
@@ -34,17 +49,56 @@ export function SuitableHotelsStrip({
     [selectedPeople]
   );
   const selectedPeopleCount = people.length || selectedCount;
+  const peopleKey = people.map((p) => p.id).join('|');
   const [dragOverId, setDragOverId] = useState('');
   const [focusIndex, setFocusIndex] = useState(0);
+  const [otherHotelId, setOtherHotelId] = useState('');
+
+  const otherHotels = useMemo(() => {
+    const shownIds = new Set(items.map((h) => String(h.hotelId || '')));
+    const fromRanked = ranked
+      .filter((h) => h && !shownIds.has(String(h.hotelId || '')))
+      .map(toHotelOption)
+      .filter(Boolean);
+
+    const rankedIds = new Set(ranked.map((h) => String(h.hotelId || '')));
+    const stay = peopleStayWindow(people);
+    const availability = buildRoomAvailability(hotels, allotments, stay);
+    const fromCatalog = [];
+    availability.forEach((entry, hotelId) => {
+      if (!hotelId || shownIds.has(hotelId) || rankedIds.has(hotelId)) return;
+      if ((Number(entry.freeBeds) || 0) <= 0) return;
+      fromCatalog.push(
+        toHotelOption({
+          hotelId,
+          hotelName: entry.hotel?.name,
+          distanceKm: entry.distanceKm,
+          freeBeds: entry.freeBeds
+        })
+      );
+    });
+
+    return [...fromRanked, ...fromCatalog]
+      .filter(Boolean)
+      .sort(
+        (a, b) =>
+          a.distanceKm - b.distanceKm ||
+          String(a.hotelName).localeCompare(String(b.hotelName))
+      );
+  }, [items, ranked, hotels, allotments, people]);
 
   useEffect(() => {
     if (!dragging) setDragOverId('');
   }, [dragging]);
 
-  const peopleKey = people.map((p) => p.id).join('|');
   useEffect(() => {
     setFocusIndex(0);
+    setOtherHotelId('');
   }, [peopleKey]);
+
+  useEffect(() => {
+    setOtherHotelId('');
+  }, [pageIndex]);
 
   useEffect(() => {
     if (focusIndex >= people.length && people.length > 0) {
@@ -74,6 +128,16 @@ export function SuitableHotelsStrip({
   function stepPerson(direction) {
     if (people.length <= 1) return;
     setFocusIndex((prev) => (prev + direction + people.length) % people.length);
+  }
+
+  function pickOtherHotel(hotelId) {
+    const id = String(hotelId || '').trim();
+    setOtherHotelId(id);
+    if (!id || allotBusy) return;
+    const hotel = otherHotels.find((h) => h.hotelId === id);
+    if (!hotel) return;
+    onHotelDrop?.(hotel);
+    setOtherHotelId('');
   }
 
   return (
@@ -120,18 +184,11 @@ export function SuitableHotelsStrip({
             <button
               type="button"
               className="uk-button uk-button-default uk-button-small x-suitable-wait-btn"
-              disabled={allotBusy || !focused}
-              onClick={() => onMoveToWaitList?.(focused)}
+              disabled={allotBusy || people.length === 0}
+              onClick={() => onMoveToWaitList?.(people)}
             >
               Move to Wait List
-            </button>
-            <button
-              type="button"
-              className="uk-button uk-button-default uk-button-small x-suitable-wait-btn"
-              disabled={allotBusy || people.length === 0}
-              onClick={() => onMoveAllToWaitList?.(people)}
-            >
-              Move All ({people.length})
+              {people.length > 1 ? ` (${people.length})` : ''}
             </button>
           </div>
         ) : null}
@@ -163,7 +220,7 @@ export function SuitableHotelsStrip({
         ) : null}
       </div>
 
-      {!items.length ? (
+      {!items.length && !otherHotels.length ? (
         <p className="x-suitable-hotels-empty">
           No open hotel beds available for this selection (reserved hotels are skipped).
         </p>
@@ -175,11 +232,14 @@ export function SuitableHotelsStrip({
             const roomsForHotel = (suggestion?.placements || []).filter(
               (p) => p.hotelId === hotel.hotelId
             );
-            const roomHint = roomsForHotel.length
-              ? [...new Set(roomsForHotel.map((p) => String(p.roomNumber || '')))]
-                  .filter(Boolean)
-                  .map((n) => `Rm ${n}`)
-                  .join(', ')
+            const roomNumbers = [
+              ...new Set(roomsForHotel.map((p) => String(p.roomNumber || '')).filter(Boolean))
+            ];
+            const peopleHere = roomsForHotel.reduce((sum, p) => sum + (p.members?.length || 0), 0);
+            const roomHint = roomNumbers.length
+              ? roomNumbers.length > 1
+                ? `${roomNumbers.length} rooms · ${roomNumbers.map((n) => `Rm ${n}`).join(', ')} · ${peopleHere} ppl`
+                : `Rm ${roomNumbers[0]}${peopleHere ? ` · ${peopleHere} ppl` : ''}`
               : `${hotel.freeBeds} beds free`;
             const isTarget = dragOverId === hotel.hotelId;
             return (
@@ -221,10 +281,37 @@ export function SuitableHotelsStrip({
               </li>
             );
           })}
+          {otherHotels.length > 0 ? (
+            <li className="x-suitable-hotel-more">
+              <label className="x-suitable-hotel-more-card" htmlFor="suitable-other-hotel">
+                <span className="x-suitable-hotel-more-label">Other hotels</span>
+                <select
+                  id="suitable-other-hotel"
+                  className="uk-select uk-form-small x-suitable-hotel-more-select"
+                  value={otherHotelId}
+                  disabled={allotBusy}
+                  aria-label="Choose another hotel not listed above"
+                  onChange={(e) => pickOtherHotel(e.target.value)}
+                >
+                  <option value="">Choose hotel…</option>
+                  {otherHotels.map((hotel) => (
+                    <option key={hotel.hotelId} value={hotel.hotelId}>
+                      {hotel.hotelName}
+                      {Number.isFinite(hotel.distanceKm) && hotel.distanceKm < 900
+                        ? ` · ${hotel.distanceKm} km`
+                        : ''}
+                      {hotel.freeBeds > 0 ? ` · ${hotel.freeBeds} beds` : ''}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </li>
+          ) : null}
         </ul>
       )}
       <p className="x-suitable-hotels-hint">
-        Drag a selected photo tile onto any of the top hotels to allot.
+        Drag a selected photo tile onto a hotel to allot, or pick another hotel at the end of the
+        list. Large families expand across rooms for a tight fill when one room is too small.
       </p>
     </div>
   );

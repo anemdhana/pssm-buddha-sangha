@@ -9,6 +9,7 @@ import {
   registrationLocationShort,
   registrationStayRangeFacets,
   registrationStats,
+  familyStayCohortKey,
   groupTilePeopleByFamily,
   registrationTilePeople,
   removeRegistrationConfirmHtml,
@@ -98,6 +99,92 @@ describe('stayRegistrations', () => {
     expect(families).toHaveLength(1);
     expect(families[0].bookingId).toBe('stay_1');
     expect(families[0].members).toHaveLength(2);
+    expect(families[0].familyLinked).toBe(false);
+  });
+
+  it('prefers guest stay dates over stale family.member dates', () => {
+    const people = registrationTilePeople([
+      {
+        id: 'stay_3',
+        family: {
+          fullName: 'Niraja',
+          stayStartDate: '2026-10-01',
+          stayEndDate: '2026-10-05',
+          members: [
+            {
+              name: 'Niraja member 4',
+              stayStartDate: '2026-10-01',
+              stayEndDate: '2026-10-05'
+            }
+          ]
+        },
+        guests: [
+          {
+            primary: true,
+            name: 'Niraja',
+            stayStartDate: '2026-10-01',
+            stayEndDate: '2026-10-05'
+          },
+          {
+            primary: false,
+            name: 'Niraja member 4',
+            stayStartDate: '2026-10-03',
+            stayEndDate: '2026-10-05'
+          }
+        ]
+      }
+    ]);
+    expect(people[1]).toMatchObject({
+      name: 'Niraja member 4',
+      stayStartDate: '2026-10-03',
+      stayEndDate: '2026-10-05'
+    });
+    expect(filterTilePeople(people, { stayRange: '2026-10-01|2026-10-05' }).map((p) => p.name)).toEqual([
+      'Niraja'
+    ]);
+    expect(filterTilePeople(people, { stayRange: '2026-10-03|2026-10-05' }).map((p) => p.name)).toEqual([
+      'Niraja member 4'
+    ]);
+  });
+
+  it('splits family tiles by stay cohort while keeping booking link', () => {
+    const people = [
+      {
+        id: 'stay_2:primary',
+        bookingId: 'stay_2',
+        name: 'Ravi Kumar',
+        primary: true,
+        stayStartDate: '2026-10-01',
+        stayEndDate: '2026-10-03'
+      },
+      {
+        id: 'stay_2:member:0',
+        bookingId: 'stay_2',
+        name: 'Padma',
+        primary: false,
+        stayStartDate: '2026-10-03',
+        stayEndDate: '2026-10-05'
+      },
+      {
+        id: 'stay_2:member:1',
+        bookingId: 'stay_2',
+        name: 'Ananya',
+        primary: false,
+        stayStartDate: '2026-10-01',
+        stayEndDate: '2026-10-03'
+      }
+    ];
+    expect(familyStayCohortKey(people[0])).toBe('stay_2::2026-10-01|2026-10-03');
+    expect(familyStayCohortKey(people[1])).toBe('stay_2::2026-10-03|2026-10-05');
+    const families = groupTilePeopleByFamily(people);
+    expect(families).toHaveLength(2);
+    expect(families.every((f) => f.bookingId === 'stay_2')).toBe(true);
+    expect(families.every((f) => f.familyLinked)).toBe(true);
+    const early = families.find((f) => f.stayRangeKey === '2026-10-01|2026-10-03');
+    const late = families.find((f) => f.stayRangeKey === '2026-10-03|2026-10-05');
+    expect(early.members.map((m) => m.name).sort()).toEqual(['Ananya', 'Ravi Kumar']);
+    expect(late.members).toHaveLength(1);
+    expect(late.members[0].name).toBe('Padma');
   });
 
   it('formats stay date ranges compactly in start-to-end order', () => {

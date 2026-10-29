@@ -19,6 +19,8 @@ public final class StayAllotmentDtos {
     public static class ReleaseAllotmentsRequest {
         public String eventId;
         public List<GuestDto> members = new ArrayList<>();
+        /** When set, every allotment for these booking ids is cleared (whole family). */
+        public List<String> bookingIds = new ArrayList<>();
     }
 
     public static class PlacementDto {
@@ -41,6 +43,12 @@ public final class StayAllotmentDtos {
         public String gender;
         public String age;
         public String livePhoto;
+        public String idProofPhoto;
+        public String idType;
+        public String stayStartDate;
+        public String stayEndDate;
         public Boolean primary;
+        /** Booking id — needed to match name-only guests when releasing to wait list. */
+        public String bookingId;
     }
 }

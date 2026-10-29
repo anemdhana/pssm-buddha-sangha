@@ -15,7 +15,7 @@ const emptyPage = {
   size: 24,
   totalPages: 0,
   stats: { parties: 0, people: 0, hotels: 0, allotted: 0, checkedIn: 0 },
-  facets: { hotels: [], locations: [] }
+  facets: { hotels: [], locations: [], stayRanges: [] }
 };
 
 function Gate({ title, message, children }) {
@@ -76,6 +76,7 @@ export function StayAllotmentsPage() {
   const [gender, setGender] = useState('');
   const [status, setStatus] = useState('');
   const [location, setLocation] = useState('');
+  const [stayRange, setStayRange] = useState('');
   const [page, setPage] = useState(0);
   const hasLoadedRef = useRef(false);
   const requestIdRef = useRef(0);
@@ -89,12 +90,13 @@ export function StayAllotmentsPage() {
       roomKind ||
       gender ||
       status ||
-      location
+      location ||
+      stayRange
   );
 
   useEffect(() => {
     setPage(0);
-  }, [debouncedQ, hotelId, roomType, roomKind, gender, status, location, picked.id]);
+  }, [debouncedQ, hotelId, roomType, roomKind, gender, status, location, stayRange, picked.id]);
 
   useEffect(() => {
     hasLoadedRef.current = false;
@@ -120,6 +122,7 @@ export function StayAllotmentsPage() {
         gender: gender || undefined,
         status: status || undefined,
         location: location || undefined,
+        stayRange: stayRange || undefined,
         page,
         size: 24
       });
@@ -148,6 +151,7 @@ export function StayAllotmentsPage() {
     gender,
     status,
     location,
+    stayRange,
     page
   ]);
 
@@ -165,6 +169,7 @@ export function StayAllotmentsPage() {
     setGender('');
     setStatus('');
     setLocation('');
+    setStayRange('');
     setPage(0);
   }
 
@@ -262,6 +267,8 @@ export function StayAllotmentsPage() {
               onStatusChange={setStatus}
               location={location}
               onLocationChange={setLocation}
+              stayRange={stayRange}
+              onStayRangeChange={setStayRange}
             />
           ) : null}
         </div>

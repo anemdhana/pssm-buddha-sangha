@@ -51,7 +51,7 @@ export function useEventRegistrations(eventId, enabled, filters = {}) {
     hasLoadedRef.current = false;
   }, [eventId]);
 
-  const refresh = useCallback(async () => {
+  const refresh = useCallback(async (overrides = {}) => {
     if (!enabled || !eventId) {
       setPageData(emptyPage);
       setError('');
@@ -65,16 +65,16 @@ export function useEventRegistrations(eventId, enabled, filters = {}) {
     setError('');
     try {
       const res = await api.listStayBookings(eventId, {
-        q: filters.q || undefined,
-        gender: filters.gender || undefined,
-        ages: filters.ages || undefined,
-        meditation: filters.meditation || undefined,
-        location: filters.location || undefined,
-        stayRange: filters.stayRange || undefined,
-        familySize: filters.familySize || undefined,
-        allotment: filters.allotment || 'wait',
-        page: filters.page ?? 0,
-        size: filters.size ?? 24
+        q: overrides.q ?? filters.q ?? undefined,
+        gender: overrides.gender ?? filters.gender ?? undefined,
+        ages: overrides.ages ?? filters.ages ?? undefined,
+        meditation: overrides.meditation ?? filters.meditation ?? undefined,
+        location: overrides.location ?? filters.location ?? undefined,
+        stayRange: overrides.stayRange ?? filters.stayRange ?? undefined,
+        familySize: overrides.familySize ?? filters.familySize ?? undefined,
+        allotment: overrides.allotment ?? filters.allotment ?? 'wait',
+        page: overrides.page ?? filters.page ?? 0,
+        size: overrides.size ?? filters.size ?? 24
       });
       if (requestId !== requestIdRef.current) return;
       setPageData(normalizePage(res.data));

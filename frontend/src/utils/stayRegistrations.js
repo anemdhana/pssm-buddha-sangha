@@ -190,6 +190,21 @@ export function stayRangeKey(start, end) {
   return `${a}|${b}`;
 }
 
+/** Stay-range key for one tile person (empty when dates missing). */
+export function personStayRangeKey(person) {
+  return stayRangeKey(person?.stayStartDate, person?.stayEndDate);
+}
+
+/**
+ * Cohort identity: one booking + one stay window.
+ * Members with different dates become sibling cards, still sharing bookingId.
+ */
+export function familyStayCohortKey(person) {
+  const bookingId = String(person?.bookingId || '').trim();
+  if (!bookingId) return '';
+  return `${bookingId}::${personStayRangeKey(person) || '_'}`;
+}
+
 /** Compact readable range, e.g. `13–20 Oct 2026` or `13 Oct – 2 Nov 2026`. */
 export function stayRangeLabel(start, end) {
   const rawStart = String(start || '').trim();
@@ -301,6 +316,9 @@ export function registrationTilePeople(bookings) {
     const primaryGuestRow = guests.find((g) => g && g.primary) || guests[0] || null;
     const members = Array.isArray(family.members) ? family.members : [];
 
+    const primaryStayStart = family.stayStartDate || primaryGuestRow?.stayStartDate || '';
+    const primaryStayEnd = family.stayEndDate || primaryGuestRow?.stayEndDate || '';
+
     people.push({
       id: `${booking.id}:primary`,
       bookingId: booking.id,
@@ -308,13 +326,15 @@ export function registrationTilePeople(bookings) {
       name: family.fullName || booking.familyFullName || primaryGuestRow?.name || '—',
       mobile: family.mobile || booking.familyMobile || primaryGuestRow?.mobile || '',
       livePhoto: family.livePhoto || '',
+      idProofPhoto: family.idProofPhoto || '',
+      idType: family.idType || '',
       meditation: family.meditation || '',
       profession: family.profession || '',
       age: family.age || primaryGuestRow?.age || 'adult',
       gender: family.gender || primaryGuestRow?.gender || '',
       place: family.place || bookingPlace,
-      stayStartDate: family.stayStartDate || primaryGuestRow?.stayStartDate || '',
-      stayEndDate: family.stayEndDate || primaryGuestRow?.stayEndDate || '',
+      stayStartDate: primaryStayStart,
+      stayEndDate: primaryStayEnd,
       memberIndex: -1,
       primary: true
     });
@@ -331,13 +351,16 @@ export function registrationTilePeople(bookings) {
         name: member.name || guest?.name || `Family member ${index + 1}`,
         mobile: member.mobile || guest?.mobile || booking.familyMobile || '',
         livePhoto: member.livePhoto || '',
+        idProofPhoto: member.idProofPhoto || '',
+        idType: member.idType || '',
         meditation: member.meditation || '',
         profession: member.profession || '',
         age: member.age || guest?.age || 'adult',
         gender: member.gender || guest?.gender || '',
         place: memberPlace,
-        stayStartDate: member.stayStartDate || guest?.stayStartDate || '',
-        stayEndDate: member.stayEndDate || guest?.stayEndDate || '',
+        // Guests are source of truth after edit; fall back to member form, then primary.
+        stayStartDate: guest?.stayStartDate || member.stayStartDate || primaryStayStart,
+        stayEndDate: guest?.stayEndDate || member.stayEndDate || primaryStayEnd,
         memberIndex: index,
         primary: false
       });
@@ -346,19 +369,50 @@ export function registrationTilePeople(bookings) {
   return people;
 }
 
-/** Group flattened tile people into one family card per booking (order preserved). */
+/**
+ * Group flattened tile people into stay-cohort family cards.
+ * Same booking + same stay dates → one card.
+ * Same booking + different stay dates → sibling cards (familyLinked), still sharing bookingId.
+ */
 export function groupTilePeopleByFamily(people) {
   const map = new Map();
   (Array.isArray(people) ? people : []).forEach((person) => {
     if (!person || !person.bookingId) return;
-    const list = map.get(person.bookingId) || [];
+    const cohortKey = familyStayCohortKey(person);
+    if (!cohortKey) return;
+    const list = map.get(cohortKey) || [];
     list.push(person);
-    map.set(person.bookingId, list);
+    map.set(cohortKey, list);
   });
-  return Array.from(map.entries()).map(([bookingId, members]) => ({
-    bookingId,
-    members
-  }));
+
+  const cohortsPerBooking = new Map();
+  map.forEach((_members, cohortKey) => {
+    const bookingId = String(cohortKey).split('::')[0] || '';
+    if (!bookingId) return;
+    cohortsPerBooking.set(bookingId, (cohortsPerBooking.get(bookingId) || 0) + 1);
+  });
+
+  return Array.from(map.entries()).map(([cohortKey, members]) => {
+    const ordered = [...members];
+    const primary = ordered.find((m) => m.primary) || ordered[0] || {};
+    const bookingId = String(primary.bookingId || cohortKey.split('::')[0] || '');
+    const stayKey = personStayRangeKey(primary);
+    const familyName =
+      String(primary.name || '').trim() ||
+      ordered.map((m) => m?.name).find(Boolean) ||
+      'Family';
+    return {
+      id: cohortKey,
+      bookingId,
+      stayRangeKey: stayKey,
+      stayStartDate: primary.stayStartDate || '',
+      stayEndDate: primary.stayEndDate || '',
+      stayLabel: stayRangeLabel(primary.stayStartDate, primary.stayEndDate),
+      familyName,
+      familyLinked: (cohortsPerBooking.get(bookingId) || 0) > 1,
+      members: ordered
+    };
+  });
 }
 
 /** Unique stay booking ids for selected tile people (one family = one booking). */

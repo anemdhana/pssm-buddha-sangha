@@ -251,9 +251,9 @@ public class StayBookingQueryRepository {
             if (bits.length == 2) {
                 String start = bits[0].trim();
                 String end = bits[1].trim();
+                // Any guest (not only primary) — split-stay members must filter independently.
                 parts.add(Criteria.where("guests").elemMatch(
-                        Criteria.where("primary").is(true)
-                                .and("stayStartDate").is(start)
+                        Criteria.where("stayStartDate").is(start)
                                 .and("stayEndDate").is(end)
                 ));
             }

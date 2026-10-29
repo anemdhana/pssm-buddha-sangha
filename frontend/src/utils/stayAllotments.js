@@ -83,13 +83,19 @@ export function allotmentTilePeople(rows) {
         id: `${row.id}__${index}`,
         allotmentId: row.id,
         bookingId: row.bookingId,
+        guestIndex: primary ? -1 : Math.max(0, index - (guests.some((g) => g?.primary) ? 1 : 0)),
         name: guest?.name || (primary ? row.familyFullName : `Guest ${index + 1}`),
         mobile: guest?.mobile || (primary ? row.familyMobile : ''),
+        familyMobile: row.familyMobile || '',
+        relation: guest?.relation || (primary ? 'Self' : ''),
         gender: guest?.gender || '',
         age: guest?.age || '',
         livePhoto: guest?.livePhoto || '',
+        idProofPhoto: guest?.idProofPhoto || '',
+        idType: guest?.idType || '',
         primary,
         place: row.place,
+        eventName: row.eventName || '',
         hotelId: row.hotelId,
         hotelName: row.hotelName,
         roomNumber: row.roomNumber,
@@ -97,8 +103,10 @@ export function allotmentTilePeople(rows) {
         roomKind: row.roomKind || 'regular',
         status: row.status || 'allotted',
         plan: row.plan === 'paid' ? 'paid' : 'free',
-        checkInDate: row.checkInDate,
-        checkOutDate: row.checkOutDate
+        checkInDate: guest?.stayStartDate || row.checkInDate,
+        checkOutDate: guest?.stayEndDate || row.checkOutDate,
+        stayStartDate: guest?.stayStartDate || row.checkInDate || '',
+        stayEndDate: guest?.stayEndDate || row.checkOutDate || ''
       });
     });
   });

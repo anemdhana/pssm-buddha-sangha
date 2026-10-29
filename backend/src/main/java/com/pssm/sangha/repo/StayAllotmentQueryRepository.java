@@ -32,7 +32,8 @@ public class StayAllotmentQueryRepository {
             String roomKind,
             String gender,
             String status,
-            String location
+            String location,
+            String stayRange
     ) {
     }
 
@@ -148,6 +149,48 @@ public class StayAllotmentQueryRepository {
         return rows;
     }
 
+    /** Stay date chips: people counts by check-in|check-out range. */
+    public List<Map<String, Object>> stayRangeFacets(AllotmentFilters filters) {
+        Criteria criteria = buildCriteria(filters, "stayRange");
+        Aggregation aggregation = Aggregation.newAggregation(
+                Aggregation.match(criteria),
+                Aggregation.project("checkInDate", "checkOutDate")
+                        .and("guests").size().as("guestCount")
+        );
+        AggregationResults<Map> results = mongoTemplate.aggregate(aggregation, StayAllotment.class, Map.class);
+        Map<String, Integer> counts = new LinkedHashMap<>();
+        for (Map raw : results.getMappedResults()) {
+            String start = trim(raw.get("checkInDate"));
+            String end = trim(raw.get("checkOutDate"));
+            if (start.isBlank() || end.isBlank()) {
+                continue;
+            }
+            String key = start + "|" + end;
+            int people = ((Number) raw.getOrDefault("guestCount", 0)).intValue();
+            if (people <= 0) {
+                people = 1;
+            }
+            counts.merge(key, people, Integer::sum);
+        }
+        List<Map<String, Object>> rows = new ArrayList<>();
+        counts.entrySet().stream()
+                .sorted((a, b) -> {
+                    int byKey = a.getKey().compareTo(b.getKey());
+                    return byKey != 0 ? byKey : Integer.compare(b.getValue(), a.getValue());
+                })
+                .forEach(entry -> {
+                    Map<String, Object> row = new LinkedHashMap<>();
+                    String key = entry.getKey();
+                    int pipe = key.indexOf('|');
+                    row.put("key", key);
+                    row.put("start", pipe > 0 ? key.substring(0, pipe) : "");
+                    row.put("end", pipe > 0 ? key.substring(pipe + 1) : "");
+                    row.put("count", entry.getValue());
+                    rows.add(row);
+                });
+        return rows;
+    }
+
     private static String locationLabel(Map raw) {
         String kind = String.valueOf(raw.getOrDefault("kind", "urban")).toLowerCase(Locale.ROOT);
         if ("rural".equals(kind)) {
@@ -216,6 +259,18 @@ public class StayAllotmentQueryRepository {
                     Criteria.where("place.name").regex(pattern),
                     Criteria.where("place.village").regex(pattern)
             ));
+        }
+        if (include(filters.stayRange(), omitField, "stayRange")) {
+            String range = filters.stayRange().trim();
+            int pipe = range.indexOf('|');
+            if (pipe > 0) {
+                String start = range.substring(0, pipe).trim();
+                String end = range.substring(pipe + 1).trim();
+                if (!start.isBlank() && !end.isBlank()) {
+                    parts.add(Criteria.where("checkInDate").is(start));
+                    parts.add(Criteria.where("checkOutDate").is(end));
+                }
+            }
         }
 
         if (parts.size() == 1) {

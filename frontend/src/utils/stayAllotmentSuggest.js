@@ -1,6 +1,7 @@
 import { hotelRoomStats } from './stayHotels.js';
 import {
   ageGroupLabel,
+  familyStayCohortKey,
   registrationLocationShort,
   stayRangeLabel
 } from './stayRegistrations.js';
@@ -242,6 +243,159 @@ function pickBestRoom(rooms, people) {
   return bestScore > -Infinity ? best : null;
 }
 
+function orderMembersForPack(members) {
+  return [...(Array.isArray(members) ? members : [])].sort((a, b) => {
+    if (Number(b?.primary) !== Number(a?.primary)) return Number(b?.primary) - Number(a?.primary);
+    const aSenior = String(a?.age || '').toLowerCase() === 'senior' ? 1 : 0;
+    const bSenior = String(b?.age || '').toLowerCase() === 'senior' ? 1 : 0;
+    if (bSenior !== aSenior) return bSenior - aSenior;
+    return 0;
+  });
+}
+
+function genderPools(people) {
+  const male = [];
+  const female = [];
+  (Array.isArray(people) ? people : []).forEach((person) => {
+    const g = normalizeGender(person?.gender);
+    if (g === 'male') male.push(person);
+    else if (g === 'female') female.push(person);
+  });
+  return { male, female };
+}
+
+/**
+ * Choose k people from remaining that a room can accept (gender / kind rules).
+ * Prefers primary/senior order already present in `remaining`.
+ */
+function selectSubsetForRoom(remaining, k, room) {
+  if (!room || k <= 0 || !Array.isArray(remaining) || remaining.length < k) return null;
+  const kind = room.kind;
+
+  if (kind === 'dormitory' || kind === 'hall') {
+    const { male, female } = genderPools(remaining);
+    const gate = room.genderGate;
+    let pool = [];
+    if (gate === 'male') pool = male;
+    else if (gate === 'female') pool = female;
+    else if (male.length >= k && female.length >= k) pool = male.length >= female.length ? male : female;
+    else if (male.length >= k) pool = male;
+    else if (female.length >= k) pool = female;
+    else return null;
+    if (pool.length < k) return null;
+    return pool.slice(0, k);
+  }
+
+  // Regular: partly filled rooms only take a single gender.
+  if (!room.empty && room.used > 0) {
+    const { male, female } = genderPools(remaining);
+    let pool = [];
+    if (male.length >= k && female.length >= k) pool = male.length >= female.length ? male : female;
+    else if (male.length >= k) pool = male;
+    else if (female.length >= k) pool = female;
+    else return null;
+    return pool.slice(0, k);
+  }
+
+  // Empty regular: mixed OK.
+  return remaining.slice(0, k);
+}
+
+function scoreSplitFill(room, subset) {
+  const score = scoreRoomForParty(room, subset);
+  if (!(score > -Infinity)) return -Infinity;
+  let next = score;
+  const size = subset.length;
+  // Prefer filling a room completely when splitting a large party.
+  if (size === room.free) next += 220;
+  if (room.empty && room.capacity === size) next += 120;
+  next += size * 18;
+  return next;
+}
+
+/**
+ * Fit a party into one or more rooms of a hotel.
+ * Tries a single room first; if the party is larger than any one room,
+ * greedily expands across rooms preferring tight (good) fills.
+ * @returns {{ room: object, members: object[] }[]}
+ */
+export function packPartyIntoRooms(rooms, members) {
+  const people = orderMembersForPack(members);
+  const size = people.length;
+  if (!size) return [];
+
+  const single = pickBestRoom(rooms, people);
+  if (single) return [{ room: single, members: [...people] }];
+
+  const list = Array.isArray(rooms) ? rooms : [];
+  const totalFree = list.reduce((sum, room) => sum + (Number(room?.free) || 0), 0);
+  if (totalFree < size) return [];
+
+  const working = list.map((room) => ({ ...room }));
+  let remaining = [...people];
+  const packs = [];
+
+  while (remaining.length) {
+    let best = null;
+    working.forEach((room, roomIndex) => {
+      if (!room || room.free <= 0) return;
+      const maxTake = Math.min(room.free, remaining.length);
+      for (let k = maxTake; k >= 1; k -= 1) {
+        const subset = selectSubsetForRoom(remaining, k, room);
+        if (!subset) continue;
+        const score = scoreSplitFill(room, subset);
+        if (!(score > -Infinity)) continue;
+        if (!best || score > best.score) {
+          best = { roomIndex, subset, score };
+        }
+        // Largest workable k for this room is enough; other rooms compete on score.
+        break;
+      }
+    });
+    if (!best) return [];
+
+    const room = working[best.roomIndex];
+    packs.push({ room: { ...room }, members: best.subset });
+    const taken = best.subset.length;
+    room.used = (Number(room.used) || 0) + taken;
+    room.free = Math.max(0, (Number(room.capacity) || 0) - room.used);
+    room.empty = room.used === 0;
+
+    const takenIds = new Set(best.subset.map((m) => m.id));
+    remaining = remaining.filter((m) => !takenIds.has(m.id));
+  }
+
+  return packs;
+}
+
+function placementFromPack({ party, hotelId, hotelName, distanceKm, stay, pack, split = false }) {
+  const room = pack.room;
+  const members = pack.members;
+  const usedBefore = Number(room.used) || 0;
+  const freeBefore = Number(room.free) || 0;
+  const size = members.length;
+  return {
+    bookingId: party.bookingId,
+    plan: party.plan,
+    hotelId,
+    hotelName: hotelName || '',
+    distanceKm: distanceKm ?? 0,
+    roomNumber: room.roomNumber,
+    roomType: room.ac ? 'ac' : 'non_ac',
+    roomKind: room.kind,
+    capacity: room.capacity,
+    usedBefore,
+    freeBefore,
+    roomStatusBefore: usedBefore <= 0 ? 'free' : freeBefore > 0 ? 'partial' : 'full',
+    exactMatch: Boolean(usedBefore <= 0 && room.capacity === size),
+    members,
+    placeLabel: party.placeLabel,
+    stayStartDate: stay.start || '',
+    stayEndDate: stay.end || '',
+    splitPart: Boolean(split)
+  };
+}
+
 /**
  * Place selected parties into rooms of one hotel (greedy, most suitable rooms first).
  * Used when dropping people onto any Suitable-hotels card.
@@ -272,34 +426,28 @@ export function suggestPlacementsForHotel({
     const availability = buildRoomAvailability(hotels, allotments, stay, pending);
     const entry = availability.get(hid);
     if (!entry) return;
-    const room = pickBestRoom(entry.rooms, party.members);
-    if (!room) return;
-    const usedBefore = Number(room.used) || 0;
-    placements.push({
-      bookingId: party.bookingId,
-      plan: party.plan,
-      hotelId: hid,
-      hotelName: entry.hotel?.name || '',
-      distanceKm: entry.distanceKm,
-      roomNumber: room.roomNumber,
-      roomType: room.ac ? 'ac' : 'non_ac',
-      roomKind: room.kind,
-      capacity: room.capacity,
-      usedBefore,
-      freeBefore: Number(room.free) || 0,
-      roomStatusBefore: usedBefore <= 0 ? 'free' : room.free > 0 ? 'partial' : 'full',
-      exactMatch: room.empty && room.capacity === party.size,
-      members: party.members,
-      placeLabel: party.placeLabel,
-      stayStartDate: stay.start || '',
-      stayEndDate: stay.end || ''
-    });
-    pending.push({
-      hotelId: hid,
-      roomNumber: room.roomNumber,
-      count: party.size,
-      start: stay.start,
-      end: stay.end
+    const packs = packPartyIntoRooms(entry.rooms, party.members);
+    if (!packs.length) return;
+    const split = packs.length > 1;
+    packs.forEach((pack) => {
+      placements.push(
+        placementFromPack({
+          party,
+          hotelId: hid,
+          hotelName: entry.hotel?.name || '',
+          distanceKm: entry.distanceKm,
+          stay,
+          pack,
+          split
+        })
+      );
+      pending.push({
+        hotelId: hid,
+        roomNumber: pack.room.roomNumber,
+        count: pack.members.length,
+        start: stay.start,
+        end: stay.end
+      });
     });
   });
   return placements;
@@ -410,23 +558,26 @@ function applyPlacement(byHotel, hotelId, roomNumber, count) {
 }
 
 /**
- * Group selected tile people into parties (one per booking), primary first.
+ * Group selected tile people into stay-cohort parties (bookingId + stay dates), primary first.
+ * Different stay dates in the same booking become separate parties so beds use the correct window.
  */
 export function partiesFromSelectedPeople(selectedIds, people) {
   const idSet = selectedIds instanceof Set ? selectedIds : new Set(selectedIds || []);
   const map = new Map();
   (Array.isArray(people) ? people : []).forEach((person) => {
     if (!person || !idSet.has(person.id) || !person.bookingId) return;
-    const list = map.get(person.bookingId) || [];
+    const cohortKey = familyStayCohortKey(person);
+    if (!cohortKey) return;
+    const list = map.get(cohortKey) || [];
     list.push(person);
-    map.set(person.bookingId, list);
+    map.set(cohortKey, list);
   });
-  return Array.from(map.entries()).map(([bookingId, members]) => {
+  return Array.from(map.entries()).map(([_cohortKey, members]) => {
     const ordered = [...members].sort((a, b) => Number(b.primary) - Number(a.primary));
     const primary = ordered.find((m) => m.primary) || ordered[0];
     const stay = peopleStayWindow(ordered);
     return {
-      bookingId,
+      bookingId: primary?.bookingId || '',
       plan: primary?.plan === 'paid' ? 'paid' : 'free',
       placeLabel: registrationLocationShort(primary?.place),
       members: ordered,
@@ -444,12 +595,17 @@ function hotelScore(entry, parties, eventLocationLabel = '') {
   const anyNeedsClose = parties.some((p) => p.needsClose);
   if (anyNeedsClose) score -= entry.distanceKm * 40;
 
-  // Prefer hotels that can host at least one party
+  // Prefer hotels that can host at least one party (single or multi-room pack)
   let canHost = 0;
+  let multiRoomHost = 0;
   parties.forEach((party) => {
-    if (pickBestRoom(entry.rooms, party.members)) canHost += 1;
+    const packs = packPartyIntoRooms(entry.rooms, party.members);
+    if (!packs.length) return;
+    canHost += 1;
+    if (packs.length > 1) multiRoomHost += 1;
   });
   score += canHost * 120;
+  score += multiRoomHost * 40;
   score += Math.min(entry.freeBeds, 40) * 2;
 
   if (eventLocationLabel) {
@@ -544,34 +700,28 @@ export function suggestHotelsForSelection({
     for (const h of hotelOrder) {
       const entry = partyAvailability.get(h.hotelId);
       if (!entry) continue;
-      const room = pickBestRoom(entry.rooms, party.members);
-      if (!room) continue;
-      const usedBefore = Number(room.used) || 0;
-      placements.push({
-        bookingId: party.bookingId,
-        plan: party.plan,
-        hotelId: h.hotelId,
-        hotelName: h.hotelName,
-        distanceKm: h.distanceKm,
-        roomNumber: room.roomNumber,
-        roomType: room.ac ? 'ac' : 'non_ac',
-        roomKind: room.kind,
-        capacity: room.capacity,
-        usedBefore,
-        freeBefore: Number(room.free) || 0,
-        roomStatusBefore: usedBefore <= 0 ? 'free' : room.free > 0 ? 'partial' : 'full',
-        exactMatch: room.empty && room.capacity === party.size,
-        members: party.members,
-        placeLabel: party.placeLabel,
-        stayStartDate: stay.start || '',
-        stayEndDate: stay.end || ''
-      });
-      pending.push({
-        hotelId: h.hotelId,
-        roomNumber: room.roomNumber,
-        count: party.size,
-        start: stay.start,
-        end: stay.end
+      const packs = packPartyIntoRooms(entry.rooms, party.members);
+      if (!packs.length) continue;
+      const split = packs.length > 1;
+      packs.forEach((pack) => {
+        placements.push(
+          placementFromPack({
+            party,
+            hotelId: h.hotelId,
+            hotelName: h.hotelName,
+            distanceKm: h.distanceKm,
+            stay,
+            pack,
+            split
+          })
+        );
+        pending.push({
+          hotelId: h.hotelId,
+          roomNumber: pack.room.roomNumber,
+          count: pack.members.length,
+          start: stay.start,
+          end: stay.end
+        });
       });
       placed = true;
       break;

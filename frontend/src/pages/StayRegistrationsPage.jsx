@@ -15,7 +15,7 @@ import {
 } from '../utils/stayAllotmentSuggest.js';
 import { fetchAllStayAllotments } from '../utils/stayAllotments.js';
 import { applySelectedRegistrationRemovals } from '../utils/stayRegistrationRemove.js';
-import { registrationTilePeople } from '../utils/stayRegistrations.js';
+import { filterTilePeople, registrationTilePeople } from '../utils/stayRegistrations.js';
 import { uikitDialogChoice } from '../utils/uikitDialog.js';
 
 function Gate({ title, message, children }) {
@@ -93,7 +93,13 @@ export function StayRegistrationsPage() {
       size: 24
     });
 
-  const allPeople = useMemo(() => registrationTilePeople(rows), [rows]);
+  const allPeople = useMemo(() => {
+    const people = registrationTilePeople(rows);
+    // Server returns whole bookings that contain a matching guest; keep only people
+    // whose own stay dates match the selected stay filter (split-stay siblings).
+    if (!stayRange) return people;
+    return filterTilePeople(people, { stayRange });
+  }, [rows, stayRange]);
   const selectedPeople = useMemo(
     () => allPeople.filter((p) => p && selectedIds.has(p.id)),
     [allPeople, selectedIds]
@@ -218,7 +224,8 @@ export function StayRegistrationsPage() {
       .map((p) => ({
         name: p.name || '',
         mobile: p.mobile || '',
-        primary: Boolean(p.primary)
+        primary: Boolean(p.primary),
+        bookingId: p.bookingId || ''
       }));
   }
 
@@ -228,9 +235,14 @@ export function StayRegistrationsPage() {
     setAllotBusy(true);
     setActionError('');
     try {
+      const bookingIds = [
+        ...new Set(list.map((p) => String(p.bookingId || '').trim()).filter(Boolean))
+      ];
       const res = await api.releaseStayAllotments({
         eventId: picked.id,
-        members: membersPayload(list)
+        members: membersPayload(list),
+        // Clear whole-family allotments so wait-list stats/tiles update immediately.
+        bookingIds
       });
       const released = Number(res?.data?.released) || 0;
       if (clearSelection) setSelectedIds(new Set());
@@ -241,8 +253,14 @@ export function StayRegistrationsPage() {
           return next;
         });
       }
+      // Return to wait-list view so released families are visible after refresh.
+      // Pass allotment:'wait' explicitly — setState has not flipped yet in this tick.
+      const nextAllotment = released > 0 ? 'wait' : showOnlyAllotted ? 'allotted' : 'wait';
+      if (released > 0 && showOnlyAllotted) {
+        setShowOnlyAllotted(false);
+      }
       await loadHotelsAndAllotments();
-      await refresh();
+      await refresh({ allotment: nextAllotment });
       if (window.UIkit) {
         window.UIkit.notification({
           message:
@@ -269,12 +287,7 @@ export function StayRegistrationsPage() {
     }
   }
 
-  async function moveFocusedToWaitList(person) {
-    if (!person) return;
-    await releasePeopleToWaitList([person]);
-  }
-
-  async function moveAllSelectedToWaitList(people) {
+  async function moveSelectedToWaitList(people) {
     const list = Array.isArray(people) ? people.filter(Boolean) : [];
     if (!list.length) return;
     const names = list
@@ -340,6 +353,8 @@ export function StayRegistrationsPage() {
           roomNumber: p.roomNumber,
           roomType: p.roomType,
           roomKind: p.roomKind,
+          checkInDate: p.stayStartDate || p.checkInDate || '',
+          checkOutDate: p.stayEndDate || p.checkOutDate || '',
           place: p.members?.[0]?.place || {},
           members: (p.members || []).map((m) => ({
             name: m.name,
@@ -348,6 +363,10 @@ export function StayRegistrationsPage() {
             gender: m.gender,
             age: m.age,
             livePhoto: m.livePhoto || '',
+            idProofPhoto: m.idProofPhoto || '',
+            idType: m.idType || '',
+            stayStartDate: m.stayStartDate || p.stayStartDate || '',
+            stayEndDate: m.stayEndDate || p.stayEndDate || '',
             primary: Boolean(m.primary)
           }))
         }))
@@ -524,6 +543,8 @@ export function StayRegistrationsPage() {
           {!loading && !emptyUnfiltered && selectedIds.size > 0 ? (
             <SuitableHotelsStrip
               suggestion={suggestion}
+              hotels={hotels}
+              allotments={allotments}
               pageIndex={hotelPage}
               onPageChange={setHotelPage}
               onHotelDrop={confirmAllotment}
@@ -531,8 +552,7 @@ export function StayRegistrationsPage() {
               selectedCount={selectedIds.size}
               dragging={peopleDragging}
               selectedPeople={selectedPeople}
-              onMoveToWaitList={moveFocusedToWaitList}
-              onMoveAllToWaitList={moveAllSelectedToWaitList}
+              onMoveToWaitList={moveSelectedToWaitList}
             />
           ) : null}
         </div>

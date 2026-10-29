@@ -37,6 +37,9 @@ const ALLOT_DRAG_MIME = 'application/x-pssm-allot-people';
 
 function FamilyInterestTile({
   members,
+  familyLinked = false,
+  familyName = '',
+  stayLabel = '',
   selectedIds,
   selectedCount = 0,
   allotBusy = false,
@@ -199,6 +202,15 @@ function FamilyInterestTile({
         Edit
       </Link>
 
+      {familyLinked ? (
+        <span
+          className="x-interest-tile-family-link"
+          title={`Same registration as ${familyName || 'family'} · different stay dates`}
+        >
+          Same family
+        </span>
+      ) : null}
+
       <div
         className="x-interest-tile-hit"
         role="button"
@@ -222,6 +234,7 @@ function FamilyInterestTile({
           )}
           <div className="x-interest-tile-overlay">
             <span className="x-interest-tile-name">{person.name}</span>
+            {stayLabel ? <span className="x-interest-tile-meta">{stayLabel}</span> : null}
             <span className="x-interest-tile-meta">{location}</span>
             <span className="x-interest-tile-meta">{profession}</span>
             <span className="x-interest-tile-meta">{meditation}</span>
@@ -547,9 +560,12 @@ export function RegistrationsTiles({
           <>
             <div className="x-interest-tiles" role="list">
               {families.map((family) => (
-                <div key={family.bookingId} role="listitem">
+                <div key={family.id || `${family.bookingId}::${family.stayRangeKey || '_'}`} role="listitem">
                   <FamilyInterestTile
                     members={family.members}
+                    familyLinked={Boolean(family.familyLinked)}
+                    familyName={family.familyName || ''}
+                    stayLabel={family.stayLabel || ''}
                     selectedIds={selected}
                     selectedCount={selectedCount}
                     allotBusy={allotBusy}
