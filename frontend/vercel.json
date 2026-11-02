@@ -2,7 +2,7 @@
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "https://BACKEND_HOST_PLACEHOLDER/api/:path*"
+      "destination": "https://pssm-buddha-sangha.onrender.com/api/:path*"
     },
     {
       "source": "/((?!api/).*)",
