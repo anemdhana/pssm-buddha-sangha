@@ -2078,6 +2078,12 @@ button.x-role-chip {
     border-color: #f3b4b4;
 }
 
+.x-capacity-night-list {
+    max-height: 220px;
+    overflow: auto;
+    margin-bottom: 12px;
+}
+
 .x-suitable-hotels {
     margin-top: 16px;
     padding: 12px;

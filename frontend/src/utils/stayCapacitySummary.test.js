@@ -3,6 +3,7 @@ import {
   eachStayNight,
   formatStayCapacityButtonLabel,
   mergeStayRangeFacets,
+  suggestHotelsToCoverRegistrations,
   summarizeRegistrationCapacity
 } from './stayCapacitySummary.js';
 
@@ -59,6 +60,11 @@ describe('stayCapacitySummary', () => {
     expect(summary.peakNight).toBe('2026-10-02');
     expect(summary.sufficient).toBe(false);
     expect(summary.shortfall).toBe(3);
+    expect(summary.nightlyDemand).toEqual([
+      { night: '2026-10-01', people: 5, shortfall: 0, covered: true },
+      { night: '2026-10-02', people: 9, shortfall: 3, covered: false },
+      { night: '2026-10-03', people: 4, shortfall: 0, covered: true }
+    ]);
     expect(formatStayCapacityButtonLabel(summary)).toContain('Need 3 beds');
   });
 
@@ -78,5 +84,56 @@ describe('stayCapacitySummary', () => {
     expect(summary.sufficient).toBe(true);
     expect(summary.shortfall).toBe(0);
     expect(formatStayCapacityButtonLabel(summary)).toContain('Capacity OK');
+  });
+
+  it('suggests a compact hotel set to keep active for peak demand', () => {
+    const hotels = [
+      {
+        id: 'far_big',
+        name: 'Far Big',
+        distanceKm: 5,
+        active: true,
+        reserved: false,
+        rooms: [{ capacity: 20 }]
+      },
+      {
+        id: 'near_small',
+        name: 'Near Small',
+        distanceKm: 0.5,
+        active: false,
+        reserved: false,
+        rooms: [{ capacity: 4 }]
+      },
+      {
+        id: 'near_mid',
+        name: 'Near Mid',
+        distanceKm: 1,
+        active: true,
+        reserved: false,
+        rooms: [{ capacity: 6 }]
+      },
+      {
+        id: 'reserved',
+        name: 'Reserved',
+        distanceKm: 0.2,
+        active: true,
+        reserved: true,
+        rooms: [{ capacity: 50 }]
+      }
+    ];
+    const allotments = [
+      { hotelId: 'near_mid', personCount: 3 },
+      { hotelId: 'far_big', personCount: 1 }
+    ];
+    const plan = suggestHotelsToCoverRegistrations({
+      hotels,
+      peakPeople: 8,
+      allotments
+    });
+    // Prefers allotted + nearer: near_mid (6) then near_small (4) covers 8 without far_big.
+    expect(plan.suggested.map((h) => h.hotelId)).toEqual(['near_mid', 'near_small']);
+    expect(plan.coversPeak).toBe(true);
+    expect(plan.activate.map((h) => h.hotelId)).toEqual(['near_small']);
+    expect(plan.deactivate.map((h) => h.hotelId)).toEqual(['far_big']);
   });
 });

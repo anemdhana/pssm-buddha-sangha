@@ -161,13 +161,15 @@ export function StayRegistrationsPage() {
     () =>
       summarizeRegistrationCapacity({
         hotels,
-        stayRanges: stayRangesAll
+        stayRanges: stayRangesAll,
+        allotments
       }),
-    [hotels, stayRangesAll]
+    [hotels, stayRangesAll, allotments]
   );
 
   function openCapacitySummary() {
     const s = capacitySummary;
+    const plan = s.hotelPlan || {};
     const peakLabel = s.peakNight
       ? new Date(`${s.peakNight}T00:00:00`).toLocaleDateString(undefined, {
           day: 'numeric',
@@ -175,20 +177,45 @@ export function StayRegistrationsPage() {
           year: 'numeric'
         })
       : '—';
-    const busyRows = (s.busiestNights || [])
+    const nightRows = (s.nightlyDemand || [])
       .map((row) => {
         const label = new Date(`${row.night}T00:00:00`).toLocaleDateString(undefined, {
+          weekday: 'short',
           day: 'numeric',
           month: 'short'
         });
-        return `<li><strong>${label}</strong> — ${row.people} people</li>`;
+        const gap =
+          row.shortfall > 0
+            ? ` · <span class="uk-text-danger">short ${row.shortfall}</span>`
+            : ` · <span class="uk-text-success">ok</span>`;
+        const peakMark = row.night === s.peakNight ? ' · peak' : '';
+        return (
+          `<li><strong>${label}</strong> — <strong>${row.people}</strong> beds needed` +
+          ` / ${s.openBeds} open${gap}${peakMark}</li>`
+        );
       })
       .join('');
+    const suggestRows = (plan.suggested || [])
+      .map((hotel) => {
+        const state = hotel.active ? 'active' : 'activate';
+        const allotted =
+          hotel.allottedPeople > 0 ? ` · ${hotel.allottedPeople} already allotted` : '';
+        return (
+          `<li><strong>${hotel.hotelName}</strong> — ${hotel.beds} beds · ${hotel.distanceKm} km` +
+          ` · <em>${state}</em>${allotted}</li>`
+        );
+      })
+      .join('');
+    const activateNames = (plan.activate || []).map((h) => h.hotelName).join(', ');
+    const deactivateNames = (plan.deactivate || []).map((h) => h.hotelName).join(', ');
     const statusLine = s.sufficient
       ? `<p class="uk-text-success"><strong>Open hotel beds can cover the peak night.</strong></p>`
       : `<p class="uk-text-danger"><strong>Short by ${s.shortfall} bed${
           s.shortfall === 1 ? '' : 's'
-        } on the busiest night.</strong></p>`;
+        } on the busiest night among currently active hotels.</strong></p>`;
+    const planStatus = plan.coversPeak
+      ? `<p class="uk-text-success"><strong>Suggested hotels cover peak ${plan.peakPeople} with ${plan.suggestedBeds} beds.</strong></p>`
+      : `<p class="uk-text-danger"><strong>Even with inactive hotels, still short ${plan.shortfall} beds.</strong></p>`;
     const html =
       `<h3 class="uk-modal-title">Hotel capacity vs registrations</h3>` +
       statusLine +
@@ -200,12 +227,34 @@ export function StayRegistrationsPage() {
         : '') +
       `<li>Peak night: <strong>${peakLabel}</strong> — <strong>${s.peakPeople}</strong> people / <strong>${s.openBeds}</strong> beds</li>` +
       `</ul>` +
-      (busyRows
-        ? `<p class="uk-text-meta uk-margin-small-bottom">Busiest nights</p><ul class="uk-list uk-list-bullet">${busyRows}</ul>`
+      (nightRows
+        ? `<p class="uk-text-meta uk-margin-small-bottom">Beds needed each night</p><ul class="uk-list uk-list-divider x-capacity-night-list">${nightRows}</ul>`
         : `<p class="uk-text-meta">No stay dates on registrations yet.</p>`) +
+      `<hr class="uk-divider-icon">` +
+      `<h4 class="uk-heading-bullet">Hotels to keep active</h4>` +
+      planStatus +
+      (suggestRows
+        ? `<ul class="uk-list uk-list-striped">${suggestRows}</ul>`
+        : `<p class="uk-text-meta">No hotel suggestion yet.</p>`) +
+      (activateNames
+        ? `<p><strong>Turn on:</strong> ${activateNames}</p>`
+        : '') +
+      (deactivateNames
+        ? `<p><strong>Can turn off:</strong> ${deactivateNames}</p>`
+        : '') +
+      `<p class="uk-text-meta">Suggestion prefers hotels that already have allotments, then nearer hotels. Reserved hotels are skipped. Adjust Active on the Hotels page.</p>` +
       `<p class="uk-text-meta">Uses each person’s stay nights [check-in → check-out). Same-day checkout frees the bed that night.</p>`;
-    return uikitDialogChoice(html, [{ id: 'ok', label: 'OK', buttonClass: 'uk-button-primary' }], {
-      cancelLabel: 'Close'
+    return uikitDialogChoice(
+      html,
+      [
+        { id: 'hotels', label: 'Open Hotels', buttonClass: 'uk-button-primary' },
+        { id: 'ok', label: 'OK', buttonClass: 'uk-button-default' }
+      ],
+      { cancelLabel: 'Close' }
+    ).then((choice) => {
+      if (choice === 'hotels') {
+        window.location.assign('/stay/hotels');
+      }
     });
   }
 

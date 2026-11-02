@@ -1,5 +1,10 @@
-import { hotelStats } from './stayHotels.js';
+import { hotelRoomStats, hotelStats } from './stayHotels.js';
 import { parseStayDay } from './stayAllotmentSuggest.js';
+
+function allotmentPeopleCount(row) {
+  if (row?.personCount != null) return Math.max(0, Number(row.personCount) || 0);
+  return Array.isArray(row?.guests) ? row.guests.length : 0;
+}
 
 /** Add N calendar days to a YYYY-MM-DD string (UTC date math). */
 export function addStayDays(day, days) {
@@ -48,10 +53,86 @@ export function mergeStayRangeFacets(...lists) {
 }
 
 /**
+ * Pick a compact non-reserved hotel set whose beds cover peak nightly demand.
+ * Prefers hotels that already have allotments, then nearer, then larger capacity.
+ * Includes inactive hotels so the UI can recommend activating them.
+ */
+export function suggestHotelsToCoverRegistrations({
+  hotels,
+  peakPeople = 0,
+  allotments = []
+} = {}) {
+  const need = Math.max(0, Number(peakPeople) || 0);
+  const allottedByHotel = new Map();
+  (Array.isArray(allotments) ? allotments : []).forEach((row) => {
+    if (!row) return;
+    const id = String(row.hotelId || '');
+    if (!id) return;
+    allottedByHotel.set(id, (allottedByHotel.get(id) || 0) + allotmentPeopleCount(row));
+  });
+
+  const candidates = (Array.isArray(hotels) ? hotels : [])
+    .filter((hotel) => hotel && hotel.reserved !== true)
+    .map((hotel) => {
+      const beds = hotelRoomStats(hotel).capacity;
+      const distanceKm = Number(hotel.distanceKm) >= 0 ? Number(hotel.distanceKm) : 999;
+      const hotelId = String(hotel.id || '');
+      return {
+        hotelId,
+        hotelName: hotel.name || 'Hotel',
+        beds,
+        distanceKm,
+        allottedPeople: allottedByHotel.get(hotelId) || 0,
+        active: hotel.active !== false
+      };
+    })
+    .filter((row) => row.hotelId && row.beds > 0)
+    .sort((a, b) => {
+      const scoreOf = (hotel) =>
+        hotel.allottedPeople * 50 -
+        hotel.distanceKm * 20 +
+        Math.min(hotel.beds, need || hotel.beds) * 2;
+      return (
+        scoreOf(b) - scoreOf(a) ||
+        a.distanceKm - b.distanceKm ||
+        b.beds - a.beds ||
+        String(a.hotelName).localeCompare(String(b.hotelName))
+      );
+    });
+
+  const suggested = [];
+  let suggestedBeds = 0;
+  if (need > 0) {
+    for (const hotel of candidates) {
+      if (suggestedBeds >= need) break;
+      suggested.push(hotel);
+      suggestedBeds += hotel.beds;
+    }
+  }
+
+  const suggestedIds = new Set(suggested.map((h) => h.hotelId));
+  const activate = suggested.filter((h) => !h.active);
+  const deactivate = candidates.filter((h) => h.active && !suggestedIds.has(h.hotelId));
+  const availableBeds = candidates.reduce((sum, h) => sum + h.beds, 0);
+
+  return {
+    suggested,
+    suggestedBeds,
+    availableBeds,
+    peakPeople: need,
+    coversPeak: need <= 0 ? true : suggestedBeds >= need,
+    shortfall: Math.max(0, need - suggestedBeds),
+    activate,
+    deactivate,
+    candidateCount: candidates.length
+  };
+}
+
+/**
  * Peak nightly bed demand from stay-range people counts vs open (non-reserved) hotel beds.
  * Stay ranges use the same half-open nights as allotment overlap: [start, end).
  */
-export function summarizeRegistrationCapacity({ hotels, stayRanges } = {}) {
+export function summarizeRegistrationCapacity({ hotels, stayRanges, allotments = [] } = {}) {
   const inventory = hotelStats(hotels);
   const ranges = Array.isArray(stayRanges) ? stayRanges : [];
   const demandByNight = new Map();
@@ -80,10 +161,24 @@ export function summarizeRegistrationCapacity({ hotels, stayRanges } = {}) {
   const shortfall = Math.max(0, peakPeople - openBeds);
   const sufficient = peakPeople <= openBeds;
 
-  const busiestNights = Array.from(demandByNight.entries())
-    .map(([night, people]) => ({ night, people }))
+  const nightlyDemand = Array.from(demandByNight.entries())
+    .map(([night, people]) => ({
+      night,
+      people,
+      shortfall: Math.max(0, people - openBeds),
+      covered: people <= openBeds
+    }))
+    .sort((a, b) => a.night.localeCompare(b.night));
+
+  const busiestNights = [...nightlyDemand]
     .sort((a, b) => b.people - a.people || a.night.localeCompare(b.night))
     .slice(0, 5);
+
+  const hotelPlan = suggestHotelsToCoverRegistrations({
+    hotels,
+    peakPeople,
+    allotments
+  });
 
   return {
     sufficient,
@@ -97,7 +192,9 @@ export function summarizeRegistrationCapacity({ hotels, stayRanges } = {}) {
     reservedBeds: inventory.reservedBeds,
     activeHotels: inventory.active,
     rangeCount: ranges.length,
-    busiestNights
+    nightlyDemand,
+    busiestNights,
+    hotelPlan
   };
 }
 
