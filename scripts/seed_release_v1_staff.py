@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 """
-Bootstrap release-v1 staff only (no sample events / bookings / hotels / demo people).
+Bootstrap release-v1: staff + one event (no hotels / registrations / demo people).
 
 Creates:
   PSSM Admin              7093405071 / Srini0101
   Accommodation Volunteer 9966362691 / Meena1005
+  Event                   Patriji Dhayana Mahayagam - 5 (2026-12-21 … 2026-12-31)
 
 Usage:
   python scripts/seed_release_v1_staff.py
@@ -15,6 +16,7 @@ from __future__ import annotations
 
 import argparse
 import sys
+from datetime import date, datetime, timezone
 from pathlib import Path
 
 try:
@@ -27,9 +29,13 @@ SCRIPTS = Path(__file__).resolve().parent
 if str(SCRIPTS) not in sys.path:
     sys.path.insert(0, str(SCRIPTS))
 
-from sangha_mongo_common import composed_password, connect, upsert_person
+from sangha_mongo_common import composed_password, connect, upsert_person, utc_now
 
 SEED_SOURCE = "release_v1"
+EVT_ID = "evt_patriji_dhayana_mahayagam_5"
+EVT_NAME = "Patriji Dhayana Mahayagam - 5"
+EVT_START = date(2026, 12, 21)
+EVT_END = date(2026, 12, 31)
 
 STAFF = [
     {
@@ -120,8 +126,32 @@ def seed_staff(db) -> None:
         )
 
 
+def seed_event(db) -> None:
+    print("\nSeeding release-v1 event…")
+    # Wipe any other events so the header only shows this one.
+    removed = db["events"].delete_many({"_id": {"$ne": EVT_ID}})
+    if removed.deleted_count:
+        print(f"  Removed {removed.deleted_count} other event(s)")
+    event = {
+        "_id": EVT_ID,
+        "name": EVT_NAME,
+        "startDate": datetime(EVT_START.year, EVT_START.month, EVT_START.day, tzinfo=timezone.utc),
+        "endDate": datetime(EVT_END.year, EVT_END.month, EVT_END.day, tzinfo=timezone.utc),
+        "location": "Santh Kabir Das Pyramid Centre, Hyderabad",
+        "expectedBudgetInr": 0,
+        "meditationHoursPerDay": 6.0,
+        "createdBy": "7093405071",
+        "createdAt": utc_now(),
+        "seedSource": SEED_SOURCE,
+    }
+    db["events"].replace_one({"_id": EVT_ID}, event, upsert=True)
+    print(f"  {EVT_ID}: {EVT_NAME}  ({EVT_START.isoformat()} – {EVT_END.isoformat()})")
+
+
 def parse_args():
-    p = argparse.ArgumentParser(description="Seed release-v1 staff only (no sample data)")
+    p = argparse.ArgumentParser(
+        description="Seed release-v1 staff + Patriji Dhayana Mahayagam - 5 event"
+    )
     p.add_argument("--uri", default="mongodb://localhost:27017/?replicaSet=rs0")
     p.add_argument("--database", default="pssm_sangha")
     p.add_argument(
@@ -132,7 +162,7 @@ def parse_args():
     p.add_argument(
         "--no-clear",
         action="store_true",
-        help="Only upsert staff; do not wipe events/bookings/hotels/people",
+        help="Only upsert staff + event; do not wipe bookings/hotels/other people",
     )
     return p.parse_args()
 
@@ -146,6 +176,7 @@ def main() -> int:
         if not args.no_clear:
             clear_sample_data(db, keep_places=args.keep_places)
         seed_staff(db)
+        seed_event(db)
     except PyMongoError as exc:
         print(f"MongoDB error: {exc}", file=sys.stderr)
         print("Is Mongo running? Try: docker compose up -d mongo", file=sys.stderr)
@@ -155,14 +186,18 @@ def main() -> int:
         return 1
 
     print(
-        """
-Done. Clean DB ready for release-v1.
+        f"""
+Done. release-v1 ready.
 
 Logins (password = up to 5 letters of name + DDMM):
   7093405071 / Srini0101     PSSM Admin
   9966362691 / Meena1005     Accommodation Volunteer
 
-Create a new event in the UI, add hotels, then register people.
+Event:
+  {EVT_NAME}
+  {EVT_START.isoformat()} – {EVT_END.isoformat()}
+
+Next: add hotels in the UI, then register people.
 """
     )
     return 0
