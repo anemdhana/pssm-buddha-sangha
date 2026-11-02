@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: pssm-buddha-sangha-api
+    runtime: docker
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    plan: free
+    healthCheckPath: /api/v1/places?kind=urban&limit=1
+    envVars:
+      - key: SERVER_PORT
+        value: "8080"
+      - key: COOKIE_SECURE
+        value: "true"
+      - key: MONGODB_URI
+        sync: false
+      - key: PSSM_CORS_ORIGINS
+        sync: false

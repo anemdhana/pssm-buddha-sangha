@@ -25,21 +25,21 @@ const ALLOTMENTS_SEED_KEY = 'pssm_stay_allotments_seed';
 const ALLOTMENTS_SEED_VERSION = '2';
 
 const SAMPLE_ADMIN = {
-  fullName: 'Srinivasa Rao',
-  mobile: '7093405071',
-  email: 'srinivasa@pssm.example',
+  fullName: 'Dhana kumar A',
+  mobile: '9445560075',
+  email: 'dhana.anem@gmail.com',
   gender: 'male',
   age: 'adult',
-  meditation: '6',
-  profession: 'Administrator',
-  birthDate: '01',
-  birthMonth: '01',
-  language: 'Telugu',
-  pyramidCenter: 'Santh Kabir Das Pyramid Centre',
-  sinceYear: '2010',
-  place: { kind: 'urban', city: 'Hyderabad', state: 'Telangana', country: 'India' },
+  meditation: '5',
+  profession: 'IT',
+  birthDate: '14',
+  birthMonth: '05',
+  language: 'Tamil',
+  pyramidCenter: '',
+  sinceYear: '2021',
+  place: { kind: 'urban', city: 'Chennai', state: 'Tamil Nadu', country: 'India' },
   members: [],
-  roles: ['pssm_admin']
+  roles: ['pssm_admin', 'event_organizer']
 };
 
 const SAMPLE_PEOPLE = [
@@ -1027,9 +1027,9 @@ function normalizeHotelPayload(payload, { id, createdBy, createdAt, eventId: eve
 }
 
 function ensureSampleAdmin() {
-  const admin = { ...SAMPLE_ADMIN, roles: ['pssm_admin'] };
+  const admin = { ...SAMPLE_ADMIN, roles: ['pssm_admin', 'event_organizer'] };
   upsertPerson(admin);
-  writeRolesForMobile(admin.mobile, ['pssm_admin']);
+  writeRolesForMobile(admin.mobile, ['pssm_admin', 'event_organizer']);
   SAMPLE_PEOPLE.forEach((person) => {
     const digits = normalizeMobile(person.mobile);
     if (!findPerson(digits)) {

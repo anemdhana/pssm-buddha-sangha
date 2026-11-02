@@ -79,9 +79,18 @@ Role-gated:
 
 ## Demo logins (from seed)
 
+### release-v1 (lean staff)
+
 | Mobile | Password | Roles |
 | --- | --- | --- |
-| `7093405071` | `Srini0101` | PSSM Admin |
+| `9445560075` | `Dhana1405` | PSSM Admin + Event Organizer |
+| `9966362691` | `Meena1005` | Accommodation Volunteer |
+
+### Full sample seed
+
+| Mobile | Password | Roles |
+| --- | --- | --- |
+| `9445560075` | `Dhana1405` | PSSM Admin + Event Organizer |
 | `9246470416` | `Chait1508` | Event Organizer |
 | `9966362691` | `Meena1005` | Accommodation Volunteer + PMMA |
 | `7780254680` | `Subha1402` | Accommodation Admin |

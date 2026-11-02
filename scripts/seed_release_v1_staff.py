@@ -3,18 +3,20 @@
 Bootstrap release-v1: staff + one event (no hotels / registrations / demo people).
 
 Creates:
-  PSSM Admin              7093405071 / Srini0101
+  PSSM Admin + Event Org  9445560075 / Dhana1405
   Accommodation Volunteer 9966362691 / Meena1005
   Event                   Patriji Dhayana Mahayagam - 5 (2026-12-21 … 2026-12-31)
 
 Usage:
   python scripts/seed_release_v1_staff.py
   python scripts/seed_release_v1_staff.py --keep-places
+  python scripts/seed_release_v1_staff.py --no-clear
 """
 
 from __future__ import annotations
 
 import argparse
+import base64
 import sys
 from datetime import date, datetime, timezone
 from pathlib import Path
@@ -37,31 +39,42 @@ EVT_NAME = "Patriji Dhayana Mahayagam - 5"
 EVT_START = date(2026, 12, 21)
 EVT_END = date(2026, 12, 31)
 
+# Prior release admin — always removed when seeding.
+LEGACY_ADMIN_MOBILE = "7093405071"
+
+ADMIN_PHOTO = SCRIPTS / "assets" / "release_v1_pssm_admin.jpg"
+
+
+def _live_photo_data_url(path: Path) -> str:
+    raw = path.read_bytes()
+    return "data:image/jpeg;base64," + base64.b64encode(raw).decode("ascii")
+
+
 STAFF = [
     {
         "person": {
-            "mobile": "7093405071",
-            "fullName": "Srinivasa Rao",
-            "email": "srinivasa@pssm.example",
+            "mobile": "9445560075",
+            "fullName": "Dhana kumar A",
+            "email": "dhana.anem@gmail.com",
             "gender": "male",
             "ageGroup": "adult",
-            "meditation": "6",
-            "profession": "Administrator",
-            "birthDate": "01",
-            "birthMonth": "01",
-            "language": "Telugu",
-            "pyramidCenter": "Santh Kabir Das Pyramid Centre",
-            "sinceYear": "2010",
+            "meditation": "5",
+            "profession": "IT",
+            "birthDate": "14",
+            "birthMonth": "05",
+            "language": "Tamil",
+            "pyramidCenter": "",
+            "sinceYear": "2021",
             "idType": "aadhaar",
             "place": {
                 "kind": "urban",
-                "city": "Hyderabad",
-                "state": "Telangana",
+                "city": "Chennai",
+                "state": "Tamil Nadu",
                 "country": "India",
             },
             "seedSource": SEED_SOURCE,
         },
-        "roles": ["pssm_admin"],
+        "roles": ["pssm_admin", "event_organizer"],
         "members": [],
     },
     {
@@ -114,15 +127,38 @@ def clear_sample_data(db, *, keep_places: bool) -> None:
         print(f"  {key}={count}")
 
 
+def remove_legacy_admin(db) -> None:
+    admin_mobile = next(
+        item["person"]["mobile"] for item in STAFF if "pssm_admin" in item["roles"]
+    )
+    removed_legacy = db["people"].delete_many({"mobile": LEGACY_ADMIN_MOBILE}).deleted_count
+    removed_other = db["people"].delete_many(
+        {"roles": "pssm_admin", "mobile": {"$ne": admin_mobile}}
+    ).deleted_count
+    if removed_legacy:
+        print(f"Removed legacy PSSM Admin ({LEGACY_ADMIN_MOBILE}): {removed_legacy}")
+    if removed_other:
+        print(f"Removed other PSSM Admin account(s): {removed_other}")
+
+
 def seed_staff(db) -> None:
     print("\nSeeding release-v1 staff…")
+    admin_photo = ""
+    if ADMIN_PHOTO.is_file():
+        admin_photo = _live_photo_data_url(ADMIN_PHOTO)
+    else:
+        print(f"  Warning: admin photo missing at {ADMIN_PHOTO}", file=sys.stderr)
+
     for item in STAFF:
-        person = item["person"]
+        person = dict(item["person"])
+        if "pssm_admin" in item["roles"] and admin_photo:
+            person["livePhoto"] = admin_photo
         plain = composed_password(person["fullName"], person["birthDate"], person["birthMonth"])
         upsert_person(db, person, item["roles"], plain, item.get("members"))
         print(
             f"  {person['mobile']}  {plain:12}  {person['fullName']}  "
             f"[{','.join(item['roles'])}]"
+            + ("  photo" if person.get("livePhoto") else "")
         )
 
 
@@ -132,6 +168,9 @@ def seed_event(db) -> None:
     removed = db["events"].delete_many({"_id": {"$ne": EVT_ID}})
     if removed.deleted_count:
         print(f"  Removed {removed.deleted_count} other event(s)")
+    admin_mobile = next(
+        item["person"]["mobile"] for item in STAFF if "pssm_admin" in item["roles"]
+    )
     event = {
         "_id": EVT_ID,
         "name": EVT_NAME,
@@ -140,7 +179,7 @@ def seed_event(db) -> None:
         "location": "Santh Kabir Das Pyramid Centre, Hyderabad",
         "expectedBudgetInr": 0,
         "meditationHoursPerDay": 6.0,
-        "createdBy": "7093405071",
+        "createdBy": admin_mobile,
         "createdAt": utc_now(),
         "seedSource": SEED_SOURCE,
     }
@@ -175,6 +214,7 @@ def main() -> int:
         db = client[args.database]
         if not args.no_clear:
             clear_sample_data(db, keep_places=args.keep_places)
+        remove_legacy_admin(db)
         seed_staff(db)
         seed_event(db)
     except PyMongoError as exc:
@@ -190,7 +230,7 @@ def main() -> int:
 Done. release-v1 ready.
 
 Logins (password = up to 5 letters of name + DDMM):
-  7093405071 / Srini0101     PSSM Admin
+  9445560075 / Dhana1405     PSSM Admin + Event Organizer
   9966362691 / Meena1005     Accommodation Volunteer
 
 Event:

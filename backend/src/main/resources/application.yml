@@ -17,7 +17,8 @@ server:
       cookie:
         name: PSSMSESSION
         http-only: true
-        same-site: lax
+        same-site: ${COOKIE_SAME_SITE:lax}
+        secure: ${COOKIE_SECURE:false}
 
 pssm:
   cors:
