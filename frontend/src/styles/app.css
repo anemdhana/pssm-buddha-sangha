@@ -2057,10 +2057,25 @@ button.x-role-chip {
     margin-right: 0;
 }
 
-.x-interest-register-btn {
+.x-interest-page-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 2px;
+}
+
+.x-interest-register-btn,
+.x-interest-capacity-btn {
     flex: 0 0 auto;
     white-space: nowrap;
-    margin-top: 2px;
+}
+
+.x-interest-capacity-btn.uk-button-danger {
+    background: #fde8e8;
+    color: #9b1c1c;
+    border-color: #f3b4b4;
 }
 
 .x-suitable-hotels {
@@ -2706,6 +2721,11 @@ button.x-role-chip {
     color: #374151;
     background: rgba(107, 114, 128, 0.12);
     border-color: rgba(107, 114, 128, 0.28);
+}
+
+.x-allot-chip.is-warn {
+  background: #fde8e8;
+  color: #9b1c1c;
 }
 
 .x-allot-chip.is-muted {

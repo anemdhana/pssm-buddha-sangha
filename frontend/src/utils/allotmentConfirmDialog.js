@@ -121,18 +121,27 @@ function buildPanelState(placements, hotels, allotments) {
       (opt) => String(opt.roomNumber) === String(placement.roomNumber)
     );
     if (altIndex < 0) {
-      alternatives.unshift({
-        score: 0,
-        roomNumber: placement.roomNumber,
-        roomType: placement.roomType,
-        roomKind: placement.roomKind,
-        capacity: placement.capacity,
-        usedBefore: placement.usedBefore || 0,
-        freeBefore: placement.freeBefore || 0,
-        roomStatusBefore: placement.roomStatusBefore || 'free',
-        exactMatch: Boolean(placement.exactMatch)
-      });
-      altIndex = 0;
+      const capacity = Math.max(0, Number(placement.capacity) || 0);
+      const usedBefore = Math.max(0, Number(placement.usedBefore) || 0);
+      const incomingCount = Array.isArray(placement.members) ? placement.members.length : 0;
+      const fits = !capacity || usedBefore + incomingCount <= capacity;
+      // Keep the packed room only when it still fits; otherwise smart options stay authoritative.
+      if (fits || !alternatives.length) {
+        alternatives.unshift({
+          score: 0,
+          roomNumber: placement.roomNumber,
+          roomType: placement.roomType,
+          roomKind: placement.roomKind,
+          capacity: placement.capacity,
+          usedBefore: placement.usedBefore || 0,
+          freeBefore: placement.freeBefore || 0,
+          roomStatusBefore: placement.roomStatusBefore || 'free',
+          exactMatch: Boolean(placement.exactMatch)
+        });
+        altIndex = 0;
+      } else {
+        altIndex = 0;
+      }
     }
     return {
       placement,

@@ -15,6 +15,11 @@ import {
 } from '../utils/stayAllotmentSuggest.js';
 import { fetchAllStayAllotments } from '../utils/stayAllotments.js';
 import { applySelectedRegistrationRemovals } from '../utils/stayRegistrationRemove.js';
+import {
+  formatStayCapacityButtonLabel,
+  mergeStayRangeFacets,
+  summarizeRegistrationCapacity
+} from '../utils/stayCapacitySummary.js';
 import { filterTilePeople, registrationTilePeople } from '../utils/stayRegistrations.js';
 import { uikitDialogChoice } from '../utils/uikitDialog.js';
 
@@ -55,6 +60,7 @@ export function StayRegistrationsPage() {
   const [selectedIds, setSelectedIds] = useState(() => new Set());
   const [hotels, setHotels] = useState([]);
   const [allotments, setAllotments] = useState([]);
+  const [stayRangesAll, setStayRangesAll] = useState([]);
   const [hotelPage, setHotelPage] = useState(0);
   const [peopleDragging, setPeopleDragging] = useState(false);
 
@@ -109,18 +115,28 @@ export function StayRegistrationsPage() {
     if (!picked.id || !signedIn || !canView) {
       setHotels([]);
       setAllotments([]);
+      setStayRangesAll([]);
       return;
     }
     try {
-      const [hotelRes, allotments] = await Promise.all([
+      const [hotelRes, allotments, waitFacets, allottedFacets] = await Promise.all([
         api.listHotels(picked.id),
-        fetchAllStayAllotments(api, picked.id)
+        fetchAllStayAllotments(api, picked.id),
+        api.listStayBookings(picked.id, { allotment: 'wait', page: 0, size: 1 }),
+        api.listStayBookings(picked.id, { allotment: 'allotted', page: 0, size: 1 })
       ]);
       setHotels(Array.isArray(hotelRes.data) ? hotelRes.data : []);
       setAllotments(Array.isArray(allotments) ? allotments : []);
+      setStayRangesAll(
+        mergeStayRangeFacets(
+          waitFacets?.data?.facets?.stayRanges,
+          allottedFacets?.data?.facets?.stayRanges
+        )
+      );
     } catch {
       setHotels([]);
       setAllotments([]);
+      setStayRangesAll([]);
     }
   }
 
@@ -140,6 +156,58 @@ export function StayRegistrationsPage() {
       }),
     [hotels, allotments, selectedIds, allPeople, location]
   );
+
+  const capacitySummary = useMemo(
+    () =>
+      summarizeRegistrationCapacity({
+        hotels,
+        stayRanges: stayRangesAll
+      }),
+    [hotels, stayRangesAll]
+  );
+
+  function openCapacitySummary() {
+    const s = capacitySummary;
+    const peakLabel = s.peakNight
+      ? new Date(`${s.peakNight}T00:00:00`).toLocaleDateString(undefined, {
+          day: 'numeric',
+          month: 'short',
+          year: 'numeric'
+        })
+      : '—';
+    const busyRows = (s.busiestNights || [])
+      .map((row) => {
+        const label = new Date(`${row.night}T00:00:00`).toLocaleDateString(undefined, {
+          day: 'numeric',
+          month: 'short'
+        });
+        return `<li><strong>${label}</strong> — ${row.people} people</li>`;
+      })
+      .join('');
+    const statusLine = s.sufficient
+      ? `<p class="uk-text-success"><strong>Open hotel beds can cover the peak night.</strong></p>`
+      : `<p class="uk-text-danger"><strong>Short by ${s.shortfall} bed${
+          s.shortfall === 1 ? '' : 's'
+        } on the busiest night.</strong></p>`;
+    const html =
+      `<h3 class="uk-modal-title">Hotel capacity vs registrations</h3>` +
+      statusLine +
+      `<ul class="uk-list uk-list-divider">` +
+      `<li><strong>${s.totalPeople}</strong> registered people (wait list + allotted)</li>` +
+      `<li><strong>${s.openHotels}</strong> open hotels · <strong>${s.openRooms}</strong> rooms · <strong>${s.openBeds}</strong> beds</li>` +
+      (s.reservedBeds
+        ? `<li><strong>${s.reservedBeds}</strong> beds in reserved hotels (not counted)</li>`
+        : '') +
+      `<li>Peak night: <strong>${peakLabel}</strong> — <strong>${s.peakPeople}</strong> people / <strong>${s.openBeds}</strong> beds</li>` +
+      `</ul>` +
+      (busyRows
+        ? `<p class="uk-text-meta uk-margin-small-bottom">Busiest nights</p><ul class="uk-list uk-list-bullet">${busyRows}</ul>`
+        : `<p class="uk-text-meta">No stay dates on registrations yet.</p>`) +
+      `<p class="uk-text-meta">Uses each person’s stay nights [check-in → check-out). Same-day checkout frees the bed that night.</p>`;
+    return uikitDialogChoice(html, [{ id: 'ok', label: 'OK', buttonClass: 'uk-button-primary' }], {
+      cancelLabel: 'Close'
+    });
+  }
 
   function toggleFamilyMembers(ids) {
     const list = Array.isArray(ids) ? ids.filter(Boolean) : [];
@@ -456,14 +524,28 @@ export function StayRegistrationsPage() {
                 {picked.name} — Search and filters run on the server for large lists.
               </p>
             </div>
-            {total > 0 ? (
-              <Link
-                className="uk-button uk-button-primary uk-button-small x-interest-register-btn"
-                to="/stay?plan=free&from=interest"
+            <div className="x-interest-page-actions">
+              <button
+                type="button"
+                className={`uk-button uk-button-small x-interest-capacity-btn ${
+                  capacitySummary.sufficient
+                    ? 'uk-button-default'
+                    : 'uk-button-danger'
+                }`}
+                onClick={openCapacitySummary}
+                title="Compare open hotel beds with registered stay dates"
               >
-                Register another family
-              </Link>
-            ) : null}
+                {formatStayCapacityButtonLabel(capacitySummary)}
+              </button>
+              {total > 0 ? (
+                <Link
+                  className="uk-button uk-button-primary uk-button-small x-interest-register-btn"
+                  to="/stay?plan=free&from=interest"
+                >
+                  Register another family
+                </Link>
+              ) : null}
+            </div>
           </header>
 
           {error || actionError ? (

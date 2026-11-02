@@ -398,6 +398,69 @@ describe('stayAllotmentSuggest', () => {
     expect(suggestion.ranked[0].inProposal).toBe(true);
   });
 
+  it('ranks hotels higher when more current guests share the selected location', () => {
+    const twinHotels = [
+      {
+        id: 'h_empty',
+        name: 'Empty Twin',
+        distanceKm: 1,
+        active: true,
+        reserved: false,
+        rooms: [
+          { roomNumber: '1', capacity: 2, kind: 'regular', roomType: 'ac', status: 'available' }
+        ]
+      },
+      {
+        id: 'h_hyderabad',
+        name: 'Hyderabad Twin',
+        distanceKm: 1.2,
+        active: true,
+        reserved: false,
+        rooms: [
+          { roomNumber: '1', capacity: 2, kind: 'regular', roomType: 'ac', status: 'available' },
+          { roomNumber: '2', capacity: 4, kind: 'regular', roomType: 'ac', status: 'available' }
+        ]
+      }
+    ];
+    const allotments = [
+      {
+        hotelId: 'h_hyderabad',
+        roomNumber: '2',
+        personCount: 4,
+        place: { kind: 'urban', city: 'Hyderabad' },
+        checkInDate: '2026-10-01',
+        checkOutDate: '2026-10-05',
+        guests: [
+          { name: 'A', stayStartDate: '2026-10-01', stayEndDate: '2026-10-05' },
+          { name: 'B', stayStartDate: '2026-10-01', stayEndDate: '2026-10-05' },
+          { name: 'C', stayStartDate: '2026-10-01', stayEndDate: '2026-10-05' },
+          { name: 'D', stayStartDate: '2026-10-01', stayEndDate: '2026-10-05' }
+        ]
+      }
+    ];
+    const selected = [
+      {
+        ...people[0],
+        stayStartDate: '2026-10-02',
+        stayEndDate: '2026-10-04'
+      },
+      {
+        ...people[1],
+        stayStartDate: '2026-10-02',
+        stayEndDate: '2026-10-04'
+      }
+    ];
+    const suggestion = suggestHotelsForSelection({
+      hotels: twinHotels,
+      allotments,
+      selectedIds: new Set(['b1:primary', 'b1:member:0']),
+      people: selected
+    });
+    expect(suggestion.ranked[0].hotelId).toBe('h_hyderabad');
+    expect(suggestion.ranked[0].sameLocationGuests).toBe(4);
+    expect(suggestion.ranked.map((h) => h.hotelId)).toEqual(['h_hyderabad', 'h_empty']);
+  });
+
   it('pages hotels by five', () => {
     const ranked = Array.from({ length: 12 }, (_, i) => ({ hotelId: `h${i}` }));
     const page0 = hotelSuggestionPage(ranked, 0, 5);
@@ -479,18 +542,24 @@ describe('stayAllotmentSuggest', () => {
         bookingId: 'b1',
         hotelId: 'h_near',
         roomNumber: '101',
+        stayStartDate: '2026-10-01',
+        stayEndDate: '2026-10-05',
         members: [{ name: 'Ravi' }]
       },
       {
         bookingId: 'b2',
         hotelId: 'h_near',
         roomNumber: '101',
+        stayStartDate: '2026-10-01',
+        stayEndDate: '2026-10-05',
         members: [{ name: 'Sita' }]
       },
       {
         bookingId: 'b3',
         hotelId: 'h_near',
         roomNumber: '202',
+        stayStartDate: '2026-10-01',
+        stayEndDate: '2026-10-05',
         members: [{ name: 'Other' }]
       }
     ]);
@@ -508,6 +577,29 @@ describe('stayAllotmentSuggest', () => {
     expect(expanded).toHaveLength(2);
     expect(expanded.map((p) => p.bookingId)).toEqual(['b1', 'b2']);
     expect(expanded.every((p) => p.roomNumber === '303')).toBe(true);
+  });
+
+  it('does not merge same-room placements with different stay dates', () => {
+    const grouped = groupPlacementsByRoom([
+      {
+        bookingId: 'b1',
+        hotelId: 'h_near',
+        roomNumber: '101',
+        stayStartDate: '2026-10-01',
+        stayEndDate: '2026-10-03',
+        members: [{ name: 'Early' }]
+      },
+      {
+        bookingId: 'b2',
+        hotelId: 'h_near',
+        roomNumber: '101',
+        stayStartDate: '2026-10-03',
+        stayEndDate: '2026-10-05',
+        members: [{ name: 'Late' }]
+      }
+    ]);
+    expect(grouped).toHaveLength(2);
+    expect(grouped.map((g) => g.members[0].name).sort()).toEqual(['Early', 'Late']);
   });
 
   it('ranks multiple smart room options in a hotel', () => {
@@ -535,5 +627,81 @@ describe('stayAllotmentSuggest', () => {
     expect(options.length).toBeGreaterThanOrEqual(2);
     expect(options[0].roomNumber).toBe('101');
     expect(options[0].exactMatch).toBe(true);
+  });
+
+  it('prefers a room that already has same-location guests with free capacity', () => {
+    const hotel = {
+      id: 'h_loc',
+      name: 'Location Hotel',
+      distanceKm: 0.5,
+      active: true,
+      reserved: false,
+      rooms: [
+        { roomNumber: '101', capacity: 2, kind: 'regular', roomType: 'ac', status: 'available' },
+        { roomNumber: '202', capacity: 4, kind: 'regular', roomType: 'ac', status: 'available' }
+      ]
+    };
+    const allotments = [
+      {
+        hotelId: 'h_loc',
+        roomNumber: '202',
+        personCount: 2,
+        place: { kind: 'urban', city: 'Hyderabad' },
+        checkInDate: '2026-10-01',
+        checkOutDate: '2026-10-05',
+        guests: [
+          {
+            name: 'Existing1',
+            gender: 'male',
+            stayStartDate: '2026-10-01',
+            stayEndDate: '2026-10-05'
+          },
+          {
+            name: 'Existing2',
+            gender: 'male',
+            stayStartDate: '2026-10-01',
+            stayEndDate: '2026-10-05'
+          }
+        ]
+      }
+    ];
+    const party = [
+      {
+        id: 'b1:primary',
+        bookingId: 'b1',
+        name: 'Ravi',
+        gender: 'male',
+        age: 'adult',
+        primary: true,
+        place: { kind: 'urban', city: 'Hyderabad' },
+        stayStartDate: '2026-10-02',
+        stayEndDate: '2026-10-04'
+      },
+      {
+        id: 'b1:member:0',
+        bookingId: 'b1',
+        name: 'Kiran',
+        gender: 'male',
+        age: 'adult',
+        primary: false,
+        place: { kind: 'urban', city: 'Hyderabad' },
+        stayStartDate: '2026-10-02',
+        stayEndDate: '2026-10-04'
+      }
+    ];
+    const options = listSmartRoomOptions('h_loc', party, [hotel], allotments);
+    expect(options[0].roomNumber).toBe('202');
+    expect(options[0].usedBefore).toBe(2);
+    expect(options[0].freeBefore).toBe(2);
+
+    const placements = suggestPlacementsForHotel({
+      hotelId: 'h_loc',
+      hotels: [hotel],
+      allotments,
+      selectedIds: new Set(['b1:primary', 'b1:member:0']),
+      people: party
+    });
+    expect(placements).toHaveLength(1);
+    expect(placements[0].roomNumber).toBe('202');
   });
 });

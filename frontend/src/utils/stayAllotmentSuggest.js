@@ -133,7 +133,10 @@ export function buildRoomAvailability(hotels, allotments, stayWindow = null, ext
   const hasWindow = Boolean(windowStart && windowEnd);
 
   const occupied = new Map();
-  function addOccupancy(hotelId, roomNumber, count, start, end) {
+  /** @type {Map<string, Map<string, number>>} */
+  const locationsByRoom = new Map();
+
+  function addOccupancy(hotelId, roomNumber, count, start, end, place = null) {
     const hid = String(hotelId || '');
     const room = String(roomNumber || '');
     const n = Math.max(0, Number(count) || 0);
@@ -141,20 +144,33 @@ export function buildRoomAvailability(hotels, allotments, stayWindow = null, ext
     if (hasWindow && !staysOverlap(start, end, windowStart, windowEnd)) return;
     const key = `${hid}|${room}`;
     occupied.set(key, (occupied.get(key) || 0) + n);
+    if (place != null) {
+      const label = registrationLocationShort(place) || 'Unknown';
+      let locMap = locationsByRoom.get(key);
+      if (!locMap) {
+        locMap = new Map();
+        locationsByRoom.set(key, locMap);
+      }
+      locMap.set(label, (locMap.get(label) || 0) + n);
+    }
   }
 
   (Array.isArray(allotments) ? allotments : []).forEach((row) => {
     if (!row) return;
     const stay = allotmentStayWindow(row);
-    const count = Array.isArray(row.guests)
-      ? row.guests.length
-      : Number(row.personCount) || 0;
-    addOccupancy(row.hotelId, row.roomNumber, count, stay.start, stay.end);
+    addOccupancy(
+      row.hotelId,
+      row.roomNumber,
+      allotmentPersonCount(row),
+      stay.start,
+      stay.end,
+      row.place
+    );
   });
 
   (Array.isArray(extraOccupancies) ? extraOccupancies : []).forEach((row) => {
     if (!row) return;
-    addOccupancy(row.hotelId, row.roomNumber, row.count, row.start, row.end);
+    addOccupancy(row.hotelId, row.roomNumber, row.count, row.start, row.end, row.place || null);
   });
 
   const byHotel = new Map();
@@ -167,6 +183,12 @@ export function buildRoomAvailability(hotels, allotments, stayWindow = null, ext
         const capacity = Math.max(0, Number(room.capacity) || 0);
         const used = occupied.get(key) || 0;
         const free = Math.max(0, capacity - used);
+        const locMap = locationsByRoom.get(key);
+        const occupantLocations = locMap
+          ? Array.from(locMap.entries())
+              .map(([name, count]) => ({ name, count }))
+              .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name))
+          : [];
         return {
           ...room,
           hotelId: hotel.id,
@@ -177,7 +199,8 @@ export function buildRoomAvailability(hotels, allotments, stayWindow = null, ext
           empty: used === 0 && free === capacity && capacity > 0,
           kind: roomKind(room),
           genderGate: roomGenderAllowed(room),
-          ac: isAc(room)
+          ac: isAc(room),
+          occupantLocations
         };
       })
       .filter((r) => r.capacity > 0);
@@ -211,6 +234,41 @@ function roomAcceptsParty(room, people) {
   return true;
 }
 
+function peoplePlaceLabels(people) {
+  const labels = new Set();
+  (Array.isArray(people) ? people : []).forEach((person) => {
+    const label = String(registrationLocationShort(person?.place) || '').trim();
+    if (label) labels.add(label);
+  });
+  return labels;
+}
+
+/** Count of current room occupants whose place matches the party. */
+export function roomSameLocationOccupantCount(room, peopleOrLabels) {
+  const wanted = new Set();
+  if (peopleOrLabels instanceof Set) {
+    peopleOrLabels.forEach((label) => {
+      const n = normalizePlaceLabel(label);
+      if (n) wanted.add(n);
+    });
+  } else if (Array.isArray(peopleOrLabels) && peopleOrLabels[0] && peopleOrLabels[0].place !== undefined) {
+    peoplePlaceLabels(peopleOrLabels).forEach((label) => wanted.add(normalizePlaceLabel(label)));
+  } else {
+    (Array.isArray(peopleOrLabels) ? peopleOrLabels : []).forEach((label) => {
+      const n = normalizePlaceLabel(label);
+      if (n) wanted.add(n);
+    });
+  }
+  if (!wanted.size) return 0;
+  let match = 0;
+  (Array.isArray(room?.occupantLocations) ? room.occupantLocations : []).forEach((row) => {
+    if (!row) return;
+    if (!wanted.has(normalizePlaceLabel(row.name))) return;
+    match += Math.max(0, Number(row.count) || 0);
+  });
+  return match;
+}
+
 function scoreRoomForParty(room, people) {
   const size = partySize(people);
   if (!roomAcceptsParty(room, people)) return -Infinity;
@@ -228,6 +286,13 @@ function scoreRoomForParty(room, people) {
   if (isMixedGender(people) && (room.kind === 'dormitory' || room.kind === 'hall')) {
     return -Infinity;
   }
+
+  // Prefer joining a room that already has same-location guests and spare beds.
+  const sameLoc = roomSameLocationOccupantCount(room, people);
+  if (sameLoc > 0 && room.free >= size) {
+    score += 700 + sameLoc * 50;
+  }
+
   return score;
 }
 
@@ -447,7 +512,8 @@ export function suggestPlacementsForHotel({
         roomNumber: pack.room.roomNumber,
         count: pack.members.length,
         start: stay.start,
-        end: stay.end
+        end: stay.end,
+        place: pack.members?.[0]?.place || party.members?.[0]?.place || null
       });
     });
   });
@@ -501,14 +567,18 @@ export function mergePlacementRoomOption(placement, roomOption) {
 }
 
 /**
- * Collapse placements that share the same hotel room into one UI row,
+ * Collapse placements that share the same hotel room AND stay window into one UI row,
  * keeping subPlacements for per-booking save fan-out.
+ * Different stay dates stay separate so "allotted + to allot" is not summed across
+ * staggered nights (which looked like over-capacity).
  */
 export function groupPlacementsByRoom(placements) {
   const map = new Map();
   (Array.isArray(placements) ? placements : []).forEach((placement) => {
     if (!placement) return;
-    const key = `${String(placement.hotelId || '')}|${String(placement.roomNumber || '')}`;
+    const stayStart = parseStayDay(placement.stayStartDate) || '';
+    const stayEnd = parseStayDay(placement.stayEndDate) || '';
+    const key = `${String(placement.hotelId || '')}|${String(placement.roomNumber || '')}|${stayStart}|${stayEnd}`;
     const members = Array.isArray(placement.members) ? placement.members : [];
     const existing = map.get(key);
     if (!existing) {
@@ -591,7 +661,64 @@ export function partiesFromSelectedPeople(selectedIds, people) {
   });
 }
 
-function hotelScore(entry, parties, eventLocationLabel = '') {
+function normalizePlaceLabel(label) {
+  return String(label || '')
+    .trim()
+    .toLowerCase();
+}
+
+/** Unique short place labels for the selected parties (city/district). */
+export function selectedPlaceLabels(parties) {
+  const labels = new Set();
+  (Array.isArray(parties) ? parties : []).forEach((party) => {
+    const label = String(party?.placeLabel || '').trim();
+    if (label) labels.add(label);
+  });
+  return labels;
+}
+
+/**
+ * How many people already allotted at this hotel share a selected place label.
+ * When stayWindow is set, only overlapping allotments count.
+ */
+export function hotelSameLocationGuestCount(
+  hotelId,
+  allotments,
+  placeLabels,
+  stayWindow = null
+) {
+  const id = String(hotelId || '');
+  const wanted = new Set(
+    [...(placeLabels instanceof Set ? placeLabels : placeLabels || [])]
+      .map(normalizePlaceLabel)
+      .filter(Boolean)
+  );
+  if (!id || !wanted.size) return 0;
+
+  const windowStart = parseStayDay(stayWindow?.start);
+  const windowEnd = parseStayDay(stayWindow?.end);
+  const hasWindow = Boolean(windowStart && windowEnd);
+
+  let match = 0;
+  (Array.isArray(allotments) ? allotments : []).forEach((row) => {
+    if (!row || String(row.hotelId || '') !== id) return;
+    if (hasWindow) {
+      const stay = allotmentStayWindow(row);
+      if (!staysOverlap(stay.start, stay.end, windowStart, windowEnd)) return;
+    }
+    const label = normalizePlaceLabel(registrationLocationShort(row.place));
+    if (!label || !wanted.has(label)) return;
+    match += allotmentPersonCount(row);
+  });
+  return match;
+}
+
+function hotelScore(
+  entry,
+  parties,
+  eventLocationLabel = '',
+  { allotments = [], stayWindow = null, placeLabels = null } = {}
+) {
   let score = 1000 - entry.distanceKm * 80;
   const anyNeedsClose = parties.some((p) => p.needsClose);
   if (anyNeedsClose) score -= entry.distanceKm * 40;
@@ -617,7 +744,27 @@ function hotelScore(entry, parties, eventLocationLabel = '') {
     );
     if (match && entry.distanceKm <= 3) score += 50;
   }
-  return score;
+
+  // Prefer hotels where current guests already share the selected people's location.
+  const labels = placeLabels || selectedPlaceLabels(parties);
+  const sameLocationGuests = hotelSameLocationGuestCount(
+    entry.hotel?.id,
+    allotments,
+    labels,
+    stayWindow
+  );
+  if (sameLocationGuests > 0) {
+    score += sameLocationGuests * 12;
+    // Extra nudge when that location is also the hotel's largest guest group.
+    const wanted = new Set([...labels].map(normalizePlaceLabel).filter(Boolean));
+    const summary = hotelLocationPeopleSummary(entry.hotel?.id, allotments, stayWindow);
+    const top = summary[0];
+    if (top && wanted.has(normalizePlaceLabel(top.name))) {
+      score += 60;
+    }
+  }
+
+  return { score, sameLocationGuests };
 }
 
 /**
@@ -648,19 +795,34 @@ export function suggestHotelsForSelection({
   const availability = buildRoomAvailability(hotels, allotments, selectionWindow);
   if (!availability.size) return empty;
 
+  const placeLabels = selectedPlaceLabels(parties);
   const ranked = Array.from(availability.values())
-    .map((entry) => ({
-      hotelId: entry.hotel.id,
-      hotelName: entry.hotel.name,
-      address: entry.hotel.address || '',
-      distanceKm: entry.distanceKm,
-      freeBeds: entry.freeBeds,
-      stats: hotelRoomStats(entry.hotel),
-      score: hotelScore(entry, parties, eventLocationLabel),
-      hotel: entry.hotel
-    }))
+    .map((entry) => {
+      const { score, sameLocationGuests } = hotelScore(entry, parties, eventLocationLabel, {
+        allotments,
+        stayWindow: selectionWindow,
+        placeLabels
+      });
+      return {
+        hotelId: entry.hotel.id,
+        hotelName: entry.hotel.name,
+        address: entry.hotel.address || '',
+        distanceKm: entry.distanceKm,
+        freeBeds: entry.freeBeds,
+        stats: hotelRoomStats(entry.hotel),
+        score,
+        sameLocationGuests,
+        sameLocationLabels: [...placeLabels],
+        hotel: entry.hotel
+      };
+    })
     .filter((row) => row.freeBeds > 0)
-    .sort((a, b) => b.score - a.score || a.distanceKm - b.distanceKm);
+    .sort(
+      (a, b) =>
+        b.score - a.score ||
+        (b.sameLocationGuests || 0) - (a.sameLocationGuests || 0) ||
+        a.distanceKm - b.distanceKm
+    );
 
   // Place parties: event-location-ish first, then seniors closer, then larger parties
   const orderedParties = [...parties].sort((a, b) => {
@@ -721,7 +883,8 @@ export function suggestHotelsForSelection({
           roomNumber: pack.room.roomNumber,
           count: pack.members.length,
           start: stay.start,
-          end: stay.end
+          end: stay.end,
+          place: pack.members?.[0]?.place || party.members?.[0]?.place || null
         });
       });
       placed = true;
@@ -815,12 +978,22 @@ export function hotelPeopleAccommodatedSoFar(hotelId, allotments) {
     .reduce((sum, row) => sum + allotmentPersonCount(row), 0);
 }
 
-/** Location labels with people counts already at this hotel, e.g. Tirupati(12). */
-export function hotelLocationPeopleSummary(hotelId, allotments) {
+/**
+ * Location labels with people counts already at this hotel, e.g. Tirupati(12).
+ * When stayWindow is set, only overlapping allotments count.
+ */
+export function hotelLocationPeopleSummary(hotelId, allotments, stayWindow = null) {
   const id = String(hotelId || '');
+  const windowStart = parseStayDay(stayWindow?.start);
+  const windowEnd = parseStayDay(stayWindow?.end);
+  const hasWindow = Boolean(windowStart && windowEnd);
   const counts = new Map();
   (Array.isArray(allotments) ? allotments : []).forEach((row) => {
     if (!row || String(row.hotelId || '') !== id) return;
+    if (hasWindow) {
+      const stay = allotmentStayWindow(row);
+      if (!staysOverlap(stay.start, stay.end, windowStart, windowEnd)) return;
+    }
     const label = registrationLocationShort(row.place) || 'Unknown';
     counts.set(label, (counts.get(label) || 0) + allotmentPersonCount(row));
   });
@@ -1102,6 +1275,11 @@ export function allotRoomPanelInnerHtml(placement, { altIndex = 0, altTotal = 1,
   const status = placement.roomStatusBefore || (placement.usedBefore > 0 ? 'partial' : 'free');
   const incoming = Array.isArray(placement.members) ? placement.members : [];
   const incomingStay = peopleStayWindow(incoming);
+  const incomingKeys = new Set(
+    incoming
+      .map((m) => allotmentPersonKey(m, m?.bookingId || placement?.bookingId || ''))
+      .filter(Boolean)
+  );
   const families =
     Number(placement.usedBefore) > 0 || status === 'partial' || status === 'full'
       ? roomCurrentOccupantFamilies(
@@ -1121,19 +1299,34 @@ export function allotRoomPanelInnerHtml(placement, { altIndex = 0, altTotal = 1,
     `<span uk-icon="icon: chevron-right; ratio: 0.9"></span></button>` +
     `</div>`;
 
+  const capacity = Math.max(0, Number(placement.capacity) || 0);
+  const usedBefore = Math.max(0, Number(placement.usedBefore) || 0);
+  const incomingCount = incoming.length;
+  const afterCount = usedBefore + incomingCount;
   const roomChips =
     `<span class="x-allot-chip ${placement.roomType === 'ac' ? 'is-ac' : 'is-nonac'}">` +
     `${placement.roomType === 'ac' ? 'AC' : 'Non-AC'}</span>` +
     `<span class="x-allot-chip is-muted">${escapeHtml(placement.roomKind || 'regular')}</span>` +
-    `<span class="x-allot-chip is-ink"><strong>${placement.capacity || '—'}</strong> beds</span>`;
+    `<span class="x-allot-chip is-ink"><strong>${capacity || '—'}</strong> beds</span>` +
+    (capacity
+      ? `<span class="x-allot-chip ${afterCount > capacity ? 'is-warn' : 'is-muted'}" title="Already in room for these dates + newly selected">` +
+        `<strong>${usedBefore}+${incomingCount}</strong> → ${afterCount}/${capacity}</span>`
+      : '');
 
-  const occupiedPeople = families.flatMap((family) =>
-    (Array.isArray(family.members) ? family.members : []).map((member) => ({
-      ...member,
-      status: family.status,
-      familyKey: member.familyKey || family.familyKey || ''
-    }))
-  );
+  // Skip people who are themselves being (re)allotted so they are not shown twice.
+  const occupiedPeople = families
+    .flatMap((family) =>
+      (Array.isArray(family.members) ? family.members : []).map((member) => ({
+        ...member,
+        status: family.status,
+        familyKey: member.familyKey || family.familyKey || '',
+        bookingId: member.bookingId || family.familyKey || ''
+      }))
+    )
+    .filter((member) => {
+      const key = allotmentPersonKey(member, member.bookingId || member.familyKey || '');
+      return !key || !incomingKeys.has(key);
+    });
 
   const incomingFamilyKey = String(placement?.bookingId || '').trim();
   const incomingMembers = incoming.map((m) => ({

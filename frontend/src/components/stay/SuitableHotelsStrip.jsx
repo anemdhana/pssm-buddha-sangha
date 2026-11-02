@@ -241,6 +241,16 @@ export function SuitableHotelsStrip({
                 ? `${roomNumbers.length} rooms · ${roomNumbers.map((n) => `Rm ${n}`).join(', ')} · ${peopleHere} ppl`
                 : `Rm ${roomNumbers[0]}${peopleHere ? ` · ${peopleHere} ppl` : ''}`
               : `${hotel.freeBeds} beds free`;
+            const sameLoc = Number(hotel.sameLocationGuests) || 0;
+            const sameLocLabel = Array.isArray(hotel.sameLocationLabels)
+              ? hotel.sameLocationLabels.filter(Boolean)[0]
+              : '';
+            const sameLocHint =
+              sameLoc > 0
+                ? sameLocLabel
+                  ? `${sameLoc} from ${sameLocLabel}`
+                  : `${sameLoc} same location`
+                : '';
             const isTarget = dragOverId === hotel.hotelId;
             return (
               <li key={hotel.hotelId}>
@@ -275,6 +285,7 @@ export function SuitableHotelsStrip({
                     <span className="x-suitable-hotel-name">{hotel.hotelName}</span>
                     <span className="x-suitable-hotel-sub">
                       {hotel.distanceKm} km · {roomHint}
+                      {sameLocHint ? ` · ${sameLocHint}` : ''}
                     </span>
                   </span>
                 </div>
