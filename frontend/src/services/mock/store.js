@@ -89,7 +89,7 @@ const SAMPLE_PEOPLE = [
     sinceYear: '2019',
     place: { kind: 'urban', city: 'Hyderabad', state: 'Telangana', country: 'India' },
     members: [],
-    roles: ['accommodation_volunteer', 'pmma_member']
+    roles: ['accommodation_volunteer']
   },
   {
     fullName: 'Subhash Reddy',
