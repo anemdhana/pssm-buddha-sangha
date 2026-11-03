@@ -83,6 +83,11 @@ export const ROLES = {
     id: 'accommodation_admin',
     label: 'Accommodation Admin',
     assignable: true
+  },
+  hotel_desk: {
+    id: 'hotel_desk',
+    label: 'Hotel Desk',
+    assignable: false
   }
 };
 
@@ -110,7 +115,22 @@ export function normalizeAssignableRoles(list) {
 export function homeAfterLogin(roles) {
   const list = normalizeRoles(roles);
   if (list.indexOf('pssm_admin') >= 0) return '/admin';
+  const staff =
+    list.indexOf('accommodation_admin') >= 0 ||
+    list.indexOf('accommodation_volunteer') >= 0 ||
+    list.indexOf('event_organizer') >= 0;
+  if (list.indexOf('hotel_desk') >= 0 && !staff) return '/hotel-desk';
   return '/';
+}
+
+/** Hotel Desk temp password: up to 4 letters hotel + 4 person + last 4 contact digits. */
+export function hotelDeskPassword(hotelName, personName, contact) {
+  const hotelLetters = String(hotelName || '').replace(/[^A-Za-z]/g, '').slice(0, 4);
+  const personLetters = String(personName || '').replace(/[^A-Za-z]/g, '').slice(0, 4);
+  const digits = normalizeMobile(contact);
+  const last4 = digits.length <= 4 ? digits : digits.slice(-4);
+  if (!hotelLetters || !personLetters || !last4) return '';
+  return hotelLetters + personLetters + last4;
 }
 
 export function emptyMember() {

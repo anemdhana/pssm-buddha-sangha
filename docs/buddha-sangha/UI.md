@@ -2,8 +2,8 @@
 ## PSSM Buddha Sangha (pssm-buddha-sangha)
 
 **Project:** pssm-buddha-sangha  
-**Version:** 1.8 (Living Document)  
-**Last Updated:** 09 October 2026  
+**Version:** 1.9 (Living Document)  
+**Last Updated:** 02 November 2026  
 
 Visitor screens live in `docs/prototype/`. This document covers sangha Admin/dashboard paper notes, accommodation fields, and the UIkit working guide.
 
@@ -43,7 +43,7 @@ Visitor screens live in `docs/prototype/`. This document covers sangha Admin/das
 | --- | --- | --- | --- |
 | 1 | **Sangha register** | Masters register: add/edit people, places, dashboard groups | Register Admin / Sangha member |
 | 2 | **Supporting events** | Active events (Register Admin can set Active/Inactive anytime), budgets, host-first support, equal share | Register Admin / Sangha member |
-| 3 | **Accommodation** | Hotels, rooms, Free/Paid Stay for an event, booking window, smart allotment, receptionist check-in/out | **Accommodation Admin**, Hotel Receptionist, Visitor |
+| 3 | **Accommodation** | Hotels, rooms, Free/Paid Stay for an event, booking window, smart allotment, Hotel Desk check-in/out | **Accommodation Admin**, **Hotel Desk**, Visitor |
 
 **Role note:** **PSSM Admin** (People & roles on My Space) assigns Event Organizer / Pyramid Sevadal / PMMA Member / Accommodation Volunteer. Accommodation Volunteer books stay (including new visitors). That is not the same as **Accommodation Admin**, who runs hotels and room allotment.
 
@@ -632,7 +632,19 @@ Needed so the system knows when booking closes.
 | Active | Yes | Yes / No | No hides the hotel from automatic and manual assignment |
 | Reserved | Yes | Switch, default off | On means smart allocation skips this hotel. Accommodation Admin assigns it by hand |
 
-Draw the hotel list as the place Accommodation Admin sets this. One row per hotel: name, distance, Active, and a **Reserved** switch, plus Edit. A separate settings page is unnecessary. The same switch is on this form so it can be set when the hotel is added. On the allocation review, those hotels appear only in the manual override list, labeled Reserved. The automatic proposal never uses them.
+**Hotel Desk people** (on this same hotel form — hotel master data, not per room; FR-28a / US-01a)
+
+Repeating block, **maximum 3** rows. Label the section **Hotel Desk** (role name).
+
+| Field | Required | Draw as | Notes |
+| --- | --- | --- | --- |
+| Name | Yes | Text | Hotel Desk person’s name |
+| Contact number | Yes | Phone | Login id |
+| Temporary password | — | Read-only after save | Generated from hotel name + person name + contact (show so Admin can share it). Regenerate only if product later needs it — default: show current temp until they change password |
+
+Button: **Add Hotel Desk person** — disabled at 3. Allow remove row before/after save (with confirm if already login-capable).
+
+Draw the hotel list as the place Accommodation Admin sets this. One row per hotel: name, distance, Active, and a **Reserved** switch, plus Edit. Optionally show a small count of Hotel Desk people attached. A separate settings page is unnecessary. The same switch is on this form so it can be set when the hotel is added. On the allocation review, those hotels appear only in the manual override list, labeled Reserved. The automatic proposal never uses them.
 
 **A3 — Add rooms**
 
@@ -693,56 +705,102 @@ Buttons: Confirm allocation, Save overrides. After confirm, hotels are notified.
 
 Also draw a notification list: check-in, check-out (full, one person, or early), and other receptionist updates. Each row shows time, hotel, party, and what happened.
 
-#### Hotel Receptionist
+#### Hotel Desk (`hotel_desk`)
 
-The receptionist sees only their own hotel.
+Behaviour rules: `Requirements.md` FR-28a, FR-09, FR-09a–e, US-01b, US-10, US-10a, US-10b, US-13a. This section is **draw / interaction only**.
 
-**R1 — Guests for this hotel**
+**Shell (all Hotel Desk pages)**
 
-List columns:
+| Element | Draw as | Notes |
+| --- | --- | --- |
+| Header | Fixed bar | **Event name** only (and event context if a picker is required). **No top menu** — no Stay / Account / Help |
+| Hotel identity | On the dashboard page (under header) | **Hotel name** of the attached hotel — always visible so they know which desk this is |
+| Body | Desk screens only | R1… — no sangha / volunteer navigation |
 
-- Party name and ID card number
-- Persons
-- Room number
-- Check-in date, 11:00 AM
-- Check-out date, 11:00 AM
-- Special needs
-- Status: Expected / Checked in / Partly checked out / Checked out
+Login uses the shared login page (contact number + temporary password). After success, land on R1 with this shell.
 
-A fixed note on the page: guests never take the room key. The key stays at reception.
+**R1 — Hotel desk (primary screen)**
 
-**R2 — Check in**
+Page job: dated guest list (same list feel as **Friends and Masters List**), then on that day update status — check-in, check-out, or did not arrive — and see who must check out on the selected date so they can be reminded. Hotel Desk person sees **only their hotel**.
+
+**List chrome (like Friends and Masters — but filters stay few)**
+
+Same overall list / tile pattern as Friends and Masters List (`/stay/registrations`): header context, filter strip, then person/family tiles. Do **not** copy that page’s rich facets (age, gender, meditation, location, stay-range chips, etc.). Receptionist filters are intentionally limited:
+
+| Filter | Draw as | Notes |
+| --- | --- | --- |
+| **Date** (main) | Date control | **Default today.** Min = event start, max = event end. Changing date reloads the list for that day (FR-09b). Also drives **checking out on this date** (FR-09e). |
+| **State** | Simple chips / toggles: Allotted · Checked-in · Checked-out · Did not arrive | Shown with the date. Narrows the dated list by FR-09a state. Allow “all states” or multi-select — keep the strip short. |
+| **Checking out on this date** | One chip / toggle | Optional narrow: only people whose stay **end date** = selected date (will check out that day @ **11:00 AM**). Keeps the filter strip short — not a second date picker. |
+
+Optional find-on-list (still light — not a second filter panel):
 
 | Field | Required | Draw as | Notes |
 | --- | --- | --- | --- |
-| ID card number | Yes | Search box | Search or scan |
+| Room number | No | Search | Guest says a room |
+| Name | No | Search | Match person name |
+| ID card (optional) | No | Search | Extra verify when available |
 
-After a match, draw a verification panel (not more typing):
+Short desk cues (meta text, not form fields):
 
-- ID card number
-- Live photo
-- ID proof photo
-- Names of visitor and family
+- Check-in: expected **11:00 AM**; second chance until **~3:00 PM**; then mark **Did not arrive**
+- Check-out today: people with stay end = selected date — remind them before **11:00 AM** check-out
+
+**Person / family tiles** (one row per person, or expandable family with per-person controls):
+
+- Name (+ live photo thumbnail when available)
 - Room number
+- Planned check-in date · **11:00 AM**
+- Planned check-out date · **11:00 AM** (always on the row)
+- Clear **Checking out on this date** mark when stay end date = selected filter date (e.g. row label / highlight — not a floating badge pile)
+- Special needs (if any)
+- **State controls — large checkboxes** (maps to FR-09a; receptionist updates status on that day):
+
+| Control label | Draw as | Interaction |
+| --- | --- | --- |
+| **Allotted** | Large checkbox, checked when state is allotted | **View only** — not clickable / not clearable (does not undo allotment) |
+| **Checked-in now** | Large checkbox | Tick to set Checked-in (after verify); still allowed during second chance until ~3:00 PM |
+| **Checked-out now** | Large checkbox | Tick to set Checked-out (leaving now); after Checked-in |
+| **Did not arrive** | Large checkbox | Tick after **~3:00 PM** when still Allotted on check-in day (FR-09c). Prefer disabled / muted before 3:00 PM with the cue above |
+
+Sketch rules:
+
+- Empty dated list → empty state (no inventing rows)
+- No match for room + name search → empty / refuse cue
+- After Checked-in, **Checked-out now** becomes available; Allotted stays as non-editable context
+- **Did not arrive** and **Checked-in** are alternatives from Allotted — not both
+- Person-wise ticks: one member Checked-in, sibling still Allotted is fine
+- **Checking out on this date** rows are for reminding + checking out; prefer still-in-house (Checked-in) when reminding
+- Fixed note on page: guests never take the room key; the key stays at reception
+
+**Volunteer list — Did not arrive reclaim** (FR-09d / US-10b)
+
+- **Who is staying where:** status chip **Did not arrive**; select tiles; **Move to Wait List**.
+- **Friends and Masters:** with **Allotted** on, toggle **Did not arrive**; select people; use existing hotel strip **Move to Wait List**.
+- Do not put wait-list reclaim on the Hotel Desk.
+
+**R2 — Check-in detail (optional deepen from R1)**
+
+When a row is opened or after room+name match, verification panel:
+
+- Name, room, live photo, ID proof (if any)
 - Special needs
-- Check-in time, expected **11:00 AM**
+- Planned check-in / check-out at **11:00 AM**
 - Key reminder
+- Same large **Checked-in now** checkbox as R1
 
-Button: Confirm check-in. It stays disabled until the ID card matches.
-
-**R3 — Check out**
+**R3 — Check-out (same desk or focused panel)**
 
 | Field | Required | Draw as | Notes |
 | --- | --- | --- | --- |
-| Party | Yes | Pick from today's guests | |
-| Who is leaving | Yes | Whole party, or a tick per person | Person-wise check-out |
-| Early check-out | No | Tick | Allowed before the planned date |
+| Who is leaving | Yes | Large **Checked-out now** per person, or whole-party action | Person-wise |
+| Early check-out | — | No separate field | Before planned date still uses Checked-out now |
 
-Show planned check-out date and **11:00 AM**. Button: Confirm check-out. Accommodation Admin is notified. Freed beds become available the same morning.
+Planned check-out date and **11:00 AM** stay visible on the row / panel.
 
-**R4 — Tell them tomorrow is the last day**
+**R4 — Tell them tomorrow is the last day** (advance; separate from R1 same-day)
 
-A list of parties whose check-out is tomorrow. Each row shows name, room, and **11:00 AM**.
+A list of parties whose check-out is **tomorrow** (FR-10 / US-13). Each row shows name, room, and **11:00 AM**. Same-day “checking out on selected date” stays on **R1** (FR-09e / US-13a), driven by the main date filter + stay end date.
 
 | Field | Required | Draw as | Notes |
 | --- | --- | --- | --- |

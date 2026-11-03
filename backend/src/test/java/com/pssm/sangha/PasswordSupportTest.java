@@ -17,4 +17,10 @@ class PasswordSupportTest {
     void normalizeMobileStripsNonDigits() {
         assertEquals("9876543210", PasswordSupport.normalizeMobile("98765 43210"));
     }
+
+    @Test
+    void hotelDeskPasswordMixesHotelNamePersonAndContact() {
+        assertEquals("SaiPMeen2691",
+                PasswordSupport.hotelDeskPassword("Sai Prakash", "Meena Rao", "9966362691"));
+    }
 }

@@ -16,6 +16,12 @@ public final class HotelDtos {
         public String status;
     }
 
+    public static class DeskPersonRequest {
+        public String id;
+        public String name;
+        public String contact;
+    }
+
     public static class HotelRequest {
         public String eventId;
         public String name;
@@ -26,5 +32,6 @@ public final class HotelDtos {
         public Boolean active;
         public Boolean reserved;
         public List<HotelRoomRequest> rooms;
+        public List<DeskPersonRequest> deskPeople;
     }
 }

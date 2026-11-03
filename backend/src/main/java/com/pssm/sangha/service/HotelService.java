@@ -2,21 +2,27 @@ package com.pssm.sangha.service;
 
 import com.pssm.sangha.common.ApiException;
 import com.pssm.sangha.domain.Hotel;
+import com.pssm.sangha.domain.Hotel.DeskPerson;
 import com.pssm.sangha.domain.Hotel.HotelRoom;
 import com.pssm.sangha.domain.Person;
 import com.pssm.sangha.domain.SanghaRole;
 import com.pssm.sangha.repo.HotelRepository;
+import com.pssm.sangha.repo.PersonRepository;
+import com.pssm.sangha.web.dto.HotelDtos.DeskPersonRequest;
 import com.pssm.sangha.web.dto.HotelDtos.HotelRequest;
 import com.pssm.sangha.web.dto.HotelDtos.HotelRoomRequest;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -24,11 +30,18 @@ import org.springframework.transaction.annotation.Transactional;
 public class HotelService {
 
     private final HotelRepository hotelRepository;
+    private final PersonRepository personRepository;
     private final AuthService authService;
+    private final PasswordEncoder passwordEncoder;
 
-    public HotelService(HotelRepository hotelRepository, AuthService authService) {
+    public HotelService(HotelRepository hotelRepository,
+                        PersonRepository personRepository,
+                        AuthService authService,
+                        PasswordEncoder passwordEncoder) {
         this.hotelRepository = hotelRepository;
+        this.personRepository = personRepository;
         this.authService = authService;
+        this.passwordEncoder = passwordEncoder;
     }
 
     @Transactional(readOnly = true)
@@ -40,7 +53,7 @@ public class HotelService {
         }
         List<Map<String, Object>> rows = new ArrayList<>();
         for (Hotel hotel : hotelRepository.findByEventIdOrderByDistanceKmAscNameAsc(eventId)) {
-            rows.add(toMap(hotel));
+            rows.add(toMap(hotel, null));
         }
         return rows;
     }
@@ -48,7 +61,7 @@ public class HotelService {
     @Transactional(readOnly = true)
     public Map<String, Object> getHotel(String id) {
         requireHotelReader();
-        return toMap(findOrThrow(id));
+        return toMap(findOrThrow(id), null);
     }
 
     @Transactional
@@ -58,23 +71,23 @@ public class HotelService {
         hotel.setId("htl_" + System.currentTimeMillis());
         hotel.setCreatedBy(actor.getMobile());
         hotel.setCreatedAt(Instant.now());
-        applyRequest(hotel, body, true);
+        Map<String, String> temps = applyRequest(hotel, body, true);
         hotel.setUpdatedAt(Instant.now());
         hotelRepository.save(hotel);
-        return toMap(hotel);
+        return toMap(hotel, temps);
     }
 
     @Transactional
     public Map<String, Object> updateHotel(String id, HotelRequest body) {
         requireHotelAdmin();
         Hotel hotel = findOrThrow(id);
-        applyRequest(hotel, body, false);
+        Map<String, String> temps = applyRequest(hotel, body, false);
         hotel.setUpdatedAt(Instant.now());
         hotelRepository.save(hotel);
-        return toMap(hotel);
+        return toMap(hotel, temps);
     }
 
-    private void applyRequest(Hotel hotel, HotelRequest body, boolean creating) {
+    private Map<String, String> applyRequest(Hotel hotel, HotelRequest body, boolean creating) {
         if (body == null) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "VALIDATION", "Hotel details are required.");
         }
@@ -121,6 +134,125 @@ public class HotelService {
             hotel.setReserved(Boolean.TRUE.equals(body.reserved));
         }
         hotel.setRooms(normalizeRooms(body.rooms));
+        if (body.deskPeople == null && !creating) {
+            return Map.of();
+        }
+        return applyDeskPeople(hotel, body.deskPeople);
+    }
+
+    private Map<String, String> applyDeskPeople(Hotel hotel, List<DeskPersonRequest> rawPeople) {
+        List<DeskPersonRequest> input = rawPeople == null ? List.of() : rawPeople;
+        if (input.size() > 3) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "VALIDATION",
+                    "At most 3 Hotel Desk people can be attached to a hotel.");
+        }
+
+        List<DeskPerson> previous = hotel.getDeskPeople() == null ? List.of() : hotel.getDeskPeople();
+        Set<String> previousContacts = new HashSet<>();
+        for (DeskPerson prev : previous) {
+            if (prev == null) {
+                continue;
+            }
+            String dig = PasswordSupport.normalizeMobile(prev.getContact());
+            if (!dig.isBlank()) {
+                previousContacts.add(dig);
+            }
+        }
+
+        List<DeskPerson> next = new ArrayList<>();
+        Map<String, String> tempsByContact = new LinkedHashMap<>();
+        Set<String> seenContacts = new HashSet<>();
+        int index = 0;
+        for (DeskPersonRequest raw : input) {
+            index++;
+            if (raw == null) {
+                continue;
+            }
+            String personName = raw.name == null ? "" : raw.name.trim();
+            String personContact = PasswordSupport.normalizeMobile(raw.contact);
+            if (personName.isBlank() && personContact.isBlank()) {
+                continue;
+            }
+            if (personName.isBlank()) {
+                throw new ApiException(HttpStatus.BAD_REQUEST, "VALIDATION",
+                        "Enter name for Hotel Desk person " + index + ".");
+            }
+            if (personContact.isBlank() || personContact.length() < 10) {
+                throw new ApiException(HttpStatus.BAD_REQUEST, "VALIDATION",
+                        "Enter a valid contact number for Hotel Desk person " + personName + ".");
+            }
+            if (!seenContacts.add(personContact)) {
+                throw new ApiException(HttpStatus.BAD_REQUEST, "VALIDATION",
+                        "Duplicate Hotel Desk contact " + personContact + ".");
+            }
+
+            DeskPerson row = new DeskPerson();
+            String id = raw.id == null ? "" : raw.id.trim();
+            if (id.isBlank()) {
+                id = "hdesk_" + hotel.getId() + "_" + personContact;
+            }
+            row.setId(id);
+            row.setName(personName);
+            row.setContact(personContact);
+            next.add(row);
+
+            String temp = syncDeskLogin(hotel, personName, personContact);
+            if (temp != null && !temp.isBlank()) {
+                tempsByContact.put(personContact, temp);
+            }
+        }
+
+        hotel.setDeskPeople(next);
+
+        Set<String> kept = new HashSet<>(seenContacts);
+        for (String oldContact : previousContacts) {
+            if (!kept.contains(oldContact)) {
+                clearDeskBinding(oldContact, hotel.getId());
+            }
+        }
+        return tempsByContact;
+    }
+
+    private String syncDeskLogin(Hotel hotel, String personName, String contact) {
+        String temp = PasswordSupport.hotelDeskPassword(hotel.getName(), personName, contact);
+        if (temp.isBlank()) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "VALIDATION",
+                    "Could not generate a temporary password for " + personName + ".");
+        }
+        Optional<Person> existing = personRepository.findByMobile(contact);
+        Person person;
+        if (existing.isPresent()) {
+            person = existing.get();
+            person.setFullName(personName);
+        } else {
+            person = new Person();
+            person.setMobile(contact);
+            person.setFullName(personName);
+        }
+        Set<String> roles = person.getRoles() == null ? new LinkedHashSet<>() : new LinkedHashSet<>(person.getRoles());
+        roles.add(SanghaRole.HOTEL_DESK);
+        person.setRoles(roles);
+        person.setHotelId(hotel.getId());
+        person.setPasswordHash(passwordEncoder.encode(temp));
+        personRepository.save(person);
+        return temp;
+    }
+
+    private void clearDeskBinding(String contact, String hotelId) {
+        personRepository.findByMobile(contact).ifPresent(person -> {
+            String bound = person.getHotelId() == null ? "" : person.getHotelId().trim();
+            if (!bound.equals(hotelId)) {
+                return;
+            }
+            Set<String> roles = person.getRoles() == null ? new LinkedHashSet<>() : new LinkedHashSet<>(person.getRoles());
+            roles.remove(SanghaRole.HOTEL_DESK);
+            person.setRoles(roles);
+            if (roles.isEmpty() || !roles.contains(SanghaRole.HOTEL_DESK)) {
+                person.setHotelId(null);
+            }
+            // Keep account/password; only drop hotel_desk binding.
+            personRepository.save(person);
+        });
     }
 
     private List<HotelRoom> normalizeRooms(List<HotelRoomRequest> rawRooms) {
@@ -234,13 +366,14 @@ public class HotelService {
                 || (!actor.getRoles().contains(SanghaRole.ACCOMMODATION_ADMIN)
                 && !actor.getRoles().contains(SanghaRole.ACCOMMODATION_VOLUNTEER)
                 && !actor.getRoles().contains(SanghaRole.EVENT_ORGANIZER)
-                && !actor.getRoles().contains(SanghaRole.PSSM_ADMIN))) {
+                && !actor.getRoles().contains(SanghaRole.PSSM_ADMIN)
+                && !actor.getRoles().contains(SanghaRole.HOTEL_DESK))) {
             throw new ApiException(HttpStatus.FORBIDDEN, "FORBIDDEN", "Not allowed to view hotels.");
         }
         return actor;
     }
 
-    private Map<String, Object> toMap(Hotel hotel) {
+    private Map<String, Object> toMap(Hotel hotel, Map<String, String> tempsByContact) {
         Map<String, Object> view = new LinkedHashMap<>();
         view.put("id", hotel.getId());
         view.put("eventId", hotel.getEventId());
@@ -276,6 +409,29 @@ public class HotelService {
         view.put("rooms", rooms);
         view.put("roomCount", rooms.size());
         view.put("capacityTotal", capacityTotal);
+
+        List<Map<String, Object>> deskPeople = new ArrayList<>();
+        if (hotel.getDeskPeople() != null) {
+            for (DeskPerson desk : hotel.getDeskPeople()) {
+                if (desk == null) {
+                    continue;
+                }
+                Map<String, Object> row = new LinkedHashMap<>();
+                row.put("id", desk.getId());
+                row.put("name", desk.getName());
+                row.put("contact", desk.getContact());
+                row.put("role", SanghaRole.HOTEL_DESK);
+                if (tempsByContact != null) {
+                    String temp = tempsByContact.get(PasswordSupport.normalizeMobile(desk.getContact()));
+                    if (temp != null && !temp.isBlank()) {
+                        row.put("temporaryPassword", temp);
+                    }
+                }
+                deskPeople.add(row);
+            }
+        }
+        view.put("deskPeople", deskPeople);
+        view.put("deskPeopleCount", deskPeople.size());
         return view;
     }
 }

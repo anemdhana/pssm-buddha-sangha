@@ -25,6 +25,8 @@ public class Hotel {
     private boolean active = true;
     private boolean reserved;
     private List<HotelRoom> rooms = new ArrayList<>();
+    /** Hotel Desk people (max 3) who can log in for this hotel. */
+    private List<DeskPerson> deskPeople = new ArrayList<>();
     private String createdBy;
     private Instant createdAt;
     private Instant updatedAt;
@@ -109,6 +111,14 @@ public class Hotel {
         this.rooms = rooms;
     }
 
+    public List<DeskPerson> getDeskPeople() {
+        return deskPeople;
+    }
+
+    public void setDeskPeople(List<DeskPerson> deskPeople) {
+        this.deskPeople = deskPeople == null ? new ArrayList<>() : deskPeople;
+    }
+
     public String getCreatedBy() {
         return createdBy;
     }
@@ -131,6 +141,36 @@ public class Hotel {
 
     public void setUpdatedAt(Instant updatedAt) {
         this.updatedAt = updatedAt;
+    }
+
+    public static class DeskPerson {
+        private String id;
+        private String name;
+        private String contact;
+
+        public String getId() {
+            return id;
+        }
+
+        public void setId(String id) {
+            this.id = id;
+        }
+
+        public String getName() {
+            return name;
+        }
+
+        public void setName(String name) {
+            this.name = name;
+        }
+
+        public String getContact() {
+            return contact;
+        }
+
+        public void setContact(String contact) {
+            this.contact = contact;
+        }
     }
 
     public static class HotelRoom {

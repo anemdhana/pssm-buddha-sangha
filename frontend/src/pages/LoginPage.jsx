@@ -3,7 +3,7 @@ import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth.jsx';
 
 export function LoginPage() {
-  const { signedIn, login, isPssmAdmin } = useAuth();
+  const { signedIn, login, isPssmAdmin, isHotelDesk, user } = useAuth();
   const navigate = useNavigate();
   const [mobile, setMobile] = useState('');
   const [password, setPassword] = useState('');
@@ -11,7 +11,8 @@ export function LoginPage() {
   const [busy, setBusy] = useState(false);
 
   if (signedIn) {
-    return <Navigate to={isPssmAdmin ? '/admin' : '/'} replace />;
+    const home = user?.home || (isPssmAdmin ? '/admin' : isHotelDesk ? '/hotel-desk' : '/');
+    return <Navigate to={home} replace />;
   }
 
   async function onLogin() {

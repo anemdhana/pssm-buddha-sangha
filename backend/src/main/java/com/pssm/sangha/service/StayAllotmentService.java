@@ -167,6 +167,8 @@ public class StayAllotmentService {
                 guest.setStayStartDate(guestStart);
                 guest.setStayEndDate(guestEnd);
                 guest.setPrimary(Boolean.TRUE.equals(member.primary) || (i == 0 && guests.isEmpty()));
+                guest.setGuestKey(allotment.getId() + ":g" + guests.size());
+                guest.setPersonStatus("allotted");
                 guests.add(guest);
                 String key = guestIdentityKey(guest, allotment.getBookingId());
                 if (!key.isBlank()) {
@@ -471,6 +473,16 @@ public class StayAllotmentService {
                 continue;
             }
             Map<String, Object> row = new LinkedHashMap<>();
+            String guestKey = guest.getGuestKey();
+            if (guestKey == null || guestKey.isBlank()) {
+                guestKey = allotment.getId() + ":g" + guests.size();
+            }
+            String personStatus = guest.getPersonStatus();
+            if (personStatus == null || personStatus.isBlank()) {
+                personStatus = "allotted";
+            }
+            row.put("guestKey", guestKey);
+            row.put("personId", allotment.getId() + "::" + guestKey);
             row.put("name", guest.getName());
             row.put("relation", guest.getRelation());
             row.put("mobile", guest.getMobile());
@@ -482,6 +494,7 @@ public class StayAllotmentService {
             row.put("stayStartDate", guest.getStayStartDate());
             row.put("stayEndDate", guest.getStayEndDate());
             row.put("primary", guest.isPrimary());
+            row.put("personStatus", personStatus);
             guests.add(row);
         }
         view.put("guests", guests);

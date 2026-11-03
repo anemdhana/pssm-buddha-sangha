@@ -39,6 +39,8 @@ public class Person {
     private PlaceInfo place;
     private Set<String> roles = new LinkedHashSet<>();
     private List<FamilyMember> members = new ArrayList<>();
+    /** Bound hotel when role includes hotel_desk. */
+    private String hotelId;
 
     @CreatedDate
     private Instant createdAt;
@@ -212,6 +214,14 @@ public class Person {
 
     public void setMembers(List<FamilyMember> members) {
         this.members = members == null ? new ArrayList<>() : members;
+    }
+
+    public String getHotelId() {
+        return hotelId;
+    }
+
+    public void setHotelId(String hotelId) {
+        this.hotelId = hotelId;
     }
 
     public Instant getCreatedAt() {

@@ -1,9 +1,11 @@
 # Work summary — resume here
 
-**Updated:** 12 Oct 2026  
+**Updated:** 02 Nov 2026  
 **Specs:** `Requirements.md` · `Technical.md` · `UI.md`  
 **Prototype (reference):** `docs/prototype/`  
 **App:** `frontend/` (React) · `backend/` (Spring Boot)
+
+**Capture habit:** mixed chat notes → split into **Requirements** (behaviour / states / rules) and **UI** (layout / controls / draw-as). Do not put checkbox/widget wording in FRs or user stories; point to `UI.md` instead. Technical stays API/data.
 
 ---
 
@@ -22,7 +24,7 @@ Java 21 + Spring Boot 3 · Spring Security **session** · Spring Data MongoDB + 
 |---|--------|--------|
 | 1 | **Sangha register** | React Done pages + Spring REST scaffolded |
 | 2 | **Supporting events** | Specced — Active/Inactive graph not built |
-| 3 | **Accommodation** | Stay booking wizard live; hotels/allotment still next |
+| 3 | **Accommodation** | Stay booking, hotels, allotment live (release-v1); receptionist desk next |
 
 ---
 
@@ -68,9 +70,13 @@ Also: `GET /auth/me`, `POST /auth/logout`
 
 ## Next
 
-1. Hotels master, booking cutoff, smart allotment  
-2. Receptionist check-in / check-out  
-3. Smoke-test live API (`VITE_USE_MOCK=false`) end-to-end  
+1. **Hotel Desk** — **implemented** (local; deploy when ready)  
+   - Hotels form: Hotel Desk people (max 3); login contact + temp password `SaiPMeen2691`-style  
+   - `/hotel-desk` menu-less dashboard; `/api/v1/reception/*`  
+   - Volunteer reclaim: **Who is staying where** — Did not arrive filter + select + Move to Wait List; **Friends and Masters** — Allotted + Did not arrive filter + existing Move to Wait List  
+   - Follow-on: WhatsApp/notifications, deepen ID-card verify
+2. Receptionist reminders / ID-card deepen (US-11…US-13) as follow-on  
+3. Smoke-test live API / deploy (`VITE_USE_MOCK=false`) end-to-end  
 
 ---
 

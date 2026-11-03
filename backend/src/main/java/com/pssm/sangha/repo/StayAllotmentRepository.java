@@ -9,4 +9,8 @@ public interface StayAllotmentRepository extends MongoRepository<StayAllotment, 
     List<StayAllotment> findByEventIdOrderByHotelNameAscRoomNumberAsc(String eventId);
 
     List<StayAllotment> findByEventId(String eventId);
+
+    List<StayAllotment> findByHotelIdOrderByRoomNumberAsc(String hotelId);
+
+    List<StayAllotment> findByEventIdAndHotelIdOrderByRoomNumberAsc(String eventId, String hotelId);
 }

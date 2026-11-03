@@ -12,6 +12,12 @@ function nextRoomKey() {
   return `room_${Date.now()}_${roomKeySeq}`;
 }
 
+let deskKeySeq = 0;
+function nextDeskKey() {
+  deskKeySeq += 1;
+  return `desk_${Date.now()}_${deskKeySeq}`;
+}
+
 const emptyRoom = () => ({
   key: nextRoomKey(),
   roomNumber: '',
@@ -19,6 +25,14 @@ const emptyRoom = () => ({
   kind: 'regular',
   roomType: 'ac',
   genderAllowed: ''
+});
+
+const emptyDeskPerson = () => ({
+  key: nextDeskKey(),
+  id: '',
+  name: '',
+  contact: '',
+  temporaryPassword: ''
 });
 
 const emptyForm = () => ({
@@ -29,7 +43,8 @@ const emptyForm = () => ({
   distanceKm: '',
   active: true,
   reserved: false,
-  rooms: [emptyRoom()]
+  rooms: [emptyRoom()],
+  deskPeople: []
 });
 
 function roomsFromHotel(hotel) {
@@ -42,6 +57,17 @@ function roomsFromHotel(hotel) {
     kind: room.kind || 'regular',
     roomType: room.roomType === 'non_ac' ? 'non_ac' : 'ac',
     genderAllowed: room.genderAllowed || ''
+  }));
+}
+
+function deskPeopleFromHotel(hotel) {
+  const list = Array.isArray(hotel?.deskPeople) ? hotel.deskPeople : [];
+  return list.map((row) => ({
+    key: nextDeskKey(),
+    id: row.id || '',
+    name: row.name || '',
+    contact: row.contact || '',
+    temporaryPassword: row.temporaryPassword || ''
   }));
 }
 
@@ -90,7 +116,8 @@ export function StayHotelFormPage() {
           distanceKm: hotel.distanceKm != null ? String(hotel.distanceKm) : '',
           active: hotel.active !== false,
           reserved: Boolean(hotel.reserved),
-          rooms: roomsFromHotel(hotel)
+          rooms: roomsFromHotel(hotel),
+          deskPeople: deskPeopleFromHotel(hotel)
         });
       })
       .catch((err) => {
@@ -132,6 +159,29 @@ export function StayHotelFormPage() {
       const next = prev.rooms.filter((room) => room.key !== key);
       return { ...prev, rooms: next.length ? next : [emptyRoom()] };
     });
+  }
+
+  function addDeskPerson() {
+    setForm((prev) => {
+      if ((prev.deskPeople || []).length >= 3) return prev;
+      return { ...prev, deskPeople: [...(prev.deskPeople || []), emptyDeskPerson()] };
+    });
+  }
+
+  function updateDeskPerson(key, field, value) {
+    setForm((prev) => ({
+      ...prev,
+      deskPeople: (prev.deskPeople || []).map((row) =>
+        row.key === key ? { ...row, [field]: value, temporaryPassword: '' } : row
+      )
+    }));
+  }
+
+  function removeDeskPerson(key) {
+    setForm((prev) => ({
+      ...prev,
+      deskPeople: (prev.deskPeople || []).filter((row) => row.key !== key)
+    }));
   }
 
   async function onPickImage(e) {
@@ -178,7 +228,14 @@ export function StayHotelFormPage() {
         roomType: room.roomType,
         genderAllowed: room.kind === 'regular' ? '' : room.genderAllowed,
         status: 'available'
-      }))
+      })),
+      deskPeople: (latest.deskPeople || [])
+        .map((row) => ({
+          id: String(row.id || '').trim(),
+          name: String(row.name || '').trim(),
+          contact: String(row.contact || '').trim()
+        }))
+        .filter((row) => row.name || row.contact)
     };
     try {
       const res = isEdit
@@ -190,7 +247,17 @@ export function StayHotelFormPage() {
           'Hotel saved, but the image was not stored. Restart the backend and try attaching the image again.'
         );
       }
-      notify(isEdit ? 'Hotel updated.' : 'Hotel saved.');
+      const savedDesk = Array.isArray(res?.data?.deskPeople) ? res.data.deskPeople : [];
+      const temps = savedDesk
+        .map((row) => (row.temporaryPassword ? `${row.name}: ${row.temporaryPassword}` : ''))
+        .filter(Boolean);
+      notify(
+        temps.length
+          ? `${isEdit ? 'Hotel updated' : 'Hotel saved'}. Temp passwords — ${temps.join(' · ')}`
+          : isEdit
+            ? 'Hotel updated.'
+            : 'Hotel saved.'
+      );
       navigate('/stay/hotels');
     } catch (err) {
       setError(err.message || 'Could not save hotel.');
@@ -401,6 +468,88 @@ export function StayHotelFormPage() {
                   </div>
                 </div>
               </div>
+            </section>
+
+            <section className="x-group" aria-labelledby="hotel-desk-title">
+              <div className="hotel-rooms-head">
+                <h3 className="x-group-title" id="hotel-desk-title">
+                  <span uk-icon="icon: users; ratio: 0.75" /> Hotel Desk
+                </h3>
+                <button
+                  type="button"
+                  className="uk-button uk-button-default uk-button-small hotel-room-add"
+                  onClick={addDeskPerson}
+                  disabled={(form.deskPeople || []).length >= 3}
+                  aria-label="Add Hotel Desk person"
+                >
+                  <span uk-icon="icon: plus; ratio: 0.8" /> Add person
+                </button>
+              </div>
+              <p className="hint uk-margin-small-bottom">
+                Up to 3 people. They log in with contact number + temporary password (hotel name + their
+                name + contact). Role: Hotel Desk.
+              </p>
+              {(form.deskPeople || []).length === 0 ? (
+                <p className="uk-text-meta">No Hotel Desk people attached yet.</p>
+              ) : (
+                <div className="uk-overflow-auto">
+                  <table className="uk-table uk-table-small uk-table-divider hotel-rooms-table">
+                    <thead>
+                      <tr>
+                        <th scope="col">Name</th>
+                        <th scope="col">Contact number</th>
+                        <th scope="col">Temporary password</th>
+                        <th scope="col" className="hotel-room-actions">
+                          <span className="uk-text-meta">Rows</span>
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(form.deskPeople || []).map((row) => (
+                        <tr key={row.key}>
+                          <td>
+                            <input
+                              className="uk-input uk-form-small"
+                              value={row.name}
+                              onChange={(e) => updateDeskPerson(row.key, 'name', e.target.value)}
+                              placeholder="Meena Rao"
+                              required
+                              aria-label="Hotel Desk name"
+                            />
+                          </td>
+                          <td>
+                            <input
+                              className="uk-input uk-form-small"
+                              type="tel"
+                              inputMode="tel"
+                              value={row.contact}
+                              onChange={(e) => updateDeskPerson(row.key, 'contact', e.target.value)}
+                              placeholder="9966362691"
+                              required
+                              aria-label="Hotel Desk contact"
+                            />
+                          </td>
+                          <td>
+                            <span className="uk-text-meta">
+                              {row.temporaryPassword || 'Shown after save'}
+                            </span>
+                          </td>
+                          <td className="hotel-room-actions">
+                            <button
+                              type="button"
+                              className="uk-button uk-button-text hotel-room-icon-btn"
+                              onClick={() => removeDeskPerson(row.key)}
+                              aria-label={`Remove Hotel Desk ${row.name || ''}`.trim()}
+                            >
+                              <span uk-icon="icon: minus-circle; ratio: 0.95" />
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </section>
 
             <section className="x-group" aria-labelledby="hotel-rooms-title">

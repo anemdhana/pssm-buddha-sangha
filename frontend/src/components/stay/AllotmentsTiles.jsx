@@ -40,16 +40,21 @@ function Chip({ active, onClick, children }) {
   );
 }
 
-function AllotmentTile({ person, onOpen }) {
+function AllotmentTile({ person, selected = false, onToggle, onOpen }) {
   const photo = String(person.livePhoto || '').trim();
   const location = registrationLocationShort(person.place);
   const age = ageGroupLabel(person.age);
   const stayLabel = stayRangeLabel(person.checkInDate, person.checkOutDate);
   const nights = stayNightCount(person.checkInDate, person.checkOutDate);
   const familyColor = familyMarkColor(person.bookingId || person.allotmentId);
+  const didNotArrive = person.status === 'did_not_arrive';
 
   return (
-    <article className={`x-interest-tile x-allot-tile${person.status === 'checked_in' ? ' is-checked-in' : ''}`}>
+    <article
+      className={`x-interest-tile x-allot-tile${person.status === 'checked_in' ? ' is-checked-in' : ''}${
+        didNotArrive ? ' is-did-not-arrive' : ''
+      }${selected ? ' is-selected' : ''}`}
+    >
       {familyColor ? (
         <span
           className="x-allot-family-mark"
@@ -58,6 +63,15 @@ function AllotmentTile({ person, onOpen }) {
           aria-hidden="true"
         />
       ) : null}
+      <label className="x-allot-tile-select">
+        <input
+          type="checkbox"
+          className="uk-checkbox"
+          checked={selected}
+          onChange={() => onToggle?.(person)}
+          aria-label={`Select ${person.name || 'guest'}`}
+        />
+      </label>
       <button
         type="button"
         className="x-interest-tile-hit x-allot-tile-hit"
@@ -121,7 +135,13 @@ export function AllotmentsTiles({
   location,
   onLocationChange,
   stayRange = '',
-  onStayRangeChange
+  onStayRangeChange,
+  selectedIds,
+  onTogglePerson,
+  onSelectAllVisible,
+  onClearSelection,
+  onMoveToWaitList,
+  allotBusy = false
 }) {
   const hotels = Array.isArray(facets?.hotels) ? facets.hotels : [];
   const locations = Array.isArray(facets?.locations) ? facets.locations : [];
@@ -141,6 +161,11 @@ export function AllotmentsTiles({
     })
     .filter((row) => row.key && row.label);
   const peopleTotal = stats?.people ?? 0;
+  const selected = selectedIds instanceof Set ? selectedIds : new Set(selectedIds || []);
+  const selectedCount = selected.size;
+  const visibleIds = people.map((p) => p.id);
+  const allVisibleSelected =
+    visibleIds.length > 0 && visibleIds.every((id) => selected.has(id));
 
   function pick(current, next, setter) {
     setter(current === next ? '' : next);
@@ -258,6 +283,12 @@ export function AllotmentsTiles({
                   >
                     In
                   </Chip>
+                  <Chip
+                    active={status === 'did_not_arrive'}
+                    onClick={() => pick(status, 'did_not_arrive', onStatusChange)}
+                  >
+                    Did not arrive
+                  </Chip>
                 </div>
               </div>
               <div className="x-allot-filter-group" role="group" aria-label="Gender">
@@ -338,6 +369,50 @@ export function AllotmentsTiles({
               {totalPages ? ` of ${totalPages}` : ''}
             </p>
           ) : null}
+          {status === 'did_not_arrive' ? (
+            <p className="x-hotel-filter-note x-allot-filter-note">
+              Select guests who did not arrive, then Move to Wait List to free their beds.
+            </p>
+          ) : null}
+          {people.length > 0 ? (
+            <div className="x-allot-select-bar">
+              <label className="uk-flex uk-flex-middle gap-8">
+                <input
+                  type="checkbox"
+                  className="uk-checkbox"
+                  checked={allVisibleSelected}
+                  onChange={() => {
+                    if (allVisibleSelected) onClearSelection?.();
+                    else onSelectAllVisible?.(people);
+                  }}
+                />
+                <span className="uk-text-small">
+                  {allVisibleSelected ? 'Clear page selection' : 'Select all on this page'}
+                </span>
+              </label>
+              {selectedCount > 0 ? (
+                <div className="x-allot-select-actions">
+                  <span className="uk-text-meta">{selectedCount} selected</span>
+                  <button
+                    type="button"
+                    className="uk-button uk-button-default uk-button-small"
+                    onClick={() => onClearSelection?.()}
+                    disabled={allotBusy}
+                  >
+                    Clear
+                  </button>
+                  <button
+                    type="button"
+                    className="uk-button uk-button-primary uk-button-small"
+                    onClick={() => onMoveToWaitList?.(people.filter((p) => selected.has(p.id)))}
+                    disabled={allotBusy}
+                  >
+                    {allotBusy ? 'Moving…' : 'Move to Wait List'}
+                  </button>
+                </div>
+              ) : null}
+            </div>
+          ) : null}
         </div>
 
         {people.length === 0 ? (
@@ -354,7 +429,12 @@ export function AllotmentsTiles({
             <div className="x-interest-tiles" role="list">
               {people.map((person) => (
                 <div key={person.id} role="listitem">
-                  <AllotmentTile person={person} onOpen={openPerson} />
+                  <AllotmentTile
+                    person={person}
+                    selected={selected.has(person.id)}
+                    onToggle={onTogglePerson}
+                    onOpen={openPerson}
+                  />
                 </div>
               ))}
             </div>

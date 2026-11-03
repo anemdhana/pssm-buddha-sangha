@@ -244,7 +244,11 @@ public class StayAllotmentQueryRepository {
             parts.add(Criteria.where("roomKind").is(normalizeKind(filters.roomKind())));
         }
         if (include(filters.status(), omitField, "status")) {
-            parts.add(Criteria.where("status").is(filters.status().trim().toLowerCase(Locale.ROOT)));
+            String status = filters.status().trim().toLowerCase(Locale.ROOT);
+            parts.add(new Criteria().orOperator(
+                    Criteria.where("status").is(status),
+                    Criteria.where("guests.personStatus").is(status)
+            ));
         }
         if (include(filters.gender(), omitField, "gender")) {
             String gender = filters.gender().trim().toLowerCase(Locale.ROOT);

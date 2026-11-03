@@ -10,10 +10,12 @@ public final class SanghaRole {
     public static final String PMMA_MEMBER = "pmma_member";
     public static final String ACCOMMODATION_VOLUNTEER = "accommodation_volunteer";
     public static final String ACCOMMODATION_ADMIN = "accommodation_admin";
+    /** Attached on hotel record (max 3) — not via People & roles. */
+    public static final String HOTEL_DESK = "hotel_desk";
 
     public static final Set<String> ALL = Set.of(
             PSSM_ADMIN, EVENT_ORGANIZER, PYRAMID_SEVADAL, PMMA_MEMBER,
-            ACCOMMODATION_VOLUNTEER, ACCOMMODATION_ADMIN
+            ACCOMMODATION_VOLUNTEER, ACCOMMODATION_ADMIN, HOTEL_DESK
     );
 
     public static final Set<String> ASSIGNABLE = Set.of(

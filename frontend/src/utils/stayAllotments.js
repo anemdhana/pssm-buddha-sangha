@@ -113,8 +113,12 @@ export function allotmentTilePeople(rows) {
     const guests = Array.isArray(row.guests) ? row.guests : [];
     guests.forEach((guest, index) => {
       const primary = Boolean(guest?.primary) || index === 0;
+      const guestKey = guest?.guestKey || `${row.id}:g${index}`;
+      const personStatus = guest?.personStatus || row.status || 'allotted';
       people.push({
         id: `${row.id}__${index}`,
+        personId: guest?.personId || `${row.id}::${guestKey}`,
+        guestKey,
         allotmentId: row.id,
         bookingId: row.bookingId,
         guestIndex: primary ? -1 : Math.max(0, index - (guests.some((g) => g?.primary) ? 1 : 0)),
@@ -135,7 +139,7 @@ export function allotmentTilePeople(rows) {
         roomNumber: row.roomNumber,
         roomType: row.roomType === 'non_ac' ? 'non_ac' : 'ac',
         roomKind: row.roomKind || 'regular',
-        status: row.status || 'allotted',
+        status: personStatus,
         plan: row.plan === 'paid' ? 'paid' : 'free',
         checkInDate: guest?.stayStartDate || row.checkInDate,
         checkOutDate: guest?.stayEndDate || row.checkOutDate,
@@ -192,9 +196,40 @@ export function filterAllotmentPeople(people, filters = {}) {
 }
 
 export function allotmentStatusLabel(status) {
+  if (status === 'did_not_arrive') return 'Did not arrive';
   if (status === 'checked_in') return 'Checked in';
   if (status === 'checked_out') return 'Checked out';
   return 'Allotted';
+}
+
+/** Booking/name/mobile keys for guests marked Did not arrive (Friends and Masters filter). */
+export function didNotArriveGuestKeys(allotments) {
+  const keys = new Set();
+  (Array.isArray(allotments) ? allotments : []).forEach((row) => {
+    if (!row) return;
+    const bookingId = String(row.bookingId || '').trim();
+    (Array.isArray(row.guests) ? row.guests : []).forEach((guest) => {
+      if (!guest || String(guest.personStatus || '').toLowerCase() !== 'did_not_arrive') return;
+      const mobile = String(guest.mobile || '').replace(/\D/g, '');
+      if (mobile) keys.add(`m:${mobile}`);
+      const name = String(guest.name || '')
+        .trim()
+        .toLowerCase();
+      if (name) keys.add(`n:${bookingId}:${name}`);
+    });
+  });
+  return keys;
+}
+
+export function personMatchesDidNotArriveKeys(person, keys) {
+  if (!person || !(keys instanceof Set) || keys.size === 0) return false;
+  const mobile = String(person.mobile || '').replace(/\D/g, '');
+  if (mobile && keys.has(`m:${mobile}`)) return true;
+  const bookingId = String(person.bookingId || '').trim();
+  const name = String(person.name || '')
+    .trim()
+    .toLowerCase();
+  return Boolean(name && keys.has(`n:${bookingId}:${name}`));
 }
 
 export function allotmentRoomTypeLabel(roomType) {

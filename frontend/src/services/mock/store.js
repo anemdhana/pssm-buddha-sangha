@@ -944,12 +944,15 @@ function requireAllotmentManager() {
 
 function enrichHotel(hotel) {
   const rooms = Array.isArray(hotel.rooms) ? hotel.rooms : [];
+  const deskPeople = Array.isArray(hotel.deskPeople) ? hotel.deskPeople : [];
   const capacityTotal = rooms.reduce((sum, room) => sum + Math.max(0, Number(room.capacity) || 0), 0);
   return {
     ...hotel,
     rooms,
+    deskPeople,
     roomCount: rooms.length,
-    capacityTotal
+    capacityTotal,
+    deskPeopleCount: deskPeople.length
   };
 }
 
@@ -1009,6 +1012,37 @@ function normalizeHotelPayload(payload, { id, createdBy, createdAt, eventId: eve
       status: 'available'
     };
   });
+  const deskIn = Array.isArray(payload?.deskPeople) ? payload.deskPeople : [];
+  if (deskIn.length > 3) {
+    throw apiError(400, 'VALIDATION', 'At most 3 Hotel Desk people can be attached to a hotel.');
+  }
+  const deskSeen = {};
+  const deskPeople = deskIn
+    .map((row, index) => {
+      const deskName = String(row?.name || '').trim();
+      const deskContact = normalizeMobile(row?.contact);
+      if (!deskName && !deskContact) return null;
+      if (!deskName) {
+        throw apiError(400, 'VALIDATION', `Enter name for Hotel Desk person ${index + 1}.`);
+      }
+      if (!deskContact || deskContact.length < 10) {
+        throw apiError(400, 'VALIDATION', `Enter a valid contact number for Hotel Desk person ${deskName}.`);
+      }
+      if (deskSeen[deskContact]) {
+        throw apiError(400, 'VALIDATION', `Duplicate Hotel Desk contact ${deskContact}.`);
+      }
+      deskSeen[deskContact] = true;
+      const temporaryPassword = `${String(name).replace(/[^A-Za-z]/g, '').slice(0, 4)}${deskName.replace(/[^A-Za-z]/g, '').slice(0, 4)}${deskContact.slice(-4)}`;
+      return {
+        id: String(row?.id || '').trim() || `hdesk_${id}_${deskContact}`,
+        name: deskName,
+        contact: deskContact,
+        role: 'hotel_desk',
+        temporaryPassword
+      };
+    })
+    .filter(Boolean);
+
   return {
     id,
     eventId,
@@ -1020,6 +1054,7 @@ function normalizeHotelPayload(payload, { id, createdBy, createdAt, eventId: eve
     active: payload?.active === false ? false : true,
     reserved: Boolean(payload?.reserved),
     rooms,
+    deskPeople,
     createdBy,
     createdAt,
     updatedAt: new Date().toISOString()
@@ -2245,15 +2280,36 @@ export const mockApi = {
     const list = readHotels();
     const idx = list.findIndex((h) => h && h.id === hotelId);
     if (idx < 0) throw apiError(404, 'NOT_FOUND', 'Hotel not found.');
-    const hotel = normalizeHotelPayload(payload, {
+    const base = {
       id: hotelId,
       eventId: payload?.eventId || list[idx].eventId,
       createdBy: list[idx].createdBy,
       createdAt: list[idx].createdAt
-    });
+    };
+    const nextPayload =
+      payload?.deskPeople == null
+        ? { ...payload, deskPeople: list[idx].deskPeople || [] }
+        : payload;
+    const hotel = normalizeHotelPayload(nextPayload, base);
     list[idx] = hotel;
     writeHotels(list);
     return { data: enrichHotel(hotel) };
+  },
+
+  async receptionMe() {
+    throw apiError(501, 'NOT_IMPLEMENTED', 'Hotel Desk reception needs the live API (VITE_USE_MOCK=false).');
+  },
+  async receptionGuests() {
+    throw apiError(501, 'NOT_IMPLEMENTED', 'Hotel Desk reception needs the live API (VITE_USE_MOCK=false).');
+  },
+  async receptionCheckIn() {
+    throw apiError(501, 'NOT_IMPLEMENTED', 'Hotel Desk reception needs the live API (VITE_USE_MOCK=false).');
+  },
+  async receptionCheckOut() {
+    throw apiError(501, 'NOT_IMPLEMENTED', 'Hotel Desk reception needs the live API (VITE_USE_MOCK=false).');
+  },
+  async receptionDidNotArrive() {
+    throw apiError(501, 'NOT_IMPLEMENTED', 'Hotel Desk reception needs the live API (VITE_USE_MOCK=false).');
   },
 
   async updateEvent(id, { name, startDate, endDate, location, expectedBudgetInr, meditationHoursPerDay }) {

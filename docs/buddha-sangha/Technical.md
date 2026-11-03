@@ -2,8 +2,8 @@
 ## PSSM Buddha Sangha (pssm-buddha-sangha)
 
 **Project:** pssm-buddha-sangha  
-**Version:** 2.8 (Living Document)  
-**Last Updated:** 09 October 2026  
+**Version:** 2.9 (Living Document)  
+**Last Updated:** 02 November 2026  
 
 Sangha register technical notes and event accommodation (allocation + REST API) in one place.
 
@@ -80,7 +80,7 @@ Sangha register technical notes and event accommodation (allocation + REST API) 
 | --- | --- | --- | --- |
 | 1 | **Sangha register** | Masters register: add/edit people, places, dashboard groups | Register Admin / Sangha member |
 | 2 | **Supporting events** | Active events (Register Admin can set Active/Inactive anytime), budgets, host-first support, equal share | Register Admin / Sangha member |
-| 3 | **Accommodation** | Hotels, rooms, Free/Paid Stay for an event, booking window, smart allotment, receptionist check-in/out | **Accommodation Admin**, Hotel Receptionist, Visitor |
+| 3 | **Accommodation** | Hotels, rooms, Free/Paid Stay for an event, booking window, smart allotment, Hotel Desk check-in/out | **Accommodation Admin**, **Hotel Desk**, Visitor |
 
 **Role note:** **PSSM Admin** (People & roles on My Space) assigns Event Organizer / Pyramid Sevadal / PMMA Member / Accommodation Volunteer. **Accommodation Volunteer** books Free/Paid stay (including for new visitors, who are added to the sangha register). That is not the same as **Accommodation Admin**, who runs hotels and room allotment for Stay.
 
@@ -172,7 +172,7 @@ Assignable by Admin UI: Event Organizer, Pyramid Sevadal, PMMA Member only. PSSM
 
 ### Next technical work (accommodation)
 
-Next: Accommodation module — wire Stay to events from `pssm_events` (then MongoDB events), booking cutoff, smart allocation, receptionist desk, Spring WebSocket / WhatsApp — see Event accommodation sections below. Prefer people who already have a sangha join record.
+Next: **Hotel Desk** — role `hotel_desk` (max 3 people on hotel record), temp password from hotel+name+contact, menu-less desk shell; `/reception/*` person states incl. `did_not_arrive`. Requirements: FR-28a, FR-09a–e. UI: A2 + R1. Stay booking / allotment are live on release-v1.
 
 ## Sangha register
 
@@ -723,7 +723,7 @@ The system manages free and self-booked hotel accommodation for event visitors a
   - The single Assigned ID Card issued for the entire party
 
 **Validation at Hotel:**
-- Hotel receptionist validates the party using the single assigned ID card (which is backed by the captured live photo and ID proof).
+- Hotel receptionist validates the arriving person by **room number + name** on the hotel desk (primary), and/or the assigned ID card (backed by live photo and ID proof when available).
 
 ---
 
@@ -942,9 +942,30 @@ Accommodation Admin and receptionist sign in with a username. A visitor family g
   "contact": "9848012345",
   "distanceFromEvent": { "value": 0.4, "unit": "km" },
   "active": true,
-  "reserved": false
+  "reserved": false,
+  "deskPeople": [
+    {
+      "id": "hdesk_1",
+      "name": "Meena Rao",
+      "contact": "9966362691",
+      "role": "hotel_desk"
+    }
+  ]
 }
 ```
+
+`deskPeople`: max **3**. Creating/updating a desk person creates a login (contact = username/mobile) with role `hotel_desk` and `hotelId` binding.
+
+**Hotel Desk temporary password (FR-28a)**  
+Deterministic mix of hotel name, person name, and contact (same spirit as join temps like `Ramak1508`):
+
+1. Letters only from **hotel name**, take up to first **4** (keep original letter case of those letters).  
+2. Letters only from **person name**, take up to first **4**.  
+3. Last **4 digits** of **contact number**.  
+4. Concatenate with no separator.
+
+Example: hotel `Sai Prakash`, name `Meena Rao`, contact `9966362691` → `SaiPMeen2691`.  
+Admin response may include `temporaryPassword` once on create/update so it can be shown in UI. After the person changes password, only the new password is accepted (same as other members).
 
 **Room**
 
@@ -1198,13 +1219,17 @@ Request
   "contact": "9848000111",
   "distanceFromEvent": { "value": 0.6, "unit": "km" },
   "active": true,
-  "reserved": false
+  "reserved": false,
+  "deskPeople": [
+    { "name": "Meena Rao", "contact": "9966362691" }
+  ]
 }
 ```
 
-`distanceFromEvent` is required. `reserved` defaults to `false`.
+`distanceFromEvent` is required. `reserved` defaults to `false`.  
+`deskPeople` optional; max 3; each entry needs `name` + `contact`. Server generates temporary passwords and may return them on the Hotel payload for Admin UI.
 
-Response `201`: Hotel.
+Response `201`: Hotel (include generated `temporaryPassword` per new desk person when present).
 
 #### `GET /hotels/:hotelId`  
 Accommodation Admin. Receptionist only for their hotel.
@@ -1733,14 +1758,22 @@ A reserved hotel is allowed here. An inactive hotel is not.
 
 ---
 
-### 13. Hotel receptionist
+### 13. Hotel Desk (`hotel_desk`)
 
-Every call is limited to the receptionist's hotel.
+Every call is limited to the caller's attached hotel (and the selected event). Role: **Hotel Desk** / `hotel_desk` (FR-28a).  
+**Behaviour:** FR-09 / FR-09a–e / US-10a–b — verify by room + name; person states `allotted` | `checked_in` | `checked_out` | `did_not_arrive`; after ~15:00 mark `did_not_arrive`; volunteer releases those back to wait list.  
+**Presentation:** `UI.md` Hotel Desk shell + R1 + volunteer list filter — not defined here.
 
 #### `GET /reception/guests`  
-Receptionist.
+Receptionist. Primary desk list (person-wise preferred).
 
-Query: `status=expected|checked_in|partly_checked_out|checked_out`, `date=YYYY-MM-DD`.
+Query:
+- `date=YYYY-MM-DD` — **required conceptually**; default **today**. Must fall within the selected event’s start–end (FR-09b). Return people whose stay covers that date at this hotel.
+- `status` — optional; one or repeated `allotted|checked_in|checked_out|did_not_arrive` to narrow by person state after date is set.
+- `checkingOutOnDate=true` — optional; only people whose planned check-out / stay **end date** equals `date` (FR-09e same-day remind set).
+- `roomNumber`, `q` (name) — optional find-on-list.
+
+Each guest row may include `checkingOutOnDate: true|false` when `date` is supplied (end date === `date`).
 
 Response `200`
 
@@ -1748,57 +1781,82 @@ Response `200`
 {
   "data": [
     {
+      "personId": "mem_1",
       "partyId": "pty_2",
-      "visitorName": "Lakshmi",
+      "name": "Lakshmi",
       "idCardNumber": "PSSM-1048",
-      "personCount": 2,
       "roomNumber": "231",
       "checkInDate": "2026-12-01",
       "checkInTime": "11:00",
       "checkOutDate": "2026-12-12",
       "checkOutTime": "11:00",
       "specialNeeds": { "aged": true, "sickness": false },
-      "status": "expected",
+      "personStatus": "allotted",
       "keyPolicy": "Room keys stay at reception."
     }
   ]
 }
 ```
 
+`personStatus`: `allotted` | `checked_in` | `checked_out` | `did_not_arrive`. Desk shows planned `checkOutDate` / `checkOutTime` always.
+
+#### `POST /reception/did-not-arrive`  
+Receptionist. Mark **Did not arrive** after the ~15:00 second-chance window (FR-09c).
+
+Request
+
+```json
+{ "personId": "mem_1" }
+```
+
+Response `200`: `{ "data": { "personId": "mem_1", "personStatus": "did_not_arrive", "markedAt": "…" } }`  
+`409` if already checked in/out, or before the allowed window when the server enforces 15:00.
+
 #### `GET /reception/guests/:partyId`  
 Receptionist. Full party, photos, and room. Used on the check-in panel.
 
+#### `GET /reception/lookup`  
+Receptionist. Desk verify step (room + name). Does not change status.
+
+Query: `roomNumber` (required when guest states a room), `name` (required).
+
+Response `200`: matching allotted person(s) for this hotel with verification panel fields (name, room, live photo, ID proof if any, special needs, expected times, key reminder).  
+`404` when no allotted person matches that room + name for this hotel (refuse entry).
+
 #### `GET /reception/id-cards/:idCardNumber`  
-Receptionist. Search step. Does not check the party in.
+Receptionist. Optional search by ID card. Does not check the person in.
 
 Response `200`: the same verification panel: card number, live photo, ID proof photo, names, room, special needs, expected time `11:00`, key reminder.  
 `404` when the card is not for this hotel.
 
 #### `POST /reception/check-ins`  
-Receptionist. Confirm step.
+Receptionist. Tick **Checked-in now** (person-wise).
 
 Request
 
 ```json
-{ "idCardNumber": "PSSM-1048" }
+{ "personId": "mem_1" }
 ```
+
+Also accepted for compatibility: `{ "idCardNumber": "PSSM-1048" }` (checks in matching person(s) for this hotel).
 
 Response `200`
 
 ```json
 {
   "data": {
+    "personId": "mem_1",
     "partyId": "pty_2",
-    "status": "checked_in",
+    "personStatus": "checked_in",
     "checkedInAt": "2026-12-01T11:05:00+05:30"
   }
 }
 ```
 
-`409` when the card does not match a party for this hotel. Accommodation Admin is notified.
+`409` when the person is not allotted to this hotel / wrong room. Accommodation Admin is notified.
 
 #### `POST /reception/check-outs`  
-Receptionist. Whole party, selected people, or an early check-out.
+Receptionist. Tick **Checked-out now** — whole party, selected people, or early check-out.
 
 Request
 
@@ -1811,7 +1869,7 @@ Request
 }
 ```
 
-`scope`: `party` or `selected`. For `party`, omit `personIds`.
+`scope`: `party` or `selected`. For `party`, omit `personIds`. Person-wise desk tick uses `scope: "selected"` with one `personId`.
 
 Response `200`
 
@@ -1819,6 +1877,7 @@ Response `200`
 {
   "data": {
     "partyId": "pty_2",
+    "personStatuses": [{ "personId": "mem_1", "personStatus": "checked_out" }],
     "status": "partly_checked_out",
     "bedsReleased": 1,
     "roomStatus": "available"
@@ -1944,9 +2003,11 @@ Accommodation Admin or the receptionist of that hotel. Full payload of the chang
 | POST | `/admin/parties/:partyId/actions` | Accommodation Admin |
 | GET | `/reception/guests` | Receptionist |
 | GET | `/reception/guests/:partyId` | Receptionist |
+| GET | `/reception/lookup` | Receptionist (room + name verify) |
 | GET | `/reception/id-cards/:idCardNumber` | Receptionist |
-| POST | `/reception/check-ins` | Receptionist |
-| POST | `/reception/check-outs` | Receptionist |
+| POST | `/reception/check-ins` | Receptionist (person-wise Checked-in now) |
+| POST | `/reception/check-outs` | Receptionist (person-wise Checked-out now) |
+| POST | `/reception/did-not-arrive` | Receptionist (after ~15:00 second chance) |
 | GET | `/reception/checkout-reminders` | Receptionist |
 | PATCH | `/reception/checkout-reminders/:partyId` | Receptionist |
 | GET | `/notifications` | Accommodation Admin, receptionist |

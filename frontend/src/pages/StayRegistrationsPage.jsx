@@ -13,7 +13,11 @@ import {
   suggestHotelsForSelection,
   suggestPlacementsForHotel
 } from '../utils/stayAllotmentSuggest.js';
-import { fetchAllStayAllotments } from '../utils/stayAllotments.js';
+import {
+  didNotArriveGuestKeys,
+  fetchAllStayAllotments,
+  personMatchesDidNotArriveKeys
+} from '../utils/stayAllotments.js';
 import { applySelectedRegistrationRemovals } from '../utils/stayRegistrationRemove.js';
 import {
   formatStayCapacityButtonLabel,
@@ -56,6 +60,7 @@ export function StayRegistrationsPage() {
   const [stayRange, setStayRange] = useState('');
   const [familySize, setFamilySize] = useState('');
   const [showOnlyAllotted, setShowOnlyAllotted] = useState(false);
+  const [showDidNotArriveOnly, setShowDidNotArriveOnly] = useState(false);
   const [page, setPage] = useState(0);
   const [selectedIds, setSelectedIds] = useState(() => new Set());
   const [hotels, setHotels] = useState([]);
@@ -74,12 +79,28 @@ export function StayRegistrationsPage() {
       location ||
       stayRange ||
       familySize ||
-      showOnlyAllotted
+      showOnlyAllotted ||
+      showDidNotArriveOnly
   );
 
   useEffect(() => {
     setPage(0);
-  }, [debouncedQ, age, meditation, gender, location, stayRange, familySize, showOnlyAllotted, picked.id]);
+  }, [
+    debouncedQ,
+    age,
+    meditation,
+    gender,
+    location,
+    stayRange,
+    familySize,
+    showOnlyAllotted,
+    showDidNotArriveOnly,
+    picked.id
+  ]);
+
+  useEffect(() => {
+    if (!showOnlyAllotted) setShowDidNotArriveOnly(false);
+  }, [showOnlyAllotted]);
 
   useEffect(() => {
     setHotelPage(0);
@@ -99,13 +120,20 @@ export function StayRegistrationsPage() {
       size: 24
     });
 
+  const didNotArriveKeys = useMemo(() => didNotArriveGuestKeys(allotments), [allotments]);
+
   const allPeople = useMemo(() => {
-    const people = registrationTilePeople(rows);
+    let people = registrationTilePeople(rows);
     // Server returns whole bookings that contain a matching guest; keep only people
     // whose own stay dates match the selected stay filter (split-stay siblings).
-    if (!stayRange) return people;
-    return filterTilePeople(people, { stayRange });
-  }, [rows, stayRange]);
+    if (stayRange) {
+      people = filterTilePeople(people, { stayRange });
+    }
+    if (showOnlyAllotted && showDidNotArriveOnly) {
+      people = people.filter((p) => personMatchesDidNotArriveKeys(p, didNotArriveKeys));
+    }
+    return people;
+  }, [rows, stayRange, showOnlyAllotted, showDidNotArriveOnly, didNotArriveKeys]);
   const selectedPeople = useMemo(
     () => allPeople.filter((p) => p && selectedIds.has(p.id)),
     [allPeople, selectedIds]
@@ -288,7 +316,19 @@ export function StayRegistrationsPage() {
     setStayRange('');
     setFamilySize('');
     setShowOnlyAllotted(false);
+    setShowDidNotArriveOnly(false);
     setPage(0);
+  }
+
+  function onShowOnlyAllottedChange(next) {
+    setShowOnlyAllotted(Boolean(next));
+    if (!next) setShowDidNotArriveOnly(false);
+  }
+
+  function onShowDidNotArriveOnlyChange(next) {
+    const on = Boolean(next);
+    setShowDidNotArriveOnly(on);
+    if (on) setShowOnlyAllotted(true);
   }
 
   async function removeSelectedRegistrations() {
@@ -661,7 +701,9 @@ export function StayRegistrationsPage() {
               familySize={familySize}
               onFamilySizeChange={setFamilySize}
               showOnlyAllotted={showOnlyAllotted}
-              onShowOnlyAllottedChange={setShowOnlyAllotted}
+              onShowOnlyAllottedChange={onShowOnlyAllottedChange}
+              showDidNotArriveOnly={showDidNotArriveOnly}
+              onShowDidNotArriveOnlyChange={onShowDidNotArriveOnlyChange}
               selectedIds={selectedIds}
               onToggleFamily={toggleFamilyMembers}
               onSelectAll={selectAllVisible}

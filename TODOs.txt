@@ -3,3 +3,11 @@ Done
    -> Stay cohort = bookingId + stay dates (display + allotment packing unit).
 1.1. can we keep that family member out of the family tile and allow to display separate tile, but still linked to family?
    -> Yes: sibling tiles with "Same family" cue; parties/allotments use cohort stay window.
+
+Capture habit: when notes are mixed, write **Requirements** (what/who/states) and **UI** (how it is drawn) as separate edits — do not blend widget language into FRs/US.
+
+Next (captured in docs — not built yet)
+2. Hotel Desk — people on hotel + desk
+   -> Implemented (release-v1): hotel deskPeople max 3, temp password, /hotel-desk R1, /reception APIs.
+      Did not arrive → Move to Wait List on Who is staying where + Friends and Masters (Allotted view).
+      Use live API (VITE_USE_MOCK=false).

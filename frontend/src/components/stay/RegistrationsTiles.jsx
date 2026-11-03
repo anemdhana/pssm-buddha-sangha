@@ -278,6 +278,8 @@ export function RegistrationsTiles({
   onFamilySizeChange,
   showOnlyAllotted = false,
   onShowOnlyAllottedChange,
+  showDidNotArriveOnly = false,
+  onShowDidNotArriveOnlyChange,
   selectedIds,
   onToggleFamily,
   onSelectAll,
@@ -521,6 +523,18 @@ export function RegistrationsTiles({
               />
               <span>Allotted</span>
             </label>
+            {showOnlyAllotted ? (
+              <label className="x-interest-allotted-toggle" htmlFor="interest-show-did-not-arrive">
+                <input
+                  id="interest-show-did-not-arrive"
+                  type="checkbox"
+                  className="uk-checkbox"
+                  checked={Boolean(showDidNotArriveOnly)}
+                  onChange={(e) => onShowDidNotArriveOnlyChange?.(e.target.checked)}
+                />
+                <span>Did not arrive</span>
+              </label>
+            ) : null}
 
             {familySizes.length > 0 ? (
               <div

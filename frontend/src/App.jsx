@@ -16,6 +16,7 @@ import { StayAllotmentsPage } from './pages/StayAllotmentsPage.jsx';
 import { StayHotelFormPage } from './pages/StayHotelFormPage.jsx';
 import { StayHotelsPage } from './pages/StayHotelsPage.jsx';
 import { StayRegistrationsPage } from './pages/StayRegistrationsPage.jsx';
+import { HotelDeskPage } from './pages/HotelDeskPage.jsx';
 
 export default function App() {
   return (
@@ -27,6 +28,14 @@ export default function App() {
               <Route path="/" element={<HomePage />} />
               <Route path="/join" element={<JoinPage />} />
               <Route path="/login" element={<LoginPage />} />
+              <Route
+                path="/hotel-desk"
+                element={
+                  <ProtectedRoute>
+                    <HotelDeskPage />
+                  </ProtectedRoute>
+                }
+              />
               <Route path="/stay" element={<StayPage />} />
               <Route
                 path="/stay/registrations"

@@ -3,6 +3,7 @@ package com.pssm.sangha.service;
 import com.pssm.sangha.common.ApiException;
 import com.pssm.sangha.domain.Person;
 import com.pssm.sangha.domain.SanghaRole;
+import com.pssm.sangha.repo.HotelRepository;
 import com.pssm.sangha.repo.PersonRepository;
 import com.pssm.sangha.security.SanghaUserDetails;
 import com.pssm.sangha.web.dto.ProfileDtos.LoginRequest;
@@ -31,15 +32,18 @@ public class AuthService {
     private final AuthenticationManager authenticationManager;
     private final SecurityContextRepository securityContextRepository;
     private final PersonRepository personRepository;
+    private final HotelRepository hotelRepository;
     private final PasswordEncoder passwordEncoder;
 
     public AuthService(AuthenticationManager authenticationManager,
                        SecurityContextRepository securityContextRepository,
                        PersonRepository personRepository,
+                       HotelRepository hotelRepository,
                        PasswordEncoder passwordEncoder) {
         this.authenticationManager = authenticationManager;
         this.securityContextRepository = securityContextRepository;
         this.personRepository = personRepository;
+        this.hotelRepository = hotelRepository;
         this.passwordEncoder = passwordEncoder;
     }
 
@@ -90,12 +94,7 @@ public class AuthService {
 
     @Transactional(readOnly = true)
     public Map<String, Object> me() {
-        Person person = currentPerson();
-        Map<String, Object> data = new LinkedHashMap<>();
-        data.put("mobile", person.getMobile());
-        data.put("name", person.getFullName());
-        data.put("roles", sortedRoles(person));
-        return data;
+        return sessionView(currentPerson());
     }
 
     @Transactional
@@ -163,7 +162,27 @@ public class AuthService {
         data.put("mobile", person.getMobile());
         data.put("name", person.getFullName());
         data.put("roles", roles);
-        data.put("home", roles.contains(SanghaRole.PSSM_ADMIN) ? "/admin" : "/");
+        String home = "/";
+        if (roles.contains(SanghaRole.PSSM_ADMIN)) {
+            home = "/admin";
+        } else if (roles.contains(SanghaRole.HOTEL_DESK)
+                && roles.stream().noneMatch(r -> SanghaRole.PSSM_ADMIN.equals(r)
+                || SanghaRole.ACCOMMODATION_ADMIN.equals(r)
+                || SanghaRole.ACCOMMODATION_VOLUNTEER.equals(r)
+                || SanghaRole.EVENT_ORGANIZER.equals(r))) {
+            home = "/hotel-desk";
+        }
+        data.put("home", home);
+        if (roles.contains(SanghaRole.HOTEL_DESK)) {
+            String hotelId = person.getHotelId() == null ? "" : person.getHotelId().trim();
+            data.put("hotelId", hotelId);
+            if (!hotelId.isBlank()) {
+                hotelRepository.findById(hotelId).ifPresent(hotel -> {
+                    data.put("hotelName", hotel.getName());
+                    data.put("eventId", hotel.getEventId());
+                });
+            }
+        }
         return data;
     }
 

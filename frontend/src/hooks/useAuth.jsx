@@ -13,7 +13,13 @@ export function AuthProvider({ children }) {
       const sample = api.ensureSampleAdmin ? api.ensureSampleAdmin() : null;
       if (sample) setSampleAdmin(sample);
       const res = await api.me();
-      setUser(res.data);
+      setUser({
+        ...(res.data || {}),
+        hotelId: res.data?.hotelId || '',
+        hotelName: res.data?.hotelName || '',
+        eventId: res.data?.eventId || '',
+        home: res.data?.home || '/'
+      });
     } catch {
       setUser(null);
     } finally {
@@ -30,7 +36,11 @@ export function AuthProvider({ children }) {
     setUser({
       mobile: res.data.mobile,
       name: res.data.name,
-      roles: res.data.roles
+      roles: res.data.roles,
+      hotelId: res.data.hotelId || '',
+      hotelName: res.data.hotelName || '',
+      eventId: res.data.eventId || '',
+      home: res.data.home || '/'
     });
     return res.data;
   }, []);
@@ -55,6 +65,7 @@ export function AuthProvider({ children }) {
       isOrganizer: hasRole('event_organizer'),
       isAccommodationVolunteer: hasRole('accommodation_volunteer'),
       isAccommodationAdmin: hasRole('accommodation_admin'),
+      isHotelDesk: hasRole('hotel_desk'),
       hasRole,
       login,
       logout,

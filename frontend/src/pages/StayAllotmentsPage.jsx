@@ -7,6 +7,7 @@ import { useAuth } from '../hooks/useAuth.jsx';
 import { useDebouncedValue } from '../hooks/useDebouncedValue.js';
 import { api } from '../services/api.js';
 import { allotmentTilePeople } from '../utils/stayAllotments.js';
+import { uikitDialogChoice } from '../utils/uikitDialog.js';
 
 const emptyPage = {
   items: [],
@@ -78,6 +79,9 @@ export function StayAllotmentsPage() {
   const [location, setLocation] = useState('');
   const [stayRange, setStayRange] = useState('');
   const [page, setPage] = useState(0);
+  const [selectedIds, setSelectedIds] = useState(() => new Set());
+  const [allotBusy, setAllotBusy] = useState(false);
+  const [actionError, setActionError] = useState('');
   const hasLoadedRef = useRef(false);
   const requestIdRef = useRef(0);
 
@@ -96,6 +100,7 @@ export function StayAllotmentsPage() {
 
   useEffect(() => {
     setPage(0);
+    setSelectedIds(new Set());
   }, [debouncedQ, hotelId, roomType, roomKind, gender, status, location, stayRange, picked.id]);
 
   useEffect(() => {
@@ -159,7 +164,11 @@ export function StayAllotmentsPage() {
     refresh();
   }, [refresh]);
 
-  const people = useMemo(() => allotmentTilePeople(pageData.items), [pageData.items]);
+  const people = useMemo(() => {
+    const list = allotmentTilePeople(pageData.items);
+    if (!status) return list;
+    return list.filter((p) => String(p.status || '') === status);
+  }, [pageData.items, status]);
 
   function clearFilters() {
     setNameSearch('');
@@ -171,6 +180,82 @@ export function StayAllotmentsPage() {
     setLocation('');
     setStayRange('');
     setPage(0);
+    setSelectedIds(new Set());
+  }
+
+  function togglePerson(person) {
+    if (!person?.id) return;
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(person.id)) next.delete(person.id);
+      else next.add(person.id);
+      return next;
+    });
+  }
+
+  function selectAllVisible(list) {
+    setSelectedIds(new Set((Array.isArray(list) ? list : []).map((p) => p.id).filter(Boolean)));
+  }
+
+  async function moveSelectedToWaitList(selectedPeople) {
+    const list = Array.isArray(selectedPeople) ? selectedPeople.filter(Boolean) : [];
+    const fromSelection =
+      list.length > 0 ? list : people.filter((p) => selectedIds.has(p.id));
+    if (!fromSelection.length || !picked.id) return;
+
+    const names = fromSelection
+      .slice(0, 3)
+      .map((p) => p.name || 'Guest')
+      .join(', ');
+    const extra = fromSelection.length > 3 ? ` and ${fromSelection.length - 3} more` : '';
+    const choice = await uikitDialogChoice(
+      `<p class="uk-margin-remove-top">Move <strong>${fromSelection.length}</strong> selected ${
+        fromSelection.length === 1 ? 'person' : 'people'
+      } to Wait List?</p>` +
+        `<p class="uk-text-meta uk-margin-small-top">${names}${extra} will leave their hotel room(s) so beds can be re-allotted.</p>`,
+      [{ id: 'ok', label: 'Move to Wait List', buttonClass: 'uk-button-primary' }]
+    );
+    if (choice !== 'ok') return;
+
+    setAllotBusy(true);
+    setActionError('');
+    try {
+      const res = await api.releaseStayAllotments({
+        eventId: picked.id,
+        members: fromSelection.map((p) => ({
+          name: p.name || '',
+          mobile: p.mobile || '',
+          primary: Boolean(p.primary),
+          bookingId: p.bookingId || ''
+        }))
+      });
+      const released = Number(res?.data?.released) || 0;
+      setSelectedIds(new Set());
+      await refresh();
+      if (window.UIkit) {
+        window.UIkit.notification({
+          message:
+            released > 0
+              ? `Moved ${released} ${released === 1 ? 'person' : 'people'} to Wait List.`
+              : 'No hotel allotment found for the selected people.',
+          status: released > 0 ? 'success' : 'warning',
+          pos: 'top-center',
+          timeout: 3200
+        });
+      }
+    } catch (err) {
+      setActionError(err.message || 'Could not move to wait list.');
+      if (window.UIkit) {
+        window.UIkit.notification({
+          message: err.message || 'Could not move to wait list.',
+          status: 'danger',
+          pos: 'top-center',
+          timeout: 4000
+        });
+      }
+    } finally {
+      setAllotBusy(false);
+    }
   }
 
   if (authLoading) {
@@ -224,9 +309,9 @@ export function StayAllotmentsPage() {
             </p>
           </header>
 
-          {error ? (
+          {error || actionError ? (
             <p className="hint" role="alert">
-              {error}
+              {actionError || error}
             </p>
           ) : null}
           {loading ? <p className="hint">Loading…</p> : null}
@@ -269,6 +354,12 @@ export function StayAllotmentsPage() {
               onLocationChange={setLocation}
               stayRange={stayRange}
               onStayRangeChange={setStayRange}
+              selectedIds={selectedIds}
+              onTogglePerson={togglePerson}
+              onSelectAllVisible={selectAllVisible}
+              onClearSelection={() => setSelectedIds(new Set())}
+              onMoveToWaitList={moveSelectedToWaitList}
+              allotBusy={allotBusy}
             />
           ) : null}
         </div>

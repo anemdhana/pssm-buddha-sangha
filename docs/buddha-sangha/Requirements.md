@@ -2,8 +2,8 @@
 ## PSSM Buddha Sangha (pssm-buddha-sangha)
 
 **Project:** pssm-buddha-sangha  
-**Version:** 2.11 (Living Document)  
-**Last Updated:** 09 October 2026  
+**Version:** 2.12 (Living Document)  
+**Last Updated:** 02 November 2026  
 
 Sangha register and event accommodation requirements and user stories in one place. Static UI: `docs/prototype/`.
 
@@ -44,6 +44,8 @@ Sangha register and event accommodation requirements and user stories in one pla
 - [Accommodation — User stories](#accommodation-user-stories)
 - [1. Basic Stories (Foundation)](#1-basic-stories-foundation-1)
   - [US-01: Accommodation Admin – Add Hotel](#us-01-accommodation-admin-add-hotel)
+  - [US-01a: Accommodation Admin – Attach Hotel Desk people (max 3)](#us-01a-accommodation-admin--attach-hotel-desk-people-max-3)
+  - [US-01b: Hotel Desk – Sign in and open hotel dashboard](#us-01b-hotel-desk--sign-in-and-open-hotel-dashboard)
   - [US-25: Accommodation Admin – Reserve Hotels for Manual Assignment](#us-25-accommodation-admin-reserve-hotels-for-manual-assignment)
   - [US-02: Accommodation Admin – Add Rooms to Hotel](#us-02-accommodation-admin-add-rooms-to-hotel)
   - [US-03: Visitor – Register Basic Details](#us-03-visitor-register-basic-details)
@@ -56,9 +58,12 @@ Sangha register and event accommodation requirements and user stories in one pla
   - [US-09: System – Generate & Assign ID Card](#us-09-system-generate-assign-id-card)
 - [3. Advanced Stories (Operations & Real-time)](#3-advanced-stories-operations-real-time)
   - [US-10: Hotel Receptionist – View Allotted Guests](#us-10-hotel-receptionist-view-allotted-guests)
+  - [US-10a: Hotel Receptionist – Verify by room + name, then update check-in / check-out / did not arrive](#us-10a-hotel-receptionist--verify-by-room--name-then-update-check-in--check-out--did-not-arrive)
+  - [US-10b: Accommodation Volunteer – Move Did not arrive back to wait list](#us-10b-accommodation-volunteer--move-did-not-arrive-back-to-wait-list)
   - [US-11: Hotel Receptionist – Validate Identity at Check-in](#us-11-hotel-receptionist-validate-identity-at-check-in)
   - [US-12: Hotel Receptionist – Perform Check-out](#us-12-hotel-receptionist-perform-check-out)
   - [US-13: Hotel Receptionist – Advance Check-out Reminder](#us-13-hotel-receptionist-advance-check-out-reminder)
+  - [US-13a: Hotel Receptionist – Remind guests checking out on the selected date](#us-13a-hotel-receptionist--remind-guests-checking-out-on-the-selected-date)
   - [US-14: Accommodation Admin – Receive Real-time Notifications](#us-14-accommodation-admin-receive-real-time-notifications)
   - [US-15: Accommodation Admin – Send Live Updates to Hotel](#us-15-accommodation-admin-send-live-updates-to-hotel)
   - [US-16: Visitor – Self Booking of Accommodation (Optional)](#us-16-visitor-self-booking-of-accommodation-optional)
@@ -85,9 +90,9 @@ Sangha register and event accommodation requirements and user stories in one pla
 | --- | --- | --- | --- |
 | 1 | **Sangha register** | Masters register: add/edit people, places, dashboard groups | Register Admin / Sangha member |
 | 2 | **Supporting events** | Active events (Register Admin can set Active/Inactive anytime), budgets, host-first support, equal share | Register Admin / Sangha member |
-| 3 | **Accommodation** | Hotels, rooms, Free/Paid Stay for an event, booking window, smart allotment, receptionist check-in/out | **Accommodation Admin**, Hotel Receptionist, Visitor |
+| 3 | **Accommodation** | Hotels, rooms, Free/Paid Stay for an event, booking window, smart allotment, Hotel Desk check-in/out | **Accommodation Admin**, **Hotel Desk**, Visitor |
 
-**Role note:** **PSSM Admin** (People & roles on My Space) assigns Event Organizer / Pyramid Sevadal / PMMA Member / **Accommodation Volunteer**. Accommodation Volunteer books Free/Paid stay for an event (including new visitors, who are added to the sangha register together with the booking). That is not the same as **Accommodation Admin**, who runs hotels and room allotment for Stay.
+**Role note:** **PSSM Admin** (People & roles on My Space) assigns Event Organizer / Pyramid Sevadal / PMMA Member / **Accommodation Volunteer**. Accommodation Volunteer books Free/Paid stay for an event (including new visitors, who are added to the sangha register together with the booking). That is not the same as **Accommodation Admin**, who runs hotels and room allotment for Stay. **Hotel Desk** (`hotel_desk`) is attached on the hotel record (max 3 people per hotel) by Accommodation Admin — not via People & roles.
 
 ## Delivery status (prototype)
 
@@ -109,7 +114,7 @@ Self-serve **Join → Login → My Space**, roles, PSSM Admin desk, and Event Or
 
 ### Next module
 
-**Event accommodation allotment** for people who already joined the sangha: Free / Paid Stay against an event (created by Event Organizer), booking window, smart room allocation, receptionist check-in/out — see Accommodation module (Accommodation Admin) FRs and US-01 onward. Join data is the source for prefill; Stay edits must not rewrite the sangha join record.
+**Hotel Desk** (allotment is live on release-v1): attach desk people on hotel (**FR-28a** / **US-01a**), menu-less desk (**US-01b**), dated guest list (**FR-09b**), states / Did not arrive / checking-out-today (**FR-09a–e**); UI **A2** + **R1**. Stay booking / allotment specs remain under Accommodation FRs and US-01 onward.
 
 ## Sangha register
 
@@ -682,7 +687,7 @@ The system shall support sharing of a single room by multiple families when capa
 **FR-19: Room Key Policy**  
 Visitors shall **never take room keys with them**.
 
-- Room keys must always be deposited / left with the Hotel Receptionist.  
+- Room keys must always be deposited / left with the **Hotel Desk**.  
 - This rule applies at all times (when going out, during the day, etc.).  
 - The system and hotel processes shall enforce / remind guests of this policy.
 
@@ -755,6 +760,26 @@ Accommodation Admin may keep a few hotels out of automatic allocation and assign
 - Smart allocation does not place anyone in a reserved hotel.  
 - Accommodation Admin assigns those rooms manually from the allocation review or from a later room change, by choosing the reserved hotel and a room.  
 - A hotel that is not active is unavailable for both automatic and manual assignment. Reserved applies only to an active hotel.
+
+**FR-28a: Hotel Desk people on the hotel (login + scoped desk)**  
+Accommodation Admin shall attach **Hotel Desk** people on the **hotel** record in Hotels & rooms (hotel master data — not per individual room).
+
+| Field | Rule |
+| --- | --- |
+| Name | Required |
+| Contact number | Required; used as login id (mobile digits) |
+| Maximum | **3** Hotel Desk people per hotel |
+
+**Role:** display name **Hotel Desk**, role id `hotel_desk` (preferred name over a generic “receptionist” label).
+
+**Behaviour**
+
+- Each attached person can **sign in** to the system with their **contact number** and a **temporary password**.  
+- Temporary password is **generated** from a mix of **hotel name + their name + contact number** (exact recipe in `Technical.md`). Accommodation Admin sees / can communicate that password when the person is saved.  
+- After login, the person is scoped to **that hotel only**. Their dashboard shows **their hotel name**.  
+- Chrome: **fixed header with the selected event name only** — **no top menu** (no Stay / Account / Help). Desk screens only (FR-09a–e).  
+- Hotel Desk is **not** assigned from PSSM Admin People & roles; attachment on the hotel is the source of the role + hotel binding.  
+- Presentation of the Hotels & rooms form and the menu-less desk shell: `UI.md`.
 
 **2.2 Visitor Registration & Family Details**
 
@@ -943,14 +968,67 @@ Once accommodation is allotted, the system shall automatically notify the concer
 **FR-09: Identity Validation at Check-in**  
 The hotel receptionist shall validate that the person(s) arriving are the correct registered visitor and their accompanying family members before allowing entry into the allotted room.
 
-- Validation shall be performed using the **assigned ID card** issued to the visitor/group.  
-- Only after successful validation of the ID card shall the receptionist permit the guest(s) to occupy the room.
+- Primary verify inputs: the guest states **room number** and **name**; the system must confirm that person is **allotted** to that room at this receptionist’s hotel before entry is allowed.  
+- Validation may also use the **assigned ID card** / live photo when available.  
+- Only after successful validation shall the receptionist permit the guest(s) to occupy the room and mark them **Checked-in**.
+
+**FR-09a: Person stay states at the hotel (receptionist)**  
+For each person allotted to the receptionist’s hotel, the system shall maintain exactly one of these states. On the selected day, the hotel receptionist updates a person’s status among these (check-in / check-out / did not arrive as allowed below) — they do **not** clear the allotment back to “unallotted” themselves.
+
+| State | Meaning | Who may change it |
+| --- | --- | --- |
+| **Allotted** | Expected at that room; not yet present | Set by allotment; receptionist **cannot** undo allotment from this desk |
+| **Checked-in** | Arrived and verified; occupying the room | Receptionist marks check-in after FR-09 validation (on that day) |
+| **Checked-out** | Left (on or before planned check-out date) | Receptionist marks check-out (on that day) |
+| **Did not arrive** | Still expected after the same-day grace window; never checked in | Receptionist marks after the **3:00 PM** second-chance window (FR-09c) |
+
+- Receptionist must be able to see the **planned check-out date** and standard **11:00 AM** check-out time for each person.  
+- State changes are **person-wise** (one family member may check in or out without forcing the whole party).  
+- **Checked-out** frees that person’s bed for re-use per FR-11.  
+- **Did not arrive** keeps the person findable for Accommodation Volunteer wait-list reclaim (FR-09d); bed handling for re-allotment follows that reclaim step.  
+- Presentation of these states (controls, layout) is specified in `UI.md` (Hotel Receptionist R1), not here.
+
+**FR-09b: Receptionist guest list — date and state filters**  
+The receptionist shall see allotted guests for their hotel as a **list for one selected date** (not an open-ended unfiltered dump).
+
+- **Primary filter — date (required for the list):** one calendar day.  
+  - **Default:** today (hotel local / event timezone as used elsewhere).  
+  - **Allowed range:** any day from the **event start date** through the **event end date** (inclusive). Days outside the event are not selectable.  
+- **Secondary filter — person state:** once a date is selected, the receptionist may narrow the list by one or more of the FR-09a states: **Allotted**, **Checked-in**, **Checked-out**, **Did not arrive**.  
+- A person appears for a selected date when that date falls within their stay for this hotel allotment (from their check-in date through their check-out date, using the same inclusive/half-open stay rule as Stay elsewhere).  
+- Scope remains this receptionist’s hotel and the selected event.  
+- List presentation and how few filters appear on screen: `UI.md` R1.
+
+**FR-09c: Same-day arrival window (11:00 AM, second chance ~3:00 PM)**  
+On a person’s **check-in date**, arrival is expected at the standard **11:00 AM** reporting time.
+
+- If the person has **not** checked in by 11:00 AM, the hotel still holds a **second chance** until about **3:00 PM** the same day (person remains **Allotted**; check-in is still allowed).  
+- If they still have not checked in **after 3:00 PM**, the receptionist shall mark them **Did not arrive** (FR-09a).  
+- Marking **Did not arrive** is for that day / that allotment person; it is distinct from **Checked-out**.  
+- Exact desk prompts and when the control is enabled: `UI.md` R1.
+
+**FR-09d: Accommodation Volunteer — reclaim Did not arrive to wait list**  
+Accommodation Volunteer (and roles that already manage allotments / Friends and Masters) shall be able to find people marked **Did not arrive** and **move them back to the wait list** (release that allotment) so beds can be given to others.
+
+- They shall be able to **filter** stay / allotment lists by the **Did not arrive** status.  
+- Moving to wait list releases the room allotment for that person (or party scope as the existing release action allows) and returns them to waiting for re-allotment.  
+- UI for filter + move action: `UI.md` (Volunteer / allotment list), not the receptionist desk.
+
+**FR-09e: Checking out on the selected desk date (same-day reminder)**  
+On the receptionist dashboard, for the **main date filter** (FR-09b), the system shall identify people whose **planned check-out date** (stay **end date**) **equals that selected date**.
+
+- Those people are **checking out on the selected day** (standard time **11:00 AM**).  
+- The receptionist shall be able to see this set clearly so they can **remind** the guest to check out today.  
+- Applies to people still in a stay status that needs a desk reminder (typically **Checked-in**; already **Checked-out** need not be pushed as “remind”).  
+- This is the **same-day** cue driven by the desk date filter. Advance notice for **tomorrow** remains FR-10 / US-13.  
+- How it is drawn on the desk: `UI.md` R1.
 
 **FR-10: Advance Check-out Reminder**  
 The hotel receptionist shall inform the visitor **in advance** when the next day is their last day of stay.
 
 - The system shall support (or prompt) the receptionist to notify the guest about the upcoming check-out.  
-- The notification must clearly mention the **check-out time of 11:00 AM**.
+- The notification must clearly mention the **check-out time of 11:00 AM**.  
+- Same-day “checking out on the selected date” visibility is FR-09e (desk date = stay end date).
 
 **FR-11: Check-out Process**  
 The hotel receptionist shall be able to perform the **check-out action** in the system.
@@ -1048,6 +1126,37 @@ Visitors submit accommodation requests until **2 days before the event**. After 
 - Hotel is saved and appears in the list of available hotels
 - Accommodation Admin can edit or deactivate a hotel later
 - Accommodation Admin can mark a hotel **Reserved** from the hotel list or the hotel form (US-25)
+- Hotel Desk people on the hotel: US-01a / FR-28a
+
+---
+
+### US-01a: Accommodation Admin – Attach Hotel Desk people (max 3)
+**As an** Accommodation Admin  
+**I want** to add up to three **Hotel Desk** people on a hotel (name + contact) in Hotels & rooms  
+**So that** they can log in and run that hotel’s desk for the event
+
+**Acceptance Criteria:**
+- On add/edit hotel (Hotels & rooms), Admin can add **Hotel Desk** rows: **name**, **contact number**
+- Maximum **3** people per hotel; cannot add a fourth
+- Saving creates (or updates) a login for each person: contact number + **temporary password**
+- Temporary password is generated from **hotel name + person name + contact number** (see Technical)
+- Admin can see the generated temporary password when saving / editing so they can tell the hotel person
+- Role is **Hotel Desk** (`hotel_desk`), bound to that hotel
+- *UI: `UI.md` A2 Hotel Desk section*
+
+---
+
+### US-01b: Hotel Desk – Sign in and open hotel dashboard
+**As a** Hotel Desk person  
+**I want** to sign in with my contact number and temporary password and see my hotel’s desk for the event  
+**So that** I can verify guests and update check-in / check-out for my hotel only
+
+**Acceptance Criteria:**
+- Login with **contact number** + temporary password (or changed password later, same pattern as other members)
+- After login: scoped to **attached hotel** only; dashboard shows **hotel name**
+- Header shows **event name** (event picker / fixed event context as product allows) and **no top menu**
+- Desk behaviour: US-10 / US-10a / FR-09a–e
+- *UI: menu-less shell + R1*
 
 ---
 
@@ -1185,32 +1294,70 @@ Visitors submit accommodation requests until **2 days before the event**. After 
 
 ### US-10: Hotel Receptionist – View Allotted Guests
 **As a** Hotel Receptionist  
-**I want** to see the list of parties allotted to my hotel  
-**So that** I know who is expected to check in
+**I want** to see the people allotted to my hotel for a chosen day — including who will check out that day  
+**So that** I know who is expected, in-house, leaving today, already left, or did not arrive
 
 **Acceptance Criteria:**
-- Receptionist can see: Party details, number of persons, check-in date, special needs, assigned rooms
-- Information is filtered only for their hotel
-- Real-time updates when Accommodation Admin makes changes
+- List is limited to this receptionist’s hotel and the selected event
+- **Main filter is a date**, default **today**; selectable dates are only days within **event start–end**
+- With a date selected, receptionist can filter by person state: **Allotted** / **Checked-in** / **Checked-out** / **Did not arrive** (FR-09b)
+- For the same selected date, receptionist can see who **will be checked out that day** — stay **end date** equals the selected date — so they can remind those guests (FR-09e)
+- For that date, receptionist can see person details needed for the desk: name, room, stay dates, special needs, current state
+- Real-time updates when Accommodation Admin changes allotments (when notifications are live)
+- *How the list looks: `UI.md` R1*
+
+---
+
+### US-10a: Hotel Receptionist – Verify by room + name, then update check-in / check-out / did not arrive
+**As a** Hotel Receptionist  
+**I want** to confirm an arriving guest by **room number** and **name**, and on that day update their status to checked-in, checked-out, or did not arrive  
+**So that** only allotted people enter, late no-shows are marked after the second chance, and volunteers can reclaim beds
+
+**Acceptance Criteria:**
+- Scope is limited to **this receptionist’s hotel** (and the selected event)
+- Receptionist can locate a person by **room number** and/or **name** (and optionally ID card) within the dated list (US-10 / FR-09b)
+- System confirms whether that person is **allotted** to the stated room; if not allotted (or wrong room), entry is refused
+- If allotted and verified, receptionist may mark the person **Checked-in** (expected reporting **11:00 AM**; late arrivals still allowed through the second-chance window)
+- If still **Allotted** after **~3:00 PM** on the check-in day, receptionist marks **Did not arrive** (FR-09c)
+- Receptionist can see each person’s **planned check-out date** (and 11:00 AM)
+- Receptionist may mark a person **Checked-out** when they leave — including early check-out before the planned date
+- Person states: **Allotted** (cannot undo allotment) · **Checked-in** · **Checked-out** · **Did not arrive** (FR-09a)
+- Updates are **person-wise** and apply on the working day (dated list)
+- After check-out, that person’s bed capacity is released for re-use
+- Live photo / ID proof may be available as extra verification
+- *UI for how this is drawn: `UI.md` Hotel Receptionist R1–R3*
+
+---
+
+### US-10b: Accommodation Volunteer – Move Did not arrive back to wait list
+**As an** Accommodation Volunteer (or other role that already releases allotments)  
+**I want** to filter people marked **Did not arrive** and move them to the wait list  
+**So that** those beds can be allotted to others
+
+**Acceptance Criteria:**
+- Can filter stay / allotment lists by status **Did not arrive** (FR-09d)
+- Can run the existing (or equivalent) **move to wait list / release allotment** action on those people
+- After move, person is waiting again; bed is free for re-allotment
+- *UI: Friends and Masters / Who is staying where filters — `UI.md`*
 
 ---
 
 ### US-11: Hotel Receptionist – Validate Identity at Check-in
 **As a** Hotel Receptionist  
-**I want** to validate the arriving party using the assigned ID Card  
+**I want** to validate the arriving party (room + name on the desk, and/or assigned ID Card)  
 **So that** only the correct guests enter the room
 
 **Acceptance Criteria:**
-- Receptionist can search or scan the ID Card
-- System shows party details + live photo for verification
-- Only after successful validation can check-in be completed
+- Receptionist can search by room number + name, and/or search or scan the ID Card
+- System shows party details + live photo for verification when available
+- Only after successful validation can check-in be completed (FR-09 / FR-09a)
 - Check-in time is recorded (standard expected time: 11:00 AM)
 
 ---
 
 ### US-12: Hotel Receptionist – Perform Check-out
 **As a** Hotel Receptionist  
-**I want** to check out a party or individual family members  
+**I want** to check out a party or individual family members (including via the desk “Checked-out now” control)  
 **So that** rooms become free for re-allotment
 
 **Acceptance Criteria:**
@@ -1232,6 +1379,20 @@ Visitors submit accommodation requests until **2 days before the event**. After 
 - System shows upcoming check-outs for the next day
 - Receptionist can mark that the guest has been informed
 - Check-out time (11:00 AM) is clearly communicated
+- Same-day “checking out on selected desk date” is US-10 / FR-09e (not a substitute for this advance list)
+
+---
+
+### US-13a: Hotel Receptionist – Remind guests checking out on the selected date
+**As a** Hotel Receptionist  
+**I want** my dashboard (for the main date filter) to show who **will check out that day** from their stay end date  
+**So that** I can remind them about today’s **11:00 AM** check-out
+
+**Acceptance Criteria:**
+- Driven by desk **date** filter: person’s planned check-out / stay **end date** = selected date (FR-09e)
+- Receptionist can see those people on the dashboard and use that list to remind them
+- Check-out time **11:00 AM** is clear
+- *UI: `UI.md` R1 (checking-out-today cue); advance tomorrow list remains R4*
 
 ---
 
@@ -1507,10 +1668,11 @@ Visitors submit accommodation requests until **2 days before the event**. After 
 | Priority | User Stories | Focus Area | Track |
 |----------|--------------|------------|-------|
 | P0 (prototype done) | US-26j, US-26, US-26a, US-26b, US-26b1, US-26c | Join, login, profile, roles, admin desk, create event | Sangha My Space — UI prototype in `docs/prototype/` |
-| P1 | US-01, US-02, US-25 | Hotels & rooms master data | Accommodation module (next) |
-| P2 | US-03, US-04, US-05, US-06, US-08, US-09, US-22, US-24 | Stay registration & booking window for joined people | Accommodation module (next) |
-| P2b | US-23, US-07, US-18, US-20, US-21 | Accommodation Admin smart allocation | Accommodation module |
-| P3 | US-10, US-11, US-12, US-13, US-19 | Hotel Receptionist operations | Accommodation module |
+| P1 | US-01, US-02, US-25 | Hotels & rooms master data | Done (release-v1) |
+| P1b | **US-01a**, **US-01b** | Hotel Desk people on hotel + login / menu-less desk | **Next** (with P3 desk) |
+| P2 | US-03, US-04, US-05, US-06, US-08, US-09, US-22, US-24 | Stay registration & booking window for joined people | Done (release-v1; ID card deepen later) |
+| P2b | US-23, US-07, US-18, US-20, US-21 | Accommodation Admin smart allocation | Done (release-v1 core) |
+| P3 | US-10, **US-10a**, **US-10b**, US-11, US-12, US-13, US-19 | Hotel Receptionist desk + Did not arrive → volunteer wait list | **Next** |
 | P4 | US-14, US-15, US-17 | Real-time & Accommodation Admin control | Accommodation module |
 | P5 | US-16 | Optional self-booking | Accommodation module |
 

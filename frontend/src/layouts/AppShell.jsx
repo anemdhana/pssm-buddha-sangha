@@ -6,7 +6,13 @@ import { api } from '../services/api.js';
 import { formatEventSub } from '../utils/password.js';
 
 export function AppShell() {
-  const { signedIn, isPssmAdmin, isOrganizer, hasRole, logout, loading } = useAuth();
+  const { signedIn, isPssmAdmin, isOrganizer, hasRole, logout, loading, isHotelDesk } = useAuth();
+  const hotelDeskOnly =
+    isHotelDesk &&
+    !isPssmAdmin &&
+    !isOrganizer &&
+    !hasRole('accommodation_admin') &&
+    !hasRole('accommodation_volunteer');
   const canViewStayRegistrations =
     hasRole('accommodation_volunteer') || isPssmAdmin || isOrganizer;
   const canViewStayAllotments =
@@ -105,46 +111,58 @@ export function AppShell() {
             <img className="patriji" src="/assets/patriji.jpg" alt="Patriji" />
             <img className="logo" src="/assets/pssm-logo.png" alt="Pyramid Spiritual Societies Movement" />
           </div>
-          <div className="event-pick">
-            <button className="event-pick-toggle" type="button" aria-label="Choose event">
-              <span className="event-pick-copy">
-                <span className="event-pick-label">{picked.name}</span>
-                {picked.sub ? <span className="event-pick-sub">{picked.sub}</span> : null}
-              </span>
-              <span uk-icon="icon: chevron-down; ratio: 0.7" />
-            </button>
-            <div uk-dropdown="mode: click; pos: bottom-left; offset: -1; delay-hide: 0">
-              <ul className="uk-nav uk-dropdown-nav event-pick-menu">
-                <li className={!picked.id && picked.name === 'PSSM Buddha Sangha' ? 'uk-active' : undefined}>
-                  <a
-                    href="/"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      pickHome();
-                    }}
-                  >
-                    <span className="event-name">PSSM Buddha Sangha</span>
-                    <span className="event-sub">Join the sangha · support events</span>
-                  </a>
-                </li>
-                {events.map((evt) => (
-                  <li key={evt.id} className={picked.id === evt.id ? 'uk-active' : undefined}>
-                    <a
-                      href="#event"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        pickSaved(evt);
-                      }}
-                    >
-                      <span className="event-name">{evt.name}</span>
-                      <span className="event-sub">{formatEventSub(evt)}</span>
-                    </a>
-                  </li>
-                ))}
-              </ul>
-            </div>
+          <div className={`event-pick${hotelDeskOnly ? ' is-hotel-desk' : ''}`}>
+            {hotelDeskOnly ? (
+              <div className="event-pick-toggle" aria-label="Event">
+                <span className="event-pick-copy">
+                  <span className="event-pick-label">{picked.name}</span>
+                  {picked.sub ? <span className="event-pick-sub">{picked.sub}</span> : null}
+                </span>
+              </div>
+            ) : (
+              <>
+                <button className="event-pick-toggle" type="button" aria-label="Choose event">
+                  <span className="event-pick-copy">
+                    <span className="event-pick-label">{picked.name}</span>
+                    {picked.sub ? <span className="event-pick-sub">{picked.sub}</span> : null}
+                  </span>
+                  <span uk-icon="icon: chevron-down; ratio: 0.7" />
+                </button>
+                <div uk-dropdown="mode: click; pos: bottom-left; offset: -1; delay-hide: 0">
+                  <ul className="uk-nav uk-dropdown-nav event-pick-menu">
+                    <li className={!picked.id && picked.name === 'PSSM Buddha Sangha' ? 'uk-active' : undefined}>
+                      <a
+                        href="/"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          pickHome();
+                        }}
+                      >
+                        <span className="event-name">PSSM Buddha Sangha</span>
+                        <span className="event-sub">Join the sangha · support events</span>
+                      </a>
+                    </li>
+                    {events.map((evt) => (
+                      <li key={evt.id} className={picked.id === evt.id ? 'uk-active' : undefined}>
+                        <a
+                          href="#event"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            pickSaved(evt);
+                          }}
+                        >
+                          <span className="event-name">{evt.name}</span>
+                          <span className="event-sub">{formatEventSub(evt)}</span>
+                        </a>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </>
+            )}
           </div>
 
+          {hotelDeskOnly ? null : (
           <nav
             className="app-nav uk-visible@m"
             uk-navbar="mode: click; align: right; offset: 0; flip: false; delay-hide: 0"
@@ -234,7 +252,9 @@ export function AppShell() {
               )}
             </ul>
           </nav>
+          )}
 
+          {hotelDeskOnly ? null : (
           <div className="app-nav-mobile uk-hidden@m">
             <button className="uk-button uk-button-text app-menu-toggle" type="button" aria-label="Open menu">
               <span uk-icon="icon: menu" />
@@ -307,6 +327,7 @@ export function AppShell() {
               </ul>
             </div>
           </div>
+          )}
         </header>
       </div>
       <Outlet />

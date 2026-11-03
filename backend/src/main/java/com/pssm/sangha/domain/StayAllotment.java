@@ -178,6 +178,8 @@ public class StayAllotment {
     }
 
     public static class AllotmentGuest {
+        /** Stable id within the allotment for desk status updates. */
+        private String guestKey;
         private String name;
         private String relation;
         private String mobile;
@@ -189,6 +191,16 @@ public class StayAllotment {
         private String stayStartDate;
         private String stayEndDate;
         private boolean primary;
+        /** allotted | checked_in | checked_out | did_not_arrive */
+        private String personStatus;
+
+        public String getGuestKey() {
+            return guestKey;
+        }
+
+        public void setGuestKey(String guestKey) {
+            this.guestKey = guestKey;
+        }
 
         public String getName() {
             return name;
@@ -276,6 +288,14 @@ public class StayAllotment {
 
         public void setPrimary(boolean primary) {
             this.primary = primary;
+        }
+
+        public String getPersonStatus() {
+            return personStatus;
+        }
+
+        public void setPersonStatus(String personStatus) {
+            this.personStatus = personStatus;
         }
     }
 }

@@ -99,6 +99,22 @@ const liveApi = {
   createHotel: (payload) => request('/hotels', { method: 'POST', body: JSON.stringify(payload) }),
   updateHotel: (id, payload) =>
     request(`/hotels/${encodeURIComponent(id)}`, { method: 'PUT', body: JSON.stringify(payload) }),
+  receptionMe: () => request('/reception/me'),
+  receptionGuests: (params = {}) => {
+    const query = new URLSearchParams();
+    Object.entries(params).forEach(([key, value]) => {
+      if (value == null || value === '' || value === false) return;
+      query.set(key, String(value));
+    });
+    const qs = query.toString();
+    return request(`/reception/guests${qs ? `?${qs}` : ''}`);
+  },
+  receptionCheckIn: (payload) =>
+    request('/reception/check-ins', { method: 'POST', body: JSON.stringify(payload) }),
+  receptionCheckOut: (payload) =>
+    request('/reception/check-outs', { method: 'POST', body: JSON.stringify(payload) }),
+  receptionDidNotArrive: (payload) =>
+    request('/reception/did-not-arrive', { method: 'POST', body: JSON.stringify(payload) }),
   countPssmAdmins: async () => 0
 };
 
