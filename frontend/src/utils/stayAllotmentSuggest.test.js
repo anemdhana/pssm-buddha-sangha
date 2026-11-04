@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  coalesceShareableSingleParties,
   expandGroupedPlacementChoice,
   formatAllotmentMovesMessage,
   groupPlacementsByRoom,
@@ -163,6 +164,171 @@ describe('stayAllotmentSuggest', () => {
     expect(staysOverlap('2026-10-01', '2026-10-05', '2026-10-05', '2026-10-08')).toBe(false);
     expect(staysOverlap('2026-10-01', '2026-10-05', '2026-10-04', '2026-10-08')).toBe(true);
     expect(staysOverlap('2026-10-01', '2026-10-03', '2026-10-03', '2026-10-05')).toBe(false);
+  });
+
+  it('coalesces same-gender singles even when stay dates differ', () => {
+    const singles = [
+      {
+        bookingId: 'm1',
+        size: 1,
+        mixed: false,
+        stayStartDate: '2026-10-01',
+        stayEndDate: '2026-10-03',
+        members: [{ id: 'm1:p', gender: 'male', bookingId: 'm1' }]
+      },
+      {
+        bookingId: 'm2',
+        size: 1,
+        mixed: false,
+        stayStartDate: '2026-10-02',
+        stayEndDate: '2026-10-05',
+        members: [{ id: 'm2:p', gender: 'male', bookingId: 'm2' }]
+      },
+      {
+        bookingId: 'f1',
+        size: 1,
+        mixed: false,
+        stayStartDate: '2026-10-01',
+        stayEndDate: '2026-10-05',
+        members: [{ id: 'f1:p', gender: 'female', bookingId: 'f1' }]
+      }
+    ];
+    const coalesced = coalesceShareableSingleParties(singles);
+    expect(coalesced).toHaveLength(2);
+    const males = coalesced.find((p) => p.shareCohort && p.members.every((m) => m.gender === 'male'));
+    const female = coalesced.find((p) => p.bookingId === 'f1');
+    expect(males?.size).toBe(2);
+    expect(males?.sourceParties).toHaveLength(2);
+    expect(female?.size).toBe(1);
+  });
+
+  it('puts selected male singles into one shared room when capacity allows', () => {
+    const malePeople = [
+      {
+        id: 'm1:primary',
+        bookingId: 'm1',
+        name: 'Arun',
+        gender: 'male',
+        age: 'adult',
+        primary: true,
+        stayStartDate: '2026-10-01',
+        stayEndDate: '2026-10-05',
+        place: { kind: 'urban', city: 'Chennai' }
+      },
+      {
+        id: 'm2:primary',
+        bookingId: 'm2',
+        name: 'Bala',
+        gender: 'male',
+        age: 'adult',
+        primary: true,
+        stayStartDate: '2026-10-01',
+        stayEndDate: '2026-10-05',
+        place: { kind: 'urban', city: 'Madurai' }
+      },
+      {
+        id: 'm3:primary',
+        bookingId: 'm3',
+        name: 'Chetan',
+        gender: 'male',
+        age: 'adult',
+        primary: true,
+        stayStartDate: '2026-10-01',
+        stayEndDate: '2026-10-05',
+        place: { kind: 'urban', city: 'Coimbatore' }
+      }
+    ];
+    const shareHotel = [
+      {
+        id: 'h_share',
+        name: 'Share Hotel',
+        distanceKm: 0.5,
+        active: true,
+        reserved: false,
+        rooms: [
+          { roomNumber: '1', capacity: 1, kind: 'regular', roomType: 'ac', status: 'available' },
+          { roomNumber: '2', capacity: 1, kind: 'regular', roomType: 'ac', status: 'available' },
+          { roomNumber: '3', capacity: 1, kind: 'regular', roomType: 'ac', status: 'available' },
+          {
+            roomNumber: 'D1',
+            capacity: 10,
+            kind: 'dormitory',
+            genderAllowed: 'gents',
+            roomType: 'ac',
+            status: 'available'
+          }
+        ]
+      }
+    ];
+    const placements = suggestPlacementsForHotel({
+      hotelId: 'h_share',
+      hotels: shareHotel,
+      allotments: [],
+      selectedIds: new Set(malePeople.map((p) => p.id)),
+      people: malePeople
+    });
+    expect(placements).toHaveLength(3);
+    expect(new Set(placements.map((p) => p.roomNumber)).size).toBe(1);
+    expect(placements[0].roomNumber).toBe('D1');
+    expect(placements.map((p) => p.bookingId).sort()).toEqual(['m1', 'm2', 'm3']);
+  });
+
+  it('puts selected female singles into one shared room when capacity allows', () => {
+    const femalePeople = [
+      {
+        id: 'f1:primary',
+        bookingId: 'f1',
+        name: 'Anu',
+        gender: 'female',
+        age: 'adult',
+        primary: true,
+        stayStartDate: '2026-10-01',
+        stayEndDate: '2026-10-05',
+        place: { kind: 'urban', city: 'Chennai' }
+      },
+      {
+        id: 'f2:primary',
+        bookingId: 'f2',
+        name: 'Bhavya',
+        gender: 'female',
+        age: 'adult',
+        primary: true,
+        stayStartDate: '2026-10-01',
+        stayEndDate: '2026-10-05',
+        place: { kind: 'urban', city: 'Madurai' }
+      }
+    ];
+    const shareHotel = [
+      {
+        id: 'h_ladies',
+        name: 'Ladies Hotel',
+        distanceKm: 0.4,
+        active: true,
+        reserved: false,
+        rooms: [
+          { roomNumber: 'A', capacity: 1, kind: 'regular', roomType: 'ac', status: 'available' },
+          { roomNumber: 'B', capacity: 1, kind: 'regular', roomType: 'ac', status: 'available' },
+          {
+            roomNumber: 'L1',
+            capacity: 6,
+            kind: 'hall',
+            genderAllowed: 'ladies',
+            roomType: 'ac',
+            status: 'available'
+          }
+        ]
+      }
+    ];
+    const placements = suggestPlacementsForHotel({
+      hotelId: 'h_ladies',
+      hotels: shareHotel,
+      allotments: [],
+      selectedIds: new Set(femalePeople.map((p) => p.id)),
+      people: femalePeople
+    });
+    expect(placements).toHaveLength(2);
+    expect(new Set(placements.map((p) => p.roomNumber)).size).toBe(1);
+    expect(placements[0].roomNumber).toBe('L1');
   });
 
   it('can allot into a room freed by same-day checkout', () => {
@@ -579,7 +745,7 @@ describe('stayAllotmentSuggest', () => {
     expect(expanded.every((p) => p.roomNumber === '303')).toBe(true);
   });
 
-  it('does not merge same-room placements with different stay dates', () => {
+  it('merges same-room placements even when stay dates differ', () => {
     const grouped = groupPlacementsByRoom([
       {
         bookingId: 'b1',
@@ -598,8 +764,188 @@ describe('stayAllotmentSuggest', () => {
         members: [{ name: 'Late' }]
       }
     ]);
-    expect(grouped).toHaveLength(2);
-    expect(grouped.map((g) => g.members[0].name).sort()).toEqual(['Early', 'Late']);
+    expect(grouped).toHaveLength(1);
+    expect(grouped[0].members.map((m) => m.name)).toEqual(['Early', 'Late']);
+    expect(grouped[0].subPlacements).toHaveLength(2);
+  });
+
+  it('does not put a female party into a room already occupied by males', () => {
+    const hotelsMix = [
+      {
+        id: 'h_mix',
+        name: 'Mix Hotel',
+        distanceKm: 0.3,
+        active: true,
+        reserved: false,
+        rooms: [
+          { roomNumber: '101', capacity: 4, kind: 'regular', roomType: 'ac', status: 'available' },
+          { roomNumber: '202', capacity: 3, kind: 'regular', roomType: 'ac', status: 'available' }
+        ]
+      }
+    ];
+    const allotmentsMale = [
+      {
+        hotelId: 'h_mix',
+        roomNumber: '101',
+        checkInDate: '2026-10-01',
+        checkOutDate: '2026-10-05',
+        bookingId: 'existing_m',
+        place: { kind: 'urban', city: 'Chennai' },
+        guests: [
+          { name: 'Ravi', gender: 'male', primary: true },
+          { name: 'Kiran', gender: 'male' }
+        ]
+      }
+    ];
+    const femaleParty = [
+      {
+        id: 'f1:primary',
+        bookingId: 'f1',
+        name: 'Anu',
+        gender: 'female',
+        age: 'adult',
+        primary: true,
+        stayStartDate: '2026-10-01',
+        stayEndDate: '2026-10-05',
+        place: { kind: 'urban', city: 'Madurai' }
+      },
+      {
+        id: 'f1:member:0',
+        bookingId: 'f1',
+        name: 'Bhavya',
+        gender: 'female',
+        age: 'adult',
+        primary: false,
+        stayStartDate: '2026-10-01',
+        stayEndDate: '2026-10-05',
+        place: { kind: 'urban', city: 'Madurai' }
+      }
+    ];
+    const placements = suggestPlacementsForHotel({
+      hotelId: 'h_mix',
+      hotels: hotelsMix,
+      allotments: allotmentsMale,
+      selectedIds: new Set(femaleParty.map((p) => p.id)),
+      people: femaleParty
+    });
+    expect(placements.length).toBeGreaterThan(0);
+    expect(placements.every((p) => p.roomNumber !== '101')).toBe(true);
+    expect(placements.every((p) => p.roomNumber === '202')).toBe(true);
+  });
+
+  it('keeps male and female selections in different rooms when allotting together', () => {
+    const peopleMix = [
+      {
+        id: 'm1:primary',
+        bookingId: 'm1',
+        name: 'Arun',
+        gender: 'male',
+        age: 'adult',
+        primary: true,
+        stayStartDate: '2026-10-01',
+        stayEndDate: '2026-10-05',
+        place: { kind: 'urban', city: 'Chennai' }
+      },
+      {
+        id: 'f1:primary',
+        bookingId: 'f1',
+        name: 'Anu',
+        gender: 'female',
+        age: 'adult',
+        primary: true,
+        stayStartDate: '2026-10-01',
+        stayEndDate: '2026-10-05',
+        place: { kind: 'urban', city: 'Madurai' }
+      },
+      {
+        id: 'f1:member:0',
+        bookingId: 'f1',
+        name: 'Bhavya',
+        gender: 'female',
+        age: 'adult',
+        primary: false,
+        stayStartDate: '2026-10-01',
+        stayEndDate: '2026-10-05',
+        place: { kind: 'urban', city: 'Madurai' }
+      }
+    ];
+    const hotelsMix = [
+      {
+        id: 'h_both',
+        name: 'Both Hotel',
+        distanceKm: 0.4,
+        active: true,
+        reserved: false,
+        rooms: [
+          { roomNumber: 'A', capacity: 3, kind: 'regular', roomType: 'ac', status: 'available' },
+          { roomNumber: 'B', capacity: 3, kind: 'regular', roomType: 'ac', status: 'available' }
+        ]
+      }
+    ];
+    const placements = suggestPlacementsForHotel({
+      hotelId: 'h_both',
+      hotels: hotelsMix,
+      allotments: [],
+      selectedIds: new Set(peopleMix.map((p) => p.id)),
+      people: peopleMix
+    });
+    expect(placements).toHaveLength(2);
+    const maleRoom = placements.find((p) => p.bookingId === 'm1')?.roomNumber;
+    const femaleRoom = placements.find((p) => p.bookingId === 'f1')?.roomNumber;
+    expect(maleRoom).toBeTruthy();
+    expect(femaleRoom).toBeTruthy();
+    expect(maleRoom).not.toBe(femaleRoom);
+  });
+
+  it('shares one regular multi-bed room for male singles when no dorm exists', () => {
+    const malePeople = [
+      {
+        id: 'm1:primary',
+        bookingId: 'm1',
+        name: 'Arun',
+        gender: 'male',
+        age: 'adult',
+        primary: true,
+        stayStartDate: '2026-10-01',
+        stayEndDate: '2026-10-05',
+        place: { kind: 'urban', city: 'Chennai' }
+      },
+      {
+        id: 'm2:primary',
+        bookingId: 'm2',
+        name: 'Bala',
+        gender: 'male',
+        age: 'adult',
+        primary: true,
+        stayStartDate: '2026-10-01',
+        stayEndDate: '2026-10-05',
+        place: { kind: 'urban', city: 'Madurai' }
+      }
+    ];
+    const hotelsOnlyRegular = [
+      {
+        id: 'h_reg',
+        name: 'Regular Hotel',
+        distanceKm: 0.5,
+        active: true,
+        reserved: false,
+        rooms: [
+          { roomNumber: '1', capacity: 1, kind: 'regular', roomType: 'ac', status: 'available' },
+          { roomNumber: '2', capacity: 1, kind: 'regular', roomType: 'ac', status: 'available' },
+          { roomNumber: '3', capacity: 3, kind: 'regular', roomType: 'ac', status: 'available' }
+        ]
+      }
+    ];
+    const placements = suggestPlacementsForHotel({
+      hotelId: 'h_reg',
+      hotels: hotelsOnlyRegular,
+      allotments: [],
+      selectedIds: new Set(malePeople.map((p) => p.id)),
+      people: malePeople
+    });
+    expect(placements).toHaveLength(2);
+    expect(new Set(placements.map((p) => p.roomNumber)).size).toBe(1);
+    expect(placements[0].roomNumber).toBe('3');
   });
 
   it('ranks multiple smart room options in a hotel', () => {

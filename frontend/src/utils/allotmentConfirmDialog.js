@@ -9,16 +9,92 @@ import {
   mergePlacementRoomOption
 } from './stayAllotmentSuggest.js';
 
-function roomConflicts(state, panelIndex, roomNumber) {
-  const room = String(roomNumber || '');
-  return state.some((panel, index) => {
-    if (index === panelIndex) return false;
-    const chosen = panel.alternatives[panel.altIndex];
-    return chosen && String(chosen.roomNumber) === room;
-  });
+function panelMemberCount(panel) {
+  if (Array.isArray(panel?.subPlacements) && panel.subPlacements.length) {
+    return panel.subPlacements.reduce(
+      (sum, sub) => sum + (Array.isArray(sub?.members) ? sub.members.length : 0),
+      0
+    );
+  }
+  return Array.isArray(panel?.placement?.members) ? panel.placement.members.length : 0;
 }
 
-function stepAltIndex(state, panelIndex, direction) {
+function panelChosenRoom(panel) {
+  return panel?.alternatives?.[panel.altIndex] || panel?.placement || null;
+}
+
+function normalizePanelGender(value) {
+  const g = String(value || '')
+    .trim()
+    .toLowerCase();
+  if (g === 'male' || g === 'm' || g === 'gents') return 'male';
+  if (g === 'female' || g === 'f' || g === 'ladies') return 'female';
+  return '';
+}
+
+function panelGenderLock(panel) {
+  const members = [];
+  if (Array.isArray(panel?.subPlacements)) {
+    panel.subPlacements.forEach((sub) => {
+      (sub?.members || []).forEach((m) => members.push(m));
+    });
+  } else if (Array.isArray(panel?.placement?.members)) {
+    panel.placement.members.forEach((m) => members.push(m));
+  }
+  let male = 0;
+  let female = 0;
+  members.forEach((m) => {
+    const g = normalizePanelGender(m?.gender);
+    if (g === 'male') male += 1;
+    else if (g === 'female') female += 1;
+  });
+  if (male > 0 && female > 0) return 'mixed';
+  if (male > 0) return 'male';
+  if (female > 0) return 'female';
+  return '';
+}
+
+/**
+ * Same room is allowed when beds still fit and genders are compatible (FR-18).
+ * Block opposite-gender share and over-capacity.
+ */
+function roomBlockedForPanel(state, panelIndex, roomOption, hotels) {
+  const roomNumber = String(roomOption?.roomNumber || '');
+  if (!roomNumber) return true;
+  const hotelId = String(
+    state[panelIndex]?.placement?.hotelId || roomOption.hotelId || ''
+  ).trim();
+  let capacity = Math.max(0, Number(roomOption.capacity) || 0);
+  let usedBefore = Math.max(0, Number(roomOption.usedBefore) || 0);
+  if ((!capacity || usedBefore < 0) && hotelId && Array.isArray(hotels)) {
+    const hotel = hotels.find((h) => String(h?.id || '') === hotelId);
+    const room = (hotel?.rooms || []).find((r) => String(r?.roomNumber || '') === roomNumber);
+    if (room) {
+      capacity = Math.max(capacity, Number(room.capacity) || 0);
+    }
+  }
+
+  const selfLock = panelGenderLock(state[panelIndex]);
+  let incoming = 0;
+  let roomLock = '';
+  state.forEach((panel, index) => {
+    const chosen = index === panelIndex ? roomOption : panelChosenRoom(panel);
+    if (!chosen || String(chosen.roomNumber) !== roomNumber) return;
+    incoming += panelMemberCount(panel);
+    const lock = panelGenderLock(panel);
+    if (!lock) return;
+    if (!roomLock) roomLock = lock;
+    else if (roomLock !== lock) roomLock = 'mixed';
+  });
+
+  if (selfLock && roomLock && selfLock !== roomLock) return true;
+  if (selfLock === 'mixed' && roomLock && roomLock !== 'mixed') return true;
+  if (roomLock === 'mixed' && selfLock && selfLock !== 'mixed') return true;
+  if (capacity && usedBefore + incoming > capacity) return true;
+  return false;
+}
+
+function stepAltIndex(state, panelIndex, direction, hotels) {
   const panel = state[panelIndex];
   const total = panel.alternatives.length;
   if (total <= 1) return false;
@@ -27,7 +103,7 @@ function stepAltIndex(state, panelIndex, direction) {
     next = (next + direction + total) % total;
     const option = panel.alternatives[next];
     if (!option) continue;
-    if (!roomConflicts(state, panelIndex, option.roomNumber)) {
+    if (!roomBlockedForPanel(state, panelIndex, option, hotels)) {
       panel.altIndex = next;
       return true;
     }
@@ -261,7 +337,7 @@ export function openAllotmentConfirmDialog({
         const panelEl = navBtn.closest('.x-allot-room-panel');
         const panelIndex = Number(panelEl?.getAttribute('data-panel-index'));
         if (!Number.isFinite(panelIndex)) return;
-        const moved = stepAltIndex(state, panelIndex, prevBtn ? -1 : 1);
+        const moved = stepAltIndex(state, panelIndex, prevBtn ? -1 : 1, hotels);
         if (moved) refreshPanel(el, state, panelIndex, allotments);
         return;
       }

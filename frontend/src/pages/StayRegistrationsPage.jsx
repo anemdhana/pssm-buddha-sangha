@@ -465,18 +465,17 @@ export function StayRegistrationsPage() {
 
   async function confirmAllotment(hotel) {
     const focusHotelId = hotel?.hotelId || '';
+    // Always re-pack into the dropped hotel so same-gender singles share a room.
+    // Do not reuse strip suggestion rows — those may split people across hotels/rooms.
     let basePlacements = focusHotelId
-      ? (suggestion.placements || []).filter((p) => p.hotelId === focusHotelId)
+      ? suggestPlacementsForHotel({
+          hotelId: focusHotelId,
+          hotels,
+          allotments,
+          selectedIds,
+          people: allPeople
+        })
       : suggestion.placements || [];
-    if (!basePlacements.length && focusHotelId) {
-      basePlacements = suggestPlacementsForHotel({
-        hotelId: focusHotelId,
-        hotels,
-        allotments,
-        selectedIds,
-        people: allPeople
-      });
-    }
     if (!basePlacements.length) {
       if (window.UIkit) {
         window.UIkit.notification({

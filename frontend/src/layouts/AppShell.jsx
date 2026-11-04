@@ -162,7 +162,15 @@ export function AppShell() {
             )}
           </div>
 
-          {hotelDeskOnly ? null : (
+          {hotelDeskOnly ? (
+            <button
+              type="button"
+              className="uk-button uk-button-default uk-button-small x-hotel-desk-logout"
+              onClick={onLogout}
+            >
+              Logout
+            </button>
+          ) : (
           <nav
             className="app-nav uk-visible@m"
             uk-navbar="mode: click; align: right; offset: 0; flip: false; delay-hide: 0"

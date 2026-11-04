@@ -758,10 +758,10 @@ Short desk cues (meta text, not form fields):
 
 | Control label | Draw as | Interaction |
 | --- | --- | --- |
-| **Allotted** | Large checkbox, checked when state is allotted | **View only** — not clickable / not clearable (does not undo allotment) |
-| **Checked-in now** | Large checkbox | Tick to set Checked-in (after verify); still allowed during second chance until ~3:00 PM |
-| **Checked-out now** | Large checkbox | Tick to set Checked-out (leaving now); after Checked-in |
-| **Did not arrive** | Large checkbox | Tick after **~3:00 PM** when still Allotted on check-in day (FR-09c). Prefer disabled / muted before 3:00 PM with the cue above |
+| **Allotted** | Large checkbox + date chip (planned check-in) | **View only** — not clickable / not clearable (does not undo allotment) |
+| **Checked-in** | Large checkbox + date chip (check-in date) | Tick to set Checked-in (after verify); still allowed during second chance until ~3:00 PM. No “now” wording — date chip carries the day |
+| **Checked-out** | Large checkbox + date chip (check-out date) | Tick to set Checked-out; after Checked-in |
+| **Did not arrive** | Large checkbox + date chip (expected check-in date) | Tick after **~3:00 PM** when still Allotted on check-in day (FR-09c). Prefer disabled / muted before 3:00 PM with the cue above |
 
 Sketch rules:
 

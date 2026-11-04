@@ -121,11 +121,45 @@ function mergeStayWindows(windows) {
   return { start, end };
 }
 
+function countGendersFromPeople(people) {
+  const counts = { male: 0, female: 0 };
+  (Array.isArray(people) ? people : []).forEach((person) => {
+    const g = normalizeGender(person?.gender);
+    if (g === 'male') counts.male += 1;
+    else if (g === 'female') counts.female += 1;
+  });
+  return counts;
+}
+
+function mergeGenderCounts(into, add) {
+  const next = into || { male: 0, female: 0 };
+  next.male = (Number(next.male) || 0) + (Number(add?.male) || 0);
+  next.female = (Number(next.female) || 0) + (Number(add?.female) || 0);
+  return next;
+}
+
+/** 'male' | 'female' | 'mixed' | '' when empty/unknown */
+export function occupantGenderLock(room) {
+  const og = room?.occupantGenders || {};
+  const male = Number(og.male) || 0;
+  const female = Number(og.female) || 0;
+  if (male > 0 && female > 0) return 'mixed';
+  if (male > 0) return 'male';
+  if (female > 0) return 'female';
+  return '';
+}
+
+function allotmentOccupantGenders(row) {
+  const guests = Array.isArray(row?.guests) ? row.guests : [];
+  if (guests.length) return countGendersFromPeople(guests);
+  return { male: 0, female: 0 };
+}
+
 /**
  * Free beds per hotel room after existing allotments.
  * @param {object|null} stayWindow optional { start, end }; only overlapping allotments count
  * @param {object[]} extraOccupancies optional pending placements
- *   [{ hotelId, roomNumber, count, start, end }]
+ *   [{ hotelId, roomNumber, count, start, end, place, genders|/members }]
  */
 export function buildRoomAvailability(hotels, allotments, stayWindow = null, extraOccupancies = []) {
   const windowStart = parseStayDay(stayWindow?.start);
@@ -135,8 +169,10 @@ export function buildRoomAvailability(hotels, allotments, stayWindow = null, ext
   const occupied = new Map();
   /** @type {Map<string, Map<string, number>>} */
   const locationsByRoom = new Map();
+  /** @type {Map<string, { male: number, female: number }>} */
+  const gendersByRoom = new Map();
 
-  function addOccupancy(hotelId, roomNumber, count, start, end, place = null) {
+  function addOccupancy(hotelId, roomNumber, count, start, end, place = null, genders = null) {
     const hid = String(hotelId || '');
     const room = String(roomNumber || '');
     const n = Math.max(0, Number(count) || 0);
@@ -144,6 +180,9 @@ export function buildRoomAvailability(hotels, allotments, stayWindow = null, ext
     if (hasWindow && !staysOverlap(start, end, windowStart, windowEnd)) return;
     const key = `${hid}|${room}`;
     occupied.set(key, (occupied.get(key) || 0) + n);
+    if (genders && ((Number(genders.male) || 0) > 0 || (Number(genders.female) || 0) > 0)) {
+      gendersByRoom.set(key, mergeGenderCounts(gendersByRoom.get(key) || { male: 0, female: 0 }, genders));
+    }
     if (place != null) {
       const label = registrationLocationShort(place) || 'Unknown';
       let locMap = locationsByRoom.get(key);
@@ -164,13 +203,25 @@ export function buildRoomAvailability(hotels, allotments, stayWindow = null, ext
       allotmentPersonCount(row),
       stay.start,
       stay.end,
-      row.place
+      row.place,
+      allotmentOccupantGenders(row)
     );
   });
 
   (Array.isArray(extraOccupancies) ? extraOccupancies : []).forEach((row) => {
     if (!row) return;
-    addOccupancy(row.hotelId, row.roomNumber, row.count, row.start, row.end, row.place || null);
+    const genders =
+      row.genders ||
+      (Array.isArray(row.members) ? countGendersFromPeople(row.members) : null);
+    addOccupancy(
+      row.hotelId,
+      row.roomNumber,
+      row.count,
+      row.start,
+      row.end,
+      row.place || null,
+      genders
+    );
   });
 
   const byHotel = new Map();
@@ -189,6 +240,7 @@ export function buildRoomAvailability(hotels, allotments, stayWindow = null, ext
               .map(([name, count]) => ({ name, count }))
               .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name))
           : [];
+        const occupantGenders = gendersByRoom.get(key) || { male: 0, female: 0 };
         return {
           ...room,
           hotelId: hotel.id,
@@ -200,7 +252,8 @@ export function buildRoomAvailability(hotels, allotments, stayWindow = null, ext
           kind: roomKind(room),
           genderGate: roomGenderAllowed(room),
           ac: isAc(room),
-          occupantLocations
+          occupantLocations,
+          occupantGenders
         };
       })
       .filter((r) => r.capacity > 0);
@@ -219,18 +272,28 @@ export function buildRoomAvailability(hotels, allotments, stayWindow = null, ext
 function roomAcceptsParty(room, people) {
   if (!room || room.free < partySize(people)) return false;
   const genders = partyGenders(people);
+  const lock = occupantGenderLock(room);
+
   if (room.kind === 'dormitory' || room.kind === 'hall') {
     if (genders.size !== 1) return false;
     const only = [...genders][0];
     if (room.genderGate && room.genderGate !== only) return false;
+    // Occupants already in the dorm/hall lock further fill to that gender (FR-24).
+    if (lock === 'mixed') return false;
+    if (lock && lock !== only) return false;
     return true;
   }
-  // Regular: if partly occupied, only same-gender fill (occupancy gender unknown → allow when empty or free==capacity)
-  if (!room.empty && room.used > 0) {
-    // Without knowing current occupants' gender, only allow if free enough and party is single-gender
-    // (conservative: skip shared fill for mixed; allow single-gender into non-empty regular)
-    if (genders.size !== 1) return false;
-  }
+
+  // Empty regular: mixed or single-gender OK.
+  if (room.empty || room.used <= 0) return true;
+
+  // Partly filled regular (FR-18): remaining beds only for the same gender already there.
+  if (genders.size !== 1) return false;
+  const only = [...genders][0];
+  if (lock === 'mixed') return false;
+  if (lock && lock !== only) return false;
+  // Occupant gender unknown: do not risk mixing — only same-gender parties were
+  // previously allowed; keep that, but never put the opposite of a known lock.
   return true;
 }
 
@@ -285,6 +348,20 @@ function scoreRoomForParty(room, people) {
 
   if (isMixedGender(people) && (room.kind === 'dormitory' || room.kind === 'hall')) {
     return -Infinity;
+  }
+
+  // Prefer filling a partly occupied same-gender-compatible room (FR-18 / FR-24)
+  // over opening another empty unit when singles can share.
+  const genders = partyGenders(people);
+  const lock = occupantGenderLock(room);
+  if (
+    !room.empty &&
+    room.used > 0 &&
+    room.free >= size &&
+    genders.size === 1 &&
+    (!lock || lock === [...genders][0])
+  ) {
+    score += 550;
   }
 
   // Prefer joining a room that already has same-location guests and spare beds.
@@ -352,14 +429,19 @@ function selectSubsetForRoom(remaining, k, room) {
     return pool.slice(0, k);
   }
 
-  // Regular: partly filled rooms only take a single gender.
+  // Regular: partly filled rooms only take the occupant gender (FR-18).
   if (!room.empty && room.used > 0) {
     const { male, female } = genderPools(remaining);
+    const lock = occupantGenderLock(room);
     let pool = [];
-    if (male.length >= k && female.length >= k) pool = male.length >= female.length ? male : female;
+    if (lock === 'male') pool = male;
+    else if (lock === 'female') pool = female;
+    else if (lock === 'mixed') return null;
+    else if (male.length >= k && female.length >= k) pool = male.length >= female.length ? male : female;
     else if (male.length >= k) pool = male;
     else if (female.length >= k) pool = female;
     else return null;
+    if (pool.length < k) return null;
     return pool.slice(0, k);
   }
 
@@ -426,6 +508,10 @@ export function packPartyIntoRooms(rooms, members) {
     room.used = (Number(room.used) || 0) + taken;
     room.free = Math.max(0, (Number(room.capacity) || 0) - room.used);
     room.empty = room.used === 0;
+    room.occupantGenders = mergeGenderCounts(
+      { ...(room.occupantGenders || { male: 0, female: 0 }) },
+      countGendersFromPeople(best.subset)
+    );
 
     const takenIds = new Set(best.subset.map((m) => m.id));
     remaining = remaining.filter((m) => !takenIds.has(m.id));
@@ -475,7 +561,9 @@ export function suggestPlacementsForHotel({
 } = {}) {
   const hid = String(hotelId || '').trim();
   if (!hid) return [];
-  const parties = partiesFromSelectedPeople(selectedIds, people).filter((p) => p.size > 0);
+  const parties = coalesceShareableSingleParties(
+    partiesFromSelectedPeople(selectedIds, people).filter((p) => p.size > 0)
+  );
   if (!parties.length) return [];
 
   const ordered = [...parties].sort((a, b) => {
@@ -496,24 +584,16 @@ export function suggestPlacementsForHotel({
     if (!packs.length) return;
     const split = packs.length > 1;
     packs.forEach((pack) => {
-      placements.push(
-        placementFromPack({
-          party,
-          hotelId: hid,
-          hotelName: entry.hotel?.name || '',
-          distanceKm: entry.distanceKm,
-          stay,
-          pack,
-          split
-        })
-      );
-      pending.push({
+      emitPackPlacements({
+        party,
         hotelId: hid,
-        roomNumber: pack.room.roomNumber,
-        count: pack.members.length,
-        start: stay.start,
-        end: stay.end,
-        place: pack.members?.[0]?.place || party.members?.[0]?.place || null
+        hotelName: entry.hotel?.name || '',
+        distanceKm: entry.distanceKm,
+        stay,
+        pack,
+        split,
+        placements,
+        pending
       });
     });
   });
@@ -576,9 +656,8 @@ export function groupPlacementsByRoom(placements) {
   const map = new Map();
   (Array.isArray(placements) ? placements : []).forEach((placement) => {
     if (!placement) return;
-    const stayStart = parseStayDay(placement.stayStartDate) || '';
-    const stayEnd = parseStayDay(placement.stayEndDate) || '';
-    const key = `${String(placement.hotelId || '')}|${String(placement.roomNumber || '')}|${stayStart}|${stayEnd}`;
+    // Same hotel + room share one confirm panel (same-gender singles / overlapping stays).
+    const key = `${String(placement.hotelId || '')}|${String(placement.roomNumber || '')}`;
     const members = Array.isArray(placement.members) ? placement.members : [];
     const existing = map.get(key);
     if (!existing) {
@@ -659,6 +738,141 @@ export function partiesFromSelectedPeople(selectedIds, people) {
       stayEndDate: stay.end || ''
     };
   });
+}
+
+/**
+ * Same-gender size-1 parties can share a room (FR-18, FR-20, FR-24).
+ * Merge them into one packing cohort so they are not each given a separate private room.
+ * Stay dates may differ; each source party keeps its own dates on emit.
+ */
+export function coalesceShareableSingleParties(parties) {
+  const list = Array.isArray(parties) ? parties : [];
+  const kept = [];
+  /** @type {Map<string, object[]>} */
+  const buckets = new Map();
+
+  list.forEach((party) => {
+    if (!party || party.size !== 1 || party.mixed) {
+      kept.push(party);
+      return;
+    }
+    const gender = normalizeGender(party.members?.[0]?.gender);
+    if (gender !== 'male' && gender !== 'female') {
+      kept.push(party);
+      return;
+    }
+    const bucket = buckets.get(gender) || [];
+    bucket.push(party);
+    buckets.set(gender, bucket);
+  });
+
+  buckets.forEach((bucket) => {
+    if (bucket.length <= 1) {
+      kept.push(...bucket);
+      return;
+    }
+    const members = bucket.flatMap((p) => p.members || []);
+    const stay = peopleStayWindow(members);
+    kept.push({
+      bookingId: bucket.map((p) => p.bookingId).filter(Boolean).join('|'),
+      plan: bucket[0].plan,
+      placeLabel: bucket[0].placeLabel || '',
+      members,
+      size: members.length,
+      needsClose: bucket.some((p) => p.needsClose),
+      mixed: false,
+      stayStartDate: stay.start || bucket[0].stayStartDate || '',
+      stayEndDate: stay.end || bucket[0].stayEndDate || '',
+      shareCohort: true,
+      sourceParties: bucket
+    });
+  });
+
+  return kept.filter(Boolean);
+}
+
+function pushPendingOccupancy(pending, hotelId, pack, stay, place) {
+  const members = Array.isArray(pack.members) ? pack.members : [];
+  pending.push({
+    hotelId,
+    roomNumber: pack.room.roomNumber,
+    count: members.length,
+    start: stay.start,
+    end: stay.end,
+    place: place || null,
+    members,
+    genders: countGendersFromPeople(members)
+  });
+}
+
+/** Emit one placement per booking when a share-cohort pack spans several singles. */
+function emitPackPlacements({
+  party,
+  hotelId,
+  hotelName,
+  distanceKm,
+  stay,
+  pack,
+  split,
+  placements,
+  pending
+}) {
+  if (party?.shareCohort && Array.isArray(party.sourceParties) && party.sourceParties.length) {
+    const inPack = new Set((pack.members || []).map((m) => m.id));
+    let usedBefore = Number(pack.room.used) || 0;
+    let freeBefore = Number(pack.room.free) || 0;
+    party.sourceParties.forEach((src) => {
+      const members = (src.members || []).filter((m) => inPack.has(m.id));
+      if (!members.length) return;
+      const srcStay = {
+        start: src.stayStartDate || stay.start || '',
+        end: src.stayEndDate || stay.end || ''
+      };
+      placements.push(
+        placementFromPack({
+          party: src,
+          hotelId,
+          hotelName,
+          distanceKm,
+          stay: srcStay,
+          pack: {
+            room: { ...pack.room, used: usedBefore, free: freeBefore },
+            members
+          },
+          split
+        })
+      );
+      usedBefore += members.length;
+      freeBefore = Math.max(0, freeBefore - members.length);
+    });
+    pushPendingOccupancy(
+      pending,
+      hotelId,
+      pack,
+      stay,
+      pack.members?.[0]?.place || party.members?.[0]?.place || null
+    );
+    return;
+  }
+
+  placements.push(
+    placementFromPack({
+      party,
+      hotelId,
+      hotelName,
+      distanceKm,
+      stay,
+      pack,
+      split
+    })
+  );
+  pushPendingOccupancy(
+    pending,
+    hotelId,
+    pack,
+    stay,
+    pack.members?.[0]?.place || party.members?.[0]?.place || null
+  );
 }
 
 function normalizePlaceLabel(label) {
@@ -778,14 +992,15 @@ export function suggestHotelsForSelection({
   people,
   eventLocationLabel = ''
 } = {}) {
-  const parties = partiesFromSelectedPeople(selectedIds, people).filter((p) => p.size > 0);
+  const baseParties = partiesFromSelectedPeople(selectedIds, people).filter((p) => p.size > 0);
+  const parties = coalesceShareableSingleParties(baseParties);
   const empty = {
-    parties,
+    parties: baseParties,
     ranked: [],
     placements: [],
-    uncoveredPartyIds: parties.map((p) => p.bookingId),
+    uncoveredPartyIds: baseParties.map((p) => p.bookingId),
     pageSize: PAGE_SIZE,
-    selectedPeople: parties.flatMap((p) => p.members)
+    selectedPeople: baseParties.flatMap((p) => p.members)
   };
   if (!parties.length) return empty;
 
@@ -867,30 +1082,28 @@ export function suggestHotelsForSelection({
       if (!packs.length) continue;
       const split = packs.length > 1;
       packs.forEach((pack) => {
-        placements.push(
-          placementFromPack({
-            party,
-            hotelId: h.hotelId,
-            hotelName: h.hotelName,
-            distanceKm: h.distanceKm,
-            stay,
-            pack,
-            split
-          })
-        );
-        pending.push({
+        emitPackPlacements({
+          party,
           hotelId: h.hotelId,
-          roomNumber: pack.room.roomNumber,
-          count: pack.members.length,
-          start: stay.start,
-          end: stay.end,
-          place: pack.members?.[0]?.place || party.members?.[0]?.place || null
+          hotelName: h.hotelName,
+          distanceKm: h.distanceKm,
+          stay,
+          pack,
+          split,
+          placements,
+          pending
         });
       });
       placed = true;
       break;
     }
-    if (!placed) uncovered.push(party.bookingId);
+    if (!placed) {
+      if (party.shareCohort && Array.isArray(party.sourceParties)) {
+        party.sourceParties.forEach((src) => uncovered.push(src.bookingId));
+      } else {
+        uncovered.push(party.bookingId);
+      }
+    }
   });
 
   // Boost ranked hotels that appear in the proposal
@@ -907,12 +1120,12 @@ export function suggestHotelsForSelection({
   );
 
   return {
-    parties,
+    parties: baseParties,
     ranked,
     placements,
     uncoveredPartyIds: uncovered,
     pageSize: PAGE_SIZE,
-    selectedPeople: parties.flatMap((p) => p.members)
+    selectedPeople: baseParties.flatMap((p) => p.members)
   };
 }
 

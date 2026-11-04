@@ -2220,6 +2220,52 @@ button.x-role-chip {
     flex-wrap: wrap;
 }
 
+.x-suitable-hotels-sort {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    margin: 0 0 10px;
+}
+
+.x-suitable-hotels-sort-label {
+    color: #667086;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    margin-right: 2px;
+}
+
+.x-suitable-sort-chip {
+    margin: 0;
+    padding: 3px 10px;
+    border: 1px solid #d0d5e0;
+    border-radius: 999px;
+    background: #fff;
+    color: #334155;
+    font-size: 0.72rem;
+    font-weight: 700;
+    line-height: 1.4;
+    cursor: pointer;
+}
+
+.x-suitable-sort-chip:hover:not(:disabled) {
+    border-color: #9aa3b5;
+    background: #f3f5f9;
+}
+
+.x-suitable-sort-chip.is-active {
+    border-color: #1b2a6b;
+    background: #1b2a6b;
+    color: #fff;
+}
+
+.x-suitable-sort-chip:disabled {
+    opacity: 0.5;
+    cursor: default;
+}
+
 .x-suitable-hotels-nav {
     display: inline-flex;
     align-items: center;
@@ -2347,7 +2393,11 @@ button.x-role-chip {
 .x-suitable-hotel-sub {
     color: #667086;
     font-size: 0.72rem;
-    line-height: 1.3;
+    line-height: 1.35;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
 }
 
 .x-suitable-hotel-badge {
@@ -4368,7 +4418,7 @@ button.x-role-chip {
     }
 }
 
-/* Hotel Desk dashboard */
+/* Hotel Desk dashboard — simple reception flow */
 .x-hotel-desk-chips {
     display: flex;
     flex-wrap: wrap;
@@ -4379,47 +4429,236 @@ button.x-role-chip {
     margin-top: 12px;
 }
 
-.x-hotel-desk-row {
-    padding: 12px 0;
+.x-hotel-desk-guest {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px 18px;
+    padding: 14px 0;
 }
 
-.x-hotel-desk-tag {
-    display: inline-block;
-    margin-left: 6px;
+.x-hotel-desk-guest-left {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    min-width: 0;
+    flex: 1 1 240px;
+}
+
+.x-hotel-desk-room-block {
+    flex: 0 0 auto;
+    min-width: 76px;
+    padding: 8px 10px;
+    border-radius: 10px;
+    background: #1e293b;
+    color: #fff;
+    text-align: center;
+    line-height: 1.15;
+}
+
+.x-hotel-desk-room-label {
+    display: block;
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    opacity: 0.75;
+}
+
+.x-hotel-desk-room-num {
+    display: block;
+    margin-top: 2px;
+    font-size: 1.45rem;
+    font-weight: 800;
+    letter-spacing: 0.02em;
+}
+
+.x-hotel-desk-guest-copy {
+    min-width: 0;
+}
+
+.x-hotel-desk-guest-topline {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 10px;
+}
+
+.x-hotel-desk-guest-name {
+    font-size: 1.15rem;
+    font-weight: 800;
+    color: #0f172a;
+    line-height: 1.25;
+}
+
+.x-hotel-desk-status {
+    display: inline-flex;
+    align-items: center;
+    padding: 3px 10px;
+    border-radius: 999px;
+    font-size: 0.78rem;
+    font-weight: 800;
+    letter-spacing: 0.02em;
+    border: 1px solid transparent;
+}
+
+.x-hotel-desk-status.is-waiting {
+    color: #92400e;
+    background: #fef3c7;
+    border-color: #fcd34d;
+}
+
+.x-hotel-desk-status.is-in {
+    color: #065f46;
+    background: #d1fae5;
+    border-color: #6ee7b7;
+}
+
+.x-hotel-desk-status.is-out {
+    color: #1e3a8a;
+    background: #dbeafe;
+    border-color: #93c5fd;
+}
+
+.x-hotel-desk-status.is-missed {
+    color: #9a3412;
+    background: #ffedd5;
+    border-color: #fdba74;
+}
+
+.x-hotel-desk-stay-line {
+    margin: 6px 0 0;
+    font-size: 0.9rem;
+    color: #475569;
+    line-height: 1.4;
+}
+
+.x-hotel-desk-stay-arrow {
+    margin: 0 6px;
+    color: #94a3b8;
+    font-weight: 700;
+}
+
+.x-hotel-desk-nights {
+    display: inline-flex;
+    margin-left: 8px;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #5b21b6;
+    background: #ede9fe;
+    border: 1px solid #c4b5fd;
+}
+
+.x-hotel-desk-leaving-note {
+    margin: 6px 0 0;
     font-size: 0.85rem;
-    font-weight: 600;
+    font-weight: 700;
     color: #9a3412;
 }
 
-.x-hotel-desk-checks {
+.x-hotel-desk-guest-actions {
     display: flex;
     flex-wrap: wrap;
-    gap: 12px 20px;
-    margin-top: 10px;
-}
-
-.x-hotel-desk-check {
-    display: inline-flex;
     align-items: center;
+    justify-content: flex-end;
     gap: 8px;
+    flex: 0 1 auto;
+}
+
+.x-hotel-desk-action {
+    min-width: 148px;
+    min-height: 48px;
+    padding: 10px 18px;
+    border: 0;
+    border-radius: 10px;
     font-size: 1rem;
+    font-weight: 800;
+    letter-spacing: 0.01em;
     cursor: pointer;
-    user-select: none;
+    color: #fff;
+    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.12);
 }
 
-.x-hotel-desk-check.is-readonly,
-.x-hotel-desk-check.is-muted {
-    opacity: 0.65;
-    cursor: default;
+.x-hotel-desk-action:disabled {
+    opacity: 0.55;
+    cursor: wait;
 }
 
-.x-hotel-desk-checkbox {
-    width: 1.35rem;
-    height: 1.35rem;
+.x-hotel-desk-action.is-arrive {
+    background: #059669;
+}
+
+.x-hotel-desk-action.is-arrive:hover:not(:disabled) {
+    background: #047857;
+}
+
+.x-hotel-desk-action.is-leave {
+    background: #2563eb;
+}
+
+.x-hotel-desk-action.is-leave:hover:not(:disabled) {
+    background: #1d4ed8;
+}
+
+.x-hotel-desk-action.is-noshow {
+    min-width: 0;
+    background: #fff;
+    color: #c2410c;
+    border: 1.5px solid #fdba74;
+    box-shadow: none;
+}
+
+.x-hotel-desk-action.is-noshow:hover:not(:disabled) {
+    background: #fff7ed;
+}
+
+.x-hotel-desk-done {
+    font-size: 0.92rem;
+    font-weight: 700;
+    color: #64748b;
+}
+
+.x-hotel-desk-guest.is-leaving .x-hotel-desk-room-block {
+    background: #9a3412;
+}
+
+@media (max-width: 640px) {
+    .x-hotel-desk-guest-actions {
+        width: 100%;
+        justify-content: stretch;
+    }
+
+    .x-hotel-desk-action {
+        flex: 1 1 auto;
+    }
 }
 
 .event-pick.is-hotel-desk .event-pick-toggle {
     cursor: default;
+}
+
+.x-hotel-desk-logout {
+    flex: 0 0 auto;
+    margin-left: auto;
+    margin-right: 8px;
+    font-weight: 700;
+}
+
+.x-hotel-desk-head-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px 16px;
+    margin-bottom: 8px;
+}
+
+.x-hotel-desk-head-row .x-hotel-desk-logout {
+    margin-left: 0;
+    margin-right: 0;
 }
 
 .x-allot-tile-select {

@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Link, Navigate } from 'react-router-dom';
+import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { useEventPick } from '../context/EventPickContext.jsx';
 import { useAuth } from '../hooks/useAuth.jsx';
 import { api } from '../services/api.js';
-import { formatEventSub } from '../utils/password.js';
+import { formatEventDate, formatEventSub } from '../utils/password.js';
 
 function todayIso() {
   const d = new Date();
@@ -17,22 +17,117 @@ function afterThreePm() {
   return new Date().getHours() >= 15;
 }
 
+function stayNightCount(start, end) {
+  const a = Date.parse(String(start || '').trim());
+  const b = Date.parse(String(end || '').trim());
+  if (!Number.isFinite(a) || !Number.isFinite(b) || b <= a) return 0;
+  return Math.round((b - a) / 86400000);
+}
+
 function notify(message, status = 'success') {
   if (window.UIkit) {
     window.UIkit.notification({ message, status, pos: 'top-center', timeout: 2200 });
   }
 }
 
+const STATUS_VIEW = {
+  allotted: { label: 'Waiting', tone: 'waiting', doneLine: '' },
+  checked_in: { label: 'In hotel', tone: 'in', doneLine: '' },
+  checked_out: { label: 'Left', tone: 'out', doneLine: 'Checkout done' },
+  did_not_arrive: { label: 'No show', tone: 'missed', doneLine: 'Marked as no show' }
+};
+
 const STATE_CHIPS = [
-  { id: 'allotted', label: 'Allotted' },
-  { id: 'checked_in', label: 'Checked-in' },
-  { id: 'checked_out', label: 'Checked-out' },
-  { id: 'did_not_arrive', label: 'Did not arrive' }
+  { id: 'allotted', label: 'Waiting' },
+  { id: 'checked_in', label: 'In hotel' },
+  { id: 'checked_out', label: 'Left' },
+  { id: 'did_not_arrive', label: 'No show' }
 ];
+
+function GuestRow({ guest, date, canMarkDidNotArrive, busy, onAction }) {
+  const status = guest.personStatus || 'allotted';
+  const view = STATUS_VIEW[status] || STATUS_VIEW.allotted;
+  const nights = stayNightCount(guest.checkInDate, guest.checkOutDate);
+  const inLabel = formatEventDate(guest.checkInDate) || guest.checkInDate || '—';
+  const outLabel = formatEventDate(guest.checkOutDate) || guest.checkOutDate || '—';
+  const canCheckIn = status === 'allotted';
+  const canCheckOut = status === 'checked_in';
+  const canNoShow =
+    status === 'allotted' && canMarkDidNotArrive && guest.checkInDate === date;
+
+  return (
+    <li className={`x-hotel-desk-guest is-${view.tone}${guest.checkingOutOnDate ? ' is-leaving' : ''}`}>
+      <div className="x-hotel-desk-guest-left">
+        <div className="x-hotel-desk-room-block" aria-label={`Room ${guest.roomNumber || '—'}`}>
+          <span className="x-hotel-desk-room-label">Room</span>
+          <span className="x-hotel-desk-room-num">{guest.roomNumber || '—'}</span>
+        </div>
+        <div className="x-hotel-desk-guest-copy">
+          <div className="x-hotel-desk-guest-topline">
+            <strong className="x-hotel-desk-guest-name">{guest.name}</strong>
+            <span className={`x-hotel-desk-status is-${view.tone}`}>{view.label}</span>
+          </div>
+          <p className="x-hotel-desk-stay-line">
+            Stay <strong>{inLabel}</strong>
+            <span className="x-hotel-desk-stay-arrow" aria-hidden="true">
+              →
+            </span>
+            <strong>{outLabel}</strong>
+            {nights > 0 ? (
+              <span className="x-hotel-desk-nights">
+                {nights} {nights === 1 ? 'night' : 'nights'}
+              </span>
+            ) : null}
+          </p>
+          {guest.checkingOutOnDate ? (
+            <p className="x-hotel-desk-leaving-note">Leaving today — remind by 11:00 AM</p>
+          ) : null}
+        </div>
+      </div>
+
+      <div className="x-hotel-desk-guest-actions">
+        {canCheckIn ? (
+          <button
+            type="button"
+            className="x-hotel-desk-action is-arrive"
+            disabled={busy}
+            onClick={() => onAction('check_in')}
+          >
+            Guest arrived
+          </button>
+        ) : null}
+        {canCheckOut ? (
+          <button
+            type="button"
+            className="x-hotel-desk-action is-leave"
+            disabled={busy}
+            onClick={() => onAction('check_out')}
+          >
+            Guest left
+          </button>
+        ) : null}
+        {canNoShow ? (
+          <button
+            type="button"
+            className="x-hotel-desk-action is-noshow"
+            disabled={busy}
+            onClick={() => onAction('did_not_arrive')}
+          >
+            Did not come
+          </button>
+        ) : null}
+        {!canCheckIn && !canCheckOut ? (
+          <span className="x-hotel-desk-done">{view.doneLine || view.label}</span>
+        ) : null}
+      </div>
+    </li>
+  );
+}
 
 export function HotelDeskPage() {
   const { signedIn, hasRole, loading: authLoading, logout, user } = useAuth();
   const isHotelDesk = hasRole('hotel_desk');
+  const navigate = useNavigate();
   const { picked, setPicked } = useEventPick();
 
   const [desk, setDesk] = useState(null);
@@ -125,10 +220,10 @@ export function HotelDeskPage() {
       else if (kind === 'did_not_arrive') await api.receptionDidNotArrive({ personId });
       notify(
         kind === 'check_in'
-          ? 'Marked checked-in.'
+          ? 'Guest arrived — marked in hotel.'
           : kind === 'check_out'
-            ? 'Marked checked-out.'
-            : 'Marked did not arrive.'
+            ? 'Guest left — checkout done.'
+            : 'Marked as no show.'
       );
       await loadGuests();
     } catch (err) {
@@ -142,6 +237,7 @@ export function HotelDeskPage() {
   async function onLogout(e) {
     e.preventDefault();
     await logout();
+    navigate('/login');
   }
 
   if (authLoading) {
@@ -182,18 +278,22 @@ export function HotelDeskPage() {
       <div className="uk-container app-column">
         <div className="uk-card uk-card-default uk-card-small uk-card-body uk-box-shadow-medium x-hotel-desk">
           <header className="x-step-head form-head">
-            <h2 className="form-title">{hotelName}</h2>
-            <p className="form-summary">
-              Hotel Desk — verify by room and name, then mark check-in / check-out. Expected check-in{' '}
-              <strong>11:00 AM</strong>; second chance until <strong>~3:00 PM</strong>, then mark Did not
-              arrive. Remind guests checking out on the selected date (11:00 AM).
-            </p>
-            <p className="uk-text-meta uk-margin-remove">
-              Room keys stay at reception.{' '}
-              <a href="#logout" onClick={onLogout}>
+            <div className="x-hotel-desk-head-row">
+              <h2 className="form-title uk-margin-remove">{hotelName}</h2>
+              <button
+                type="button"
+                className="uk-button uk-button-default uk-button-small x-hotel-desk-logout"
+                onClick={onLogout}
+              >
                 Logout
-              </a>
+              </button>
+            </div>
+            <p className="form-summary">
+              Find the guest by <strong>room</strong> or <strong>name</strong>. When they come, press{' '}
+              <strong>Guest arrived</strong>. When they go, press <strong>Guest left</strong>. After 3:00
+              PM, if they still did not come, press <strong>Did not come</strong>.
             </p>
+            <p className="uk-text-meta uk-margin-remove">Keep room keys at the desk.</p>
           </header>
 
           <div className="x-hotel-desk-filters uk-margin">
@@ -214,37 +314,37 @@ export function HotelDeskPage() {
               </div>
               <div className="x-field">
                 <label className="x-label" htmlFor="desk-room">
-                  Room
+                  Find room
                 </label>
                 <input
                   className="uk-input uk-form-small"
                   id="desk-room"
                   value={roomQuery}
                   onChange={(e) => setRoomQuery(e.target.value)}
-                  placeholder="Room number"
+                  placeholder="Type room number"
                 />
               </div>
               <div className="x-field">
                 <label className="x-label" htmlFor="desk-name">
-                  Name
+                  Find name
                 </label>
                 <input
                   className="uk-input uk-form-small"
                   id="desk-name"
                   value={nameQuery}
                   onChange={(e) => setNameQuery(e.target.value)}
-                  placeholder="Guest name"
+                  placeholder="Type guest name"
                 />
               </div>
             </div>
 
-            <div className="x-hotel-desk-chips uk-margin-small-top" role="group" aria-label="State filter">
+            <div className="x-hotel-desk-chips uk-margin-small-top" role="group" aria-label="Show">
               <button
                 type="button"
                 className={`uk-button uk-button-small ${!statusFilter ? 'uk-button-primary' : 'uk-button-default'}`}
                 onClick={() => setStatusFilter('')}
               >
-                All states
+                All guests
               </button>
               {STATE_CHIPS.map((chip) => (
                 <button
@@ -261,7 +361,7 @@ export function HotelDeskPage() {
                 className={`uk-button uk-button-small ${checkingOutOnly ? 'uk-button-primary' : 'uk-button-default'}`}
                 onClick={() => setCheckingOutOnly((v) => !v)}
               >
-                Checking out on this date
+                Leaving today
               </button>
             </div>
           </div>
@@ -271,79 +371,19 @@ export function HotelDeskPage() {
           {loading ? (
             <p className="hint">Loading guests…</p>
           ) : guests.length === 0 ? (
-            <p className="uk-text-meta">No guests match this date and filters.</p>
+            <p className="uk-text-meta">No guests for this date and filter.</p>
           ) : (
             <ul className="uk-list uk-list-divider x-hotel-desk-list">
-              {guests.map((guest) => {
-                const status = guest.personStatus || 'allotted';
-                const personId = guest.personId;
-                const busy = busyId === personId;
-                return (
-                  <li key={personId} className="x-hotel-desk-row">
-                    <div className="x-hotel-desk-row-main">
-                      <div>
-                        <strong>{guest.name}</strong>
-                        {guest.checkingOutOnDate ? (
-                          <span className="x-hotel-desk-tag"> Checking out on this date</span>
-                        ) : null}
-                        <p className="uk-text-meta uk-margin-remove">
-                          Room {guest.roomNumber || '—'} · In {guest.checkInDate} 11:00 · Out{' '}
-                          {guest.checkOutDate} 11:00
-                        </p>
-                      </div>
-                    </div>
-                    <div className="x-hotel-desk-checks" role="group" aria-label={`Status for ${guest.name}`}>
-                      <label className="x-hotel-desk-check is-readonly">
-                        <input type="checkbox" checked={status === 'allotted'} readOnly disabled />
-                        <span>Allotted</span>
-                      </label>
-                      <label className="x-hotel-desk-check">
-                        <input
-                          type="checkbox"
-                          className="x-hotel-desk-checkbox"
-                          checked={status === 'checked_in' || status === 'checked_out'}
-                          disabled={busy || status !== 'allotted'}
-                          onChange={() => {
-                            if (status === 'allotted') runAction(personId, 'check_in');
-                          }}
-                        />
-                        <span>Checked-in now</span>
-                      </label>
-                      <label className="x-hotel-desk-check">
-                        <input
-                          type="checkbox"
-                          className="x-hotel-desk-checkbox"
-                          checked={status === 'checked_out'}
-                          disabled={busy || status !== 'checked_in'}
-                          onChange={() => {
-                            if (status === 'checked_in') runAction(personId, 'check_out');
-                          }}
-                        />
-                        <span>Checked-out now</span>
-                      </label>
-                      <label
-                        className={`x-hotel-desk-check${!canMarkDidNotArrive && status === 'allotted' ? ' is-muted' : ''}`}
-                      >
-                        <input
-                          type="checkbox"
-                          className="x-hotel-desk-checkbox"
-                          checked={status === 'did_not_arrive'}
-                          disabled={
-                            busy ||
-                            status !== 'allotted' ||
-                            !canMarkDidNotArrive ||
-                            guest.checkInDate !== date
-                          }
-                          onChange={() => {
-                            if (status === 'allotted') runAction(personId, 'did_not_arrive');
-                          }}
-                        />
-                        <span>Did not arrive</span>
-                      </label>
-                    </div>
-                  </li>
-                );
-              })}
+              {guests.map((guest) => (
+                <GuestRow
+                  key={guest.personId}
+                  guest={guest}
+                  date={date}
+                  canMarkDidNotArrive={canMarkDidNotArrive}
+                  busy={busyId === guest.personId}
+                  onAction={(kind) => runAction(guest.personId, kind)}
+                />
+              ))}
             </ul>
           )}
         </div>
