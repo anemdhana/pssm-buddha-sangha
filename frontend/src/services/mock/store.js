@@ -832,6 +832,17 @@ function stripGuestsFromEventAllotments(
           (bare && keys.has(bare)) ||
           (nameKey && keys.has(nameKey));
         if (matched) {
+          const status = String(g?.personStatus || 'allotted')
+            .trim()
+            .toLowerCase()
+            .replace(/-/g, '_');
+          if (status === 'checked_in' || status === 'checked_out') {
+            throw apiError(
+              409,
+              'GUEST_CHECKED_IN',
+              `Cannot move or release ${g?.name || 'guest'} — already checked in or out at the hotel.`
+            );
+          }
           changed = true;
           const reportKey = key || bare;
           const target =
@@ -1874,6 +1885,51 @@ export const mockApi = {
     };
   },
 
+  async getMyStayBooking(eventId) {
+    if (!isSignedIn()) throw apiError(401, 'UNAUTHORIZED', 'Please login again.');
+    const session = readSession();
+    const id = String(eventId || '').trim();
+    if (!id) throw apiError(400, 'VALIDATION', 'Event id is required.');
+    const mobile = normalizeMobile(session.mobile);
+    const events = readJson(EVENTS_KEY, []);
+    const known = Array.isArray(events) ? events.find((e) => e && e.id === id) : null;
+    const startDate = known ? String(known.startDate || '').trim() : '';
+    let bookingClosesOn = null;
+    if (/^\d{4}-\d{2}-\d{2}$/.test(startDate)) {
+      const d = new Date(`${startDate}T12:00:00`);
+      d.setDate(d.getDate() - 2);
+      bookingClosesOn = d.toISOString().slice(0, 10);
+    }
+    const event = {
+      id,
+      name: known ? known.name || '' : '',
+      startDate: startDate || null,
+      endDate: known ? String(known.endDate || '').trim() || null : null,
+      location: known ? known.location || '' : '',
+      bookingClosesOn
+    };
+    const matches = readStayBookings()
+      .filter((b) => b && b.eventId === id && normalizeMobile(b.familyMobile) === mobile)
+      .sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || '')));
+    const booking = matches[0] ? enrichStayBookingRow(matches[0]) : null;
+    const allotments = booking
+      ? readAllotments()
+          .filter((a) => a && a.eventId === id && String(a.bookingId || '') === String(booking.id || ''))
+          .map((a) => ({
+            id: a.id,
+            hotelName: a.hotelName || '',
+            roomNumber: a.roomNumber || '',
+            roomType: a.roomType || '',
+            roomKind: a.roomKind || '',
+            status: a.status || 'allotted',
+            checkInDate: a.checkInDate || '',
+            checkOutDate: a.checkOutDate || '',
+            personCount: Array.isArray(a.guests) ? a.guests.length : 0
+          }))
+      : [];
+    return { data: { event, booking, allotments } };
+  },
+
   async getStayBooking(id) {
     if (!isSignedIn()) throw apiError(401, 'UNAUTHORIZED', 'Please login again.');
     const session = readSession();
@@ -2207,11 +2263,23 @@ export const mockApi = {
       }
       guests.forEach((g) => {
         const key = allotmentGuestKey(g, bookingId);
-        if (key) guestKeys.add(key);
+        if (!key) return;
+        if (guestKeys.has(key)) {
+          throw apiError(409, 'DUPLICATE_GUEST', 'The same person appears more than once in this allotment batch.');
+        }
+        guestKeys.add(key);
       });
+      const room = (Array.isArray(hotel.rooms) ? hotel.rooms : []).find(
+        (r) => String(r?.roomNumber || '').trim() === String(p?.roomNumber || '').trim()
+      );
+      if (!room) {
+        throw apiError(400, 'VALIDATION', `Room ${p?.roomNumber || ''} was not found in ${hotel.name}.`);
+      }
+      const capacity = Math.max(0, Number(room.capacity) || 0);
       const primary = guests.find((g) => g.primary) || guests[0] || {};
       prepared.push({
-        id: `allot_${Date.now()}_${index}`,
+        id: `allot_${Date.now()}_${index}_${Math.random().toString(36).slice(2, 8)}`,
+        _capacity: capacity,
         eventId,
         eventName: String(payload?.eventName || '').trim(),
         bookingId,
@@ -2246,18 +2314,80 @@ export const mockApi = {
         });
       });
     });
+    const existing = readAllotments();
+    // Server-style capacity check (exclude guests we are about to move).
+    prepared.forEach((row) => {
+      const capacity = Math.max(0, Number(row._capacity) || 0);
+      let used = 0;
+      let lock = '';
+      (Array.isArray(existing) ? existing : []).forEach((other) => {
+        if (!other || String(other.eventId || '') !== eventId) return;
+        if (String(other.hotelId || '') !== String(row.hotelId || '')) return;
+        if (String(other.roomNumber || '') !== String(row.roomNumber || '')) return;
+        (Array.isArray(other.guests) ? other.guests : []).forEach((g) => {
+          const key = allotmentGuestKey(g, other.bookingId);
+          if (key && guestKeys.has(key)) return;
+          used += 1;
+          const gender = String(g?.gender || '')
+            .trim()
+            .toLowerCase();
+          const gNorm = gender === 'male' || gender === 'm' || gender === 'gents' ? 'male'
+            : gender === 'female' || gender === 'f' || gender === 'ladies' ? 'female' : '';
+          if (!gNorm) return;
+          if (!lock) lock = gNorm;
+          else if (lock !== gNorm) lock = 'mixed';
+        });
+      });
+      if (used + (row.guests?.length || 0) > capacity) {
+        throw apiError(
+          409,
+          'ROOM_FULL',
+          `Room ${row.roomNumber} in ${row.hotelName} does not have enough free beds (capacity ${capacity}).`
+        );
+      }
+      // Gender lock only vs other parties already in the room. A whole family may be
+      // mixed — do not segregate within one placement. Alone parties still match lock.
+      let partyGender = '';
+      (row.guests || []).forEach((g) => {
+        const gender = String(g?.gender || '')
+          .trim()
+          .toLowerCase();
+        const gNorm = gender === 'male' || gender === 'm' || gender === 'gents' ? 'male'
+          : gender === 'female' || gender === 'f' || gender === 'ladies' ? 'female' : '';
+        if (!gNorm) return;
+        if (!partyGender) partyGender = gNorm;
+        else if (partyGender !== gNorm) partyGender = 'mixed';
+      });
+      if (lock && lock !== 'mixed' && partyGender && partyGender !== lock) {
+        throw apiError(
+          409,
+          'GENDER_MISMATCH',
+          `Room ${row.roomNumber} already has ${lock} guests — cannot add ${
+            partyGender === 'mixed' ? 'a mixed family' : `${partyGender} guest`
+          }.`
+        );
+      }
+    });
+
     const stripped = stripGuestsFromEventAllotments(
-      readAllotments(),
+      existing,
       eventId,
       guestKeys,
       targetsByGuestKey
     );
     const next = stripped.list;
-    prepared.forEach((row) => next.unshift(row));
+    prepared.forEach((row) => {
+      const { _capacity, ...clean } = row;
+      next.unshift(clean);
+    });
     writeJson(ALLOTMENTS_KEY, next);
     writeJson(ALLOTMENTS_SEED_KEY, ALLOTMENTS_SEED_VERSION);
     return {
-      data: { created: prepared.length, allotments: prepared, moves: stripped.moves }
+      data: {
+        created: prepared.length,
+        allotments: prepared.map(({ _capacity, ...clean }) => clean),
+        moves: stripped.moves
+      }
     };
   },
 

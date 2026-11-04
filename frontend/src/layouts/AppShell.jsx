@@ -185,10 +185,7 @@ export function AppShell() {
                   <div className="uk-navbar-dropdown">
                     <ul className="uk-nav uk-navbar-dropdown-nav">
                       <li>
-                        <Link to="/stay?plan=free">Free Accommodation</Link>
-                      </li>
-                      <li>
-                        <Link to="/stay?plan=paid">Paid Accommodation</Link>
+                        <Link to="/stay">Accommodation</Link>
                       </li>
                       {canViewStayRegistrations ? (
                         <li>
@@ -233,6 +230,11 @@ export function AppShell() {
                   </a>
                   <div className="uk-navbar-dropdown">
                     <ul className="uk-nav uk-navbar-dropdown-nav">
+                      <li>
+                        <NavLink to="/" end>
+                          Home
+                        </NavLink>
+                      </li>
                       {isPssmAdmin && (
                         <li>
                           <NavLink to="/admin">People &amp; roles</NavLink>
@@ -273,10 +275,7 @@ export function AppShell() {
                   <>
                     <li className="uk-nav-header">Stay</li>
                     <li>
-                      <Link to="/stay?plan=free">Free Accommodation</Link>
-                    </li>
-                    <li>
-                      <Link to="/stay?plan=paid">Paid Accommodation</Link>
+                      <Link to="/stay">Accommodation</Link>
                     </li>
                     {canViewStayRegistrations ? (
                       <li>
@@ -309,6 +308,9 @@ export function AppShell() {
                 {signedIn && (
                   <>
                     <li className="uk-nav-header">Account</li>
+                    <li>
+                      <Link to="/">Home</Link>
+                    </li>
                     {isPssmAdmin && (
                       <li>
                         <Link to="/admin">People &amp; roles</Link>

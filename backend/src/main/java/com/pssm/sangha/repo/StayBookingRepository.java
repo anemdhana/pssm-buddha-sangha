@@ -9,4 +9,6 @@ public interface StayBookingRepository extends MongoRepository<StayBooking, Stri
     List<StayBooking> findByEventIdOrderByCreatedAtDesc(String eventId);
 
     List<StayBooking> findByFamilyMobileOrderByCreatedAtDesc(String familyMobile);
+
+    List<StayBooking> findByEventIdAndFamilyMobileOrderByCreatedAtDesc(String eventId, String familyMobile);
 }

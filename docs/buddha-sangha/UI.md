@@ -43,7 +43,7 @@ Visitor screens live in `docs/prototype/`. This document covers sangha Admin/das
 | --- | --- | --- | --- |
 | 1 | **Sangha register** | Masters register: add/edit people, places, dashboard groups | Register Admin / Sangha member |
 | 2 | **Supporting events** | Active events (Register Admin can set Active/Inactive anytime), budgets, host-first support, equal share | Register Admin / Sangha member |
-| 3 | **Accommodation** | Hotels, rooms, Free/Paid Stay for an event, booking window, smart allotment, Hotel Desk check-in/out | **Accommodation Admin**, **Hotel Desk**, Visitor |
+| 3 | **Accommodation** | Hotels, rooms, stay registration for an event, booking window, smart allotment, Hotel Desk check-in/out | **Accommodation Admin**, **Hotel Desk**, Visitor |
 
 **Role note:** **PSSM Admin** (People & roles on My Space) assigns Event Organizer / Pyramid Sevadal / PMMA Member / Accommodation Volunteer. Accommodation Volunteer books stay (including new visitors). That is not the same as **Accommodation Admin**, who runs hotels and room allotment.
 
@@ -379,11 +379,11 @@ Copy this block for each new sketch.
 
 A static look-and-feel page is at `docs/prototype/index.html`. Open that file in a browser. It is not the working app, and it does not live in `frontend/`.
 
-The landing is **PSSM Buddha Sangha**: Join, Login to My Space, and Free / Paid Accommodation. The header keeps Patriji and the PSSM logo, with an event picker and Stay / Sangha / Account menus.
+The landing is **PSSM Buddha Sangha**: Join, Login to My Space, and Accommodation. The header keeps Patriji and the PSSM logo, with an event picker and Stay / Sangha / Account menus.
 
 Login is `docs/prototype/login.html`. The person signs in with **mobile number** and **password**. The first password is created at join: up to the first 5 letters of the name, then the date and month of birth. Example: Ramakrishna, 15 August → `Ramak1508`.
 
-Join is `docs/prototype/join.html` (who → place → family → review → done). Optional passport-size live photo and ID proof sit on who and on each family member (advised, not required). Family members use collapsible person cards. Accommodation in the React app is `/stay?plan=free|paid` (prototype `visitor.html`): who → place → family → how long (start/end per person) → review. When a sangha join exists, people details are prefilled and the wizard opens at how long. Accommodation Volunteers get Myself / New visitor. Stay uses the header-selected event. UIkit pieces in use: form, progress, grid, tab, chips, and camera capture.
+Join is `docs/prototype/join.html` (who → place → family → review → done). Optional passport-size live photo and ID proof sit on who and on each family member (advised, not required). Family members use collapsible person cards. Accommodation in the React app is `/stay` (prototype `visitor.html`): who → place → family → how long (start/end per person) → review. When a sangha join exists, people details are prefilled and the wizard opens at how long. Accommodation Volunteers get Myself / New visitor. Stay uses the header-selected event. UIkit pieces in use: form, progress, grid, tab, chips, and camera capture.
 
 Paper screenshots will be added here when they are shared.
 
@@ -406,7 +406,7 @@ The UI is **mobile first**, **minimal**, and collected as a **wizard**. The same
 - Lists (hotels, guests, allocation review) show a few columns. Extra detail opens on the next step, not on the same screen.
 - UIkit pieces for this: `uk-container` with a narrow width, `uk-form-stacked`, `uk-width-1-1` controls, `uk-button-primary uk-width-1-1`, and `uk-card-small`.
 
-Visitor booking is the wizard opened from **Stay â†’ Free Accommodation** or **Paid Accommodation** (or the matching cards on the landing page). There is no plan step inside the wizard; the plan comes from the menu. There is no sign-in inside the wizard. The steps are who is coming, place, family, days, the couple question when it applies, ID photos, and the summary. If the visitor already joined the sangha, who / place / family are prefilled from a copy of that join. Back returns to the previous step. Next stores that step.
+Visitor booking is the wizard opened from **Stay → Accommodation** (or the matching card on the landing page). There is no free/paid choice in the UI — events are mostly free for now. There is no sign-in inside the wizard. The steps are who is coming, place, family, days, the couple question when it applies, ID photos, and the summary. If the visitor already joined the sangha, who / place / family are prefilled from a copy of that join. Back returns to the previous step. Next stores that step.
 
 Accommodation Admin and receptionist follow the same rule. Hotel entry, room entry, allocation review, check-in, and check-out are separate steps, not one crowded page.
 
@@ -432,10 +432,9 @@ Sangha home before any form. Cards and header menus:
 | --- | --- |
 | Join PSSM Buddha Sangha | `join.html` (who → place → family → review → done) |
 | Login to My Space | The login page |
-| Free Accommodation | `visitor.html?plan=free` |
-| Paid Accommodation | `visitor.html?plan=paid` |
+| Accommodation | `visitor.html` / `/stay` |
 
-Header menus: **Stay** (Free / Paid), **Sangha** (Join / Login to My Space), **Account**.
+Header menus: **Stay** (Accommodation), **Sangha** (Join / Login to My Space), **Account**.
 
 **Login to My Space**
 
@@ -459,7 +458,7 @@ The first password is created at join: up to the first 5 letters of the name + d
 - PSSM Admin joins and logs in like any member, then lands on People & roles (`admin.html`).
 - PSSM Admin pre-assigns one or more of Event Organizer, Pyramid Sevadal, PMMA Member.
 - My Profile shows assigned roles (read-only).
-- Event Organizer opens Create event (name, dates, location, expected budget INR, optional meditation hours/day). Saved events feed the header event picker; Free and Paid Stay use the selected event.
+- Event Organizer opens Create event (name, dates, location, expected budget INR, optional meditation hours/day). Saved events feed the header event picker; Accommodation uses the selected event.
 
 **My Profile (`profile.html`)**
 
@@ -498,7 +497,7 @@ Signed-in Event Organizer only. Form fields, in order:
 5. Meditation hours per day (optional)  
 6. Save → list of events  
 
-Helper under the form: *Free and Paid Stay use the event selected in the header.* Non-organizers see a short gate message pointing to PSSM Admin People & roles. Each listed event has **Edit**, which fills the form for update. Header event picker shows name and dates only (not budget).
+Helper under the form: *Accommodation uses the event selected in the header.* Non-organizers see a short gate message pointing to PSSM Admin People & roles. Each listed event has **Edit**, which fills the form for update. Header event picker shows name and dates only (not budget).
 
 
 **Join PSSM Buddha Sangha (`join.html`)**
@@ -517,7 +516,7 @@ The visitor fills the accommodation wizard while booking is open. After the cuto
 
 **V1 — Who is coming?**
 
-Plan is already chosen from Stay / landing. Do not redraw Free / Paid here.
+Opened from Stay → Accommodation (or the home Accommodation card). Do not offer a free/paid choice here.
 
 | Field | Required | Draw as | Notes |
 | --- | --- | --- | --- |
@@ -589,7 +588,7 @@ Only one person provides ID. Draw a picker, then two camera boxes.
 
 No new typing. Draw a summary card the visitor can keep:
 
-- Free Accommodation or Paid Accommodation
+- Accommodation for the selected event
 - Party name, mobile, gender, meditation, and date and month of birth
 - Number of persons
 - Rural or urban place (village and town, or city)
@@ -911,7 +910,7 @@ These screens are specified in the UI prototype and are not built yet. Pick from
 
 | Screen | Reach for | Do not reach for |
 | --- | --- | --- |
-| Landing | Card rows with an icon and a chevron, as on `index.html` (Join, Login, Free / Paid) | A tab bar, or inventing a second visual system outside UIkit |
+| Landing | Card rows with an icon and a chevron, as on `index.html` (Join, Login, Accommodation) | A tab bar, or inventing a second visual system outside UIkit |
 | Login | Compact `x-group` form: mobile + password | Building the password on the login page from name/date/month |
 | My Profile | Same switcher wizard as join; profile titles; Save | A separate denser settings page |
 | Visitor wizard | Switcher, progress, subnav pills, form, modal for address | Visible tabs, accordion sections, or more than one step on the page |
@@ -952,7 +951,7 @@ They are in the same Documentation menu. They do not help this app.
 
 ## 6. Choices that keep coming up
 
-**Two or three options** (Male / Female, Rural / Urban, Yes / No, Free / Paid). Subnav pills. Show every option. Do not use a select.
+**Two or three options** (Male / Female, Rural / Urban, Yes / No). Subnav pills. Show every option. Do not use a select.
 
 **More than a few options** (ID proof type, override hotel, override room). `uk-select`. A row of pills will wrap into a tall block.
 
@@ -996,7 +995,7 @@ They are in the same Documentation menu. They do not help this app.
 | --- | --- |
 | `docs/prototype/app.css` | Header, colours, Patriji body background, narrow column, button and field shape |
 | `docs/prototype/app-profile.js` | Sangha profile in `localStorage`, event picker helper, composed password |
-| `docs/prototype/index.html` | PSSM Buddha Sangha landing (Join, Login, Free / Paid) |
+| `docs/prototype/index.html` | PSSM Buddha Sangha landing (Join, Login, Accommodation) |
 | `docs/prototype/join.html` | Join sangha wizard |
 | `docs/prototype/login.html` | Login to My Space |
 | `docs/prototype/visitor.html` | Accommodation wizard (`?plan=free` or `?plan=paid`) |

@@ -90,9 +90,9 @@ Sangha register and event accommodation requirements and user stories in one pla
 | --- | --- | --- | --- |
 | 1 | **Sangha register** | Masters register: add/edit people, places, dashboard groups | Register Admin / Sangha member |
 | 2 | **Supporting events** | Active events (Register Admin can set Active/Inactive anytime), budgets, host-first support, equal share | Register Admin / Sangha member |
-| 3 | **Accommodation** | Hotels, rooms, Free/Paid Stay for an event, booking window, smart allotment, Hotel Desk check-in/out | **Accommodation Admin**, **Hotel Desk**, Visitor |
+| 3 | **Accommodation** | Hotels, rooms, stay registration for an event, booking window, smart allotment, Hotel Desk check-in/out | **Accommodation Admin**, **Hotel Desk**, Visitor |
 
-**Role note:** **PSSM Admin** (People & roles on My Space) assigns Event Organizer / Pyramid Sevadal / PMMA Member / **Accommodation Volunteer**. Accommodation Volunteer books Free/Paid stay for an event (including new visitors, who are added to the sangha register together with the booking). That is not the same as **Accommodation Admin**, who runs hotels and room allotment for Stay. **Hotel Desk** (`hotel_desk`) is attached on the hotel record (max 3 people per hotel) by Accommodation Admin — not via People & roles.
+**Role note:** **PSSM Admin** (People & roles on My Space) assigns Event Organizer / Pyramid Sevadal / PMMA Member / **Accommodation Volunteer**. Accommodation Volunteer books accommodation for an event (including new visitors, who are added to the sangha register together with the booking). That is not the same as **Accommodation Admin**, who runs hotels and room allotment for Stay. **Hotel Desk** (`hotel_desk`) is attached on the hotel record (max 3 people per hotel) by Accommodation Admin — not via People & roles.
 
 ## Delivery status (prototype)
 
@@ -625,20 +625,16 @@ The system must support the complete lifecycle of such multi-day spiritual event
 
 **2.1 Accommodation Management**
 
-**FR-01: Free Accommodation for Visitors**  
-The system shall support the provision of **free hotel room accommodation** to registered visitors of the event.
+**FR-01: Accommodation for Visitors**  
+The system shall support **hotel room accommodation** for registered visitors of the event. Events are **mostly free** at present; the product UI offers a single **Accommodation** path (not separate free vs paid menus).
 
 - Accommodation shall be arranged in hotels located **near the event venue**.  
 - Preferred locations should be within **walkable distance** from the event place.  
 - In cases where walkable distance is not possible, the hotels should be accessible by a **very short auto/rickshaw ride**.  
-- The system must allow organizers to allocate, track, and manage free hotel rooms for visitors based on availability, registration status, and other defined criteria.
+- The system must allow organizers to allocate, track, and manage hotel rooms for visitors based on availability, registration status, and other defined criteria.
 
-**FR-02: Self-Booking of Accommodation by Visitors**  
-Visitors shall have the option to **book accommodation on their own**.
-
-- The system must allow visitors to independently search, select, and book hotel rooms (or other types of accommodation) according to their preference.  
-- Self-booking may be used as an alternative to the free accommodation provided by the organizers.  
-- The system should support (or integrate with) booking workflows so that visitors can complete the reservation process themselves.
+**FR-02: Self-Booking of Accommodation by Visitors** *(deferred)*  
+Self-booked / paid stay may return later. While events are mostly free, the live UI does **not** expose a separate paid path; the API may still store `plan` for older records.
 
 **FR-06: Priority Allocation for Special Needs**  
 If the registration indicates the presence of **aged/elderly persons** or any **sickness/medical condition** in the group, the smart allocation flow (FR-23) shall:
@@ -852,7 +848,7 @@ Each visitor party signs in as one family group with the main person's **mobile 
 - Example: name Ramakrishna, 15 August → `Ramak1508`. Date 31 and month 8 end with `3108`.  
 - After sign-in, the visitor may change the password whenever they wish. Once changed, the temporary password no longer works.  
 - The same sign-in opens the whole party, not a separate login for each family member.  
-- A visitor who already joined **PSSM Buddha Sangha** can book Free or Paid accommodation with who / place / family prefilled from a **copy** of the join record; edits for the stay do not change the sangha join.
+- A visitor who already joined **PSSM Buddha Sangha** can book Accommodation with who / place / family prefilled from a **copy** of the join record; edits for the stay do not change the sangha join.
 
 **FR-29a: My Profile after Login**  
 After Login to My Space, the signed-in person sees **Stay** and **Account** menus only (Sangha join/login menus are hidden).
@@ -886,7 +882,7 @@ A joined person with the **PSSM Admin** role lands on a different home after log
 - Action buttons on the person card (Save roles / Remove person) are equal width and aligned on the card.
 
 **FR-29c: Event Organizer Creates Events**  
-A signed-in person with the **Event Organizer** role can create spiritual events that the sangha uses for **support** and for **Free / Paid Stay**.
+A signed-in person with the **Event Organizer** role can create spiritual events that the sangha uses for **support** and for **Accommodation**.
 
 **Required fields**
 
@@ -909,12 +905,12 @@ A signed-in person with the **Event Organizer** role can create spiritual events
 - Only Event Organizer may open Create event and save. Others see a gate message (PSSM Admin assigns the role).  
 - The organizer can list events and **edit** an existing event (same fields as create).  
 - Saved events appear in the **header event picker**.  
-- **Free accommodation** and **Paid (self) accommodation** always run against the **currently selected event** (dates, location, booking cutoff = start − 2 days, allotment, hotels). Stay is not offered without an event selected.  
+- **Accommodation** always runs against the **currently selected event** (dates, location, booking cutoff = start − 2 days, allotment, hotels). Stay is not offered without an event selected.  
 - Expected budget is stored for later **supporting-events** allotment (equal share / host-first). Register Admin may still mark Active/Inactive and review allotment as already specified.  
 - A person without Event Organizer cannot create events.
 
 **FR-29d: Accommodation Volunteer Books Stay**  
-A signed-in person with the **Accommodation Volunteer** role can book **Free** or **Paid** accommodation for the event selected in the header.
+A signed-in person with the **Accommodation Volunteer** role can book **Accommodation** for the event selected in the header.
 
 - Volunteer may book for **themselves** (profile prefill) or for a **new visitor**.  
 - New visitor: all entered people details are saved to the **sangha register** and the **stay booking** together (`registerFamily`).  
@@ -1605,20 +1601,20 @@ Visitors submit accommodation requests until **2 days before the event**. After 
 ### US-26c: Event Organizer – Create Event
 **As an** Event Organizer  
 **I want** to create an event with name, dates, location, expected budget (INR), and optional daily meditation hours  
-**So that** members can support that event and book Free or Paid Stay against it
+**So that** members can support that event and book Accommodation against it
 
 **Acceptance Criteria:**
 - Only a signed-in person with Event Organizer can open Create event and save
 - Required: event name, start date, end date (end ≥ start), location (one line), expected budget (INR, > 0)
 - Optional: meditation hours per day (≥ 0)
 - After save, the event appears in the organizer’s list and in the header event picker
-- Choosing that event in the picker is what Free Stay and Paid Stay use (booking window, allotment, receptionist flows)
+- Choosing that event in the picker is what Accommodation uses (booking window, allotment, receptionist flows)
 - Non-organizers cannot save; UI points them to PSSM Admin → People & roles
 - Edit loads the event into the same form; Update saves changes; Cancel returns to create mode
 
 ### US-26d: Accommodation Volunteer – Book Stay for New Visitors
 **As an** Accommodation Volunteer  
-**I want** to book Free or Paid accommodation for a new visitor  
+**I want** to book Accommodation for a new visitor  
 **So that** their details enter the sangha register and the stay booking in one flow
 
 **Acceptance Criteria:**

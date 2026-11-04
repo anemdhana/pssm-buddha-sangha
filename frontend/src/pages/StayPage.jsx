@@ -154,7 +154,7 @@ export function StayPage() {
     sub: picked.sub
   };
 
-  const planCrumb = plan === 'paid' ? 'Paid Accommodation' : 'Free Accommodation';
+  const planCrumb = 'Accommodation';
   const crumbs = fromInterest
     ? [
         { label: 'Stay' },

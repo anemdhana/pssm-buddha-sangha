@@ -76,6 +76,8 @@ const liveApi = {
     });
     return request(`/bookings?${query.toString()}`);
   },
+  getMyStayBooking: (eventId) =>
+    request(`/bookings/mine?eventId=${encodeURIComponent(String(eventId || ''))}`),
   getStayBooking: (id) => request(`/bookings/${encodeURIComponent(id)}`),
   updateStayBooking: (id, payload) =>
     request(`/bookings/${encodeURIComponent(id)}`, { method: 'PUT', body: JSON.stringify(payload) }),

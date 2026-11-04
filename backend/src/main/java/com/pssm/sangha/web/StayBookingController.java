@@ -49,6 +49,11 @@ public class StayBookingController {
                 eventId, q, gender, ages, meditation, location, stayRange, familySize, allotment, page, size)));
     }
 
+    @GetMapping("/mine")
+    public ResponseEntity<?> mine(@RequestParam("eventId") String eventId) {
+        return ResponseEntity.ok(ApiResponses.data(stayBookingService.mineForEvent(eventId)));
+    }
+
     @GetMapping("/{id}")
     public ResponseEntity<?> get(@PathVariable("id") String id) {
         return ResponseEntity.ok(ApiResponses.data(stayBookingService.getById(id)));

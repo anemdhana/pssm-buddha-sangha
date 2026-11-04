@@ -80,7 +80,7 @@ Sangha register technical notes and event accommodation (allocation + REST API) 
 | --- | --- | --- | --- |
 | 1 | **Sangha register** | Masters register: add/edit people, places, dashboard groups | Register Admin / Sangha member |
 | 2 | **Supporting events** | Active events (Register Admin can set Active/Inactive anytime), budgets, host-first support, equal share | Register Admin / Sangha member |
-| 3 | **Accommodation** | Hotels, rooms, Free/Paid Stay for an event, booking window, smart allotment, Hotel Desk check-in/out | **Accommodation Admin**, **Hotel Desk**, Visitor |
+| 3 | **Accommodation** | Hotels, rooms, stay registration for an event, booking window, smart allotment, Hotel Desk check-in/out | **Accommodation Admin**, **Hotel Desk**, Visitor |
 
 **Role note:** **PSSM Admin** (People & roles on My Space) assigns Event Organizer / Pyramid Sevadal / PMMA Member / Accommodation Volunteer. **Accommodation Volunteer** books Free/Paid stay (including for new visitors, who are added to the sangha register). That is not the same as **Accommodation Admin**, who runs hotels and room allotment for Stay.
 
@@ -512,7 +512,7 @@ Response `201`: `{ "data": { ...event } }`.
 
 Event Organizer only. Same body as `POST /events`. Response `200`: `{ "data": { ...event } }`. `404` if id unknown.
 
-**Stay link:** Free and Paid accommodation always use the event selected in the header picker (booking cutoff = start − 2 days, allotment, hotels). Header picker subtitle shows dates only (not budget).
+**Stay link:** Accommodation always uses the event selected in the header picker (booking cutoff = start − 2 days, allotment, hotels). Header picker subtitle shows dates only (not budget).
 
 ### Endpoint index
 
@@ -598,7 +598,7 @@ Same as [Chosen technical stack](#chosen-technical-stack). Accommodation-specifi
 | Real-time          | **Spring WebSocket** (STOMP)        | Live notifications between Accommodation Admin and Hotel Receptionists. |
 | Notifications      | **WhatsApp** (primary for now)      | Alerts to Accommodation Admin / Receptionist / Visitors as needed. |
 | Database           | **MongoDB 7** + Spring Data MongoDB | Document model (embedded family/place). |
-| Authentication     | **Spring Security session** + RBAC  | Roles: Accommodation Admin, Hotel Receptionist, Visitor, Sangha member, plus **PSSM Admin** and pre-assigned member roles **Event Organizer**, **Pyramid Sevadal**, **PMMA Member** (one or more). PSSM Admin lands on People & roles to search by mobile, assign/remove those roles, and remove people. A family group signs in with mobile number + password. First password is up to 5 letters of the name + date + month (e.g. `Ramak1508`), created at join, and can be changed. After login, the UI shows Stay + Account only; My Profile edits the sangha record through a join-like wizard. Event Organizer may create events (name, dates, location, expected budget INR, optional meditation hours/day); Free and Paid Stay use the selected event. |
+| Authentication     | **Spring Security session** + RBAC  | Roles: Accommodation Admin, Hotel Receptionist, Visitor, Sangha member, plus **PSSM Admin** and pre-assigned member roles **Event Organizer**, **Pyramid Sevadal**, **PMMA Member** (one or more). PSSM Admin lands on People & roles to search by mobile, assign/remove those roles, and remove people. A family group signs in with mobile number + password. First password is up to 5 letters of the name + date + month (e.g. `Ramak1508`), created at join, and can be changed. After login, the UI shows Stay + Account only; My Profile edits the sangha record through a join-like wizard. Event Organizer may create events (name, dates, location, expected budget INR, optional meditation hours/day); Accommodation uses the selected event. |
 | File Storage       | Local disk or Cloud (S3/Cloudinary) | For live photos and ID proof images. |
 | Deploy             | **Docker Compose** on one VPS       | Nginx + Spring Boot + MongoDB with resource limits — see [Production deployment](#production-deployment). |
 
@@ -1407,6 +1407,9 @@ Response `201`
 
 `bookedAt` is set server-side when the interest is submitted (same instant as `createdAt`). Status is `registered` until a later room-allocation pass assigns hotels (`allotted`, etc.).  
 `GET /bookings?eventId=` — Accommodation Volunteer, Event Organizer, or PSSM Admin: list Friends and Masters List (families) for that event, newest first.
+
+#### `GET /bookings/mine?eventId=`  
+Signed-in person: own stay registration for that event (match on `familyMobile`), plus any room allotments. Used by the home page stay summary. Response: `{ event, booking, allotments }` (`booking` may be `null`).
 
 Stored fields: `familyMobile`, `familyFullName`, `registeredFamily`, `familyDetail` (Mongo). Response embeds `family` (profile shape) plus `guests`.
 

@@ -20,7 +20,7 @@ Snapshot of permissions enforced in the app today (frontend nav + backend APIs).
 | Capability | Member (any signed-in) | PMMA / Sevadal | Accommodation Volunteer | Accommodation Admin | Event Organizer | PSSM Admin | Hotel Desk |
 | --- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
 | Join / login / My Profile / change password | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ (login + change password) |
-| Free / Paid Accommodation (own family) | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | |
+| Accommodation (own family) | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | |
 | Book / register **another** visitor while booking | | | ✓ | | ✓ | ✓ | |
 | **Stay → Friends and Masters List** (list/edit/remove registrations) | | | ✓ | | ✓ | ✓ | |
 | **Stay → Who is staying where** (allotments view) | | | ✓ | ✓ | ✓ | ✓ | |
@@ -78,7 +78,7 @@ Role-gated:
 | Action | Who |
 | --- | --- |
 | People & roles (`/admin`) — list people, set assignable roles, remove person | `pssm_admin` |
-| Create / manage events (`/events`) | `event_organizer` |
+| Home (`/`), My Profile, Change password | Any signed-in (Hotel Desk: login + change password only) |
 | My Profile, Change password | Any signed-in (incl. Hotel Desk) |
 
 ---

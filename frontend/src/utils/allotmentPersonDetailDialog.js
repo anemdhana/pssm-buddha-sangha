@@ -147,7 +147,6 @@ export function allotmentPersonDetailHtml(person) {
     detailText('Profession', p.profession) +
     detailText('Meditation', p.meditation) +
     detailText('Hometown', place) +
-    detailText('Plan', p.plan === 'paid' ? 'Paid' : p.plan === 'free' ? 'Free' : '') +
     detailText('Event', p.eventName, { wide: true });
 
   return (

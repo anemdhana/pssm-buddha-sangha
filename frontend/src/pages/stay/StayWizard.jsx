@@ -71,7 +71,6 @@ function placeFieldErrors(form) {
   return errors;
 }
 
-const PLAN_LABELS = { free: 'Free stay', paid: 'Paid stay' };
 
 const ID_LABELS = {
   aadhaar: 'Aadhaar',
@@ -297,7 +296,6 @@ export function StayWizard({
 }) {
   const navigate = useNavigate();
   const isEdit = Boolean(bookingId);
-  const planLabel = PLAN_LABELS[plan] || PLAN_LABELS.free;
   const eventName = (event && event.name) || 'the event';
   const lockMobile =
     isEdit || (bookingMode === 'self' && Boolean(initialForm && initialForm.mobile));
@@ -820,7 +818,7 @@ export function StayWizard({
                 <p className="form-summary">
                   {bookingMode === 'guest'
                     ? `Enter the visitor’s mobile first — we fill details if they are already in the sangha.`
-                    : `A few details about you for your ${planLabel.toLowerCase()} accommodation.`}
+                    : 'A few details about you for your accommodation.'}
                 </p>
               </header>
               <form className="uk-form-stacked" onSubmit={(e) => e.preventDefault()}>
@@ -1163,8 +1161,7 @@ export function StayWizard({
               <header className="x-step-head form-head">
                 <h2 className="form-title">Where are you from?</h2>
                 <p className="form-summary">
-                  Village or city — start typing, and we’ll fill what we know. It helps plan your {planLabel.toLowerCase()}{' '}
-                  accommodation.
+                  Village or city — start typing, and we’ll fill what we know. It helps plan your accommodation.
                 </p>
               </header>
               <form className="uk-form-stacked" onSubmit={(e) => e.preventDefault()}>
@@ -1421,7 +1418,7 @@ export function StayWizard({
               <header className="x-step-head form-head">
                 <h2 className="form-title">Review &amp; submit</h2>
                 <p className="form-summary">
-                  A quick look before you register interest for {eventName} ({planLabel.toLowerCase()}). Accommodation is not yet assigned — we are collecting who plans to attend. Change anything with Back, then submit.
+                  A quick look before you register interest for {eventName}. Accommodation is not yet assigned — we are collecting who plans to attend. Change anything with Back, then submit.
                 </p>
               </header>
               <div className="x-summary">
@@ -1496,7 +1493,6 @@ export function StayWizard({
                   <h3 className="x-group-title">
                     <span uk-icon="icon: calendar; ratio: 0.75" /> Stay
                   </h3>
-                  <SummaryRow label="Plan" value={planLabel} />
                   <SummaryRow label="Event" value={eventName} />
                   <SummaryRow label={form.fullName || 'You'} value={stayRange(form.stayStartDate, form.stayEndDate)} />
                   {form.members.map((m, i) => (
@@ -1536,13 +1532,12 @@ export function StayWizard({
                 <p className="form-summary">
                   {isEdit
                     ? `Saved ${partyCount} person${partyCount === 1 ? '' : 's'} for ${eventName}. Room allocation is still later.`
-                    : `We recorded ${partyCount} person${partyCount === 1 ? '' : 's'} for ${eventName} (${planLabel.toLowerCase()}). Room allocation will happen later; check-in and check-out at 11:00 AM when rooms are assigned.`}
+                    : `We recorded ${partyCount} person${partyCount === 1 ? '' : 's'} for ${eventName}. Room allocation will happen later; check-in and check-out at 11:00 AM when rooms are assigned.`}
                 </p>
               </header>
               <div className="x-summary">
                 <section className="x-group">
                   <SummaryRow label="Registered on" value={formatBookedAt(bookedAt)} />
-                  <SummaryRow label="Plan" value={planLabel} />
                   <SummaryRow label="Event" value={eventName} />
                   <SummaryRow label={form.fullName || 'You'} value={stayRange(form.stayStartDate, form.stayEndDate)} />
                   {form.members.map((m, i) => (

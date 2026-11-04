@@ -67,19 +67,21 @@ describe('stayRegistrations', () => {
         id: 'stay_1',
         plan: 'free',
         familyFullName: 'Ravi Kumar',
+        familyMobile: '9876543210',
         place: { kind: 'rural', district: 'Ranga Reddy' },
         family: {
           fullName: 'Ravi Kumar',
+          mobile: '9876543210',
           meditation: '6',
           profession: 'Farmer',
           age: 'senior',
           livePhoto: 'data:image/jpeg;base64,abc',
           place: { kind: 'rural', district: 'Ranga Reddy' },
-          members: [{ name: 'Padma', age: 'senior', meditation: '5', profession: 'Homemaker', livePhoto: '' }]
+          members: [{ name: 'Padma', age: 'senior', meditation: '5', profession: 'Homemaker', livePhoto: '', mobile: '' }]
         },
         guests: [
-          { primary: true, name: 'Ravi Kumar', age: 'senior' },
-          { primary: false, name: 'Padma', age: 'senior' }
+          { primary: true, name: 'Ravi Kumar', age: 'senior', mobile: '9876543210' },
+          { primary: false, name: 'Padma', age: 'senior', mobile: '' }
         ]
       }
     ]);
@@ -89,10 +91,12 @@ describe('stayRegistrations', () => {
       age: 'senior',
       meditation: '6',
       profession: 'Farmer',
-      primary: true
+      primary: true,
+      mobile: '9876543210'
     });
     expect(people[1].name).toBe('Padma');
     expect(people[1].profession).toBe('Homemaker');
+    expect(people[1].mobile).toBe('');
     expect(people[1].memberIndex).toBe(0);
     expect(registrationLocationShort(people[0].place)).toBe('Ranga Reddy');
     const families = groupTilePeopleByFamily(people);

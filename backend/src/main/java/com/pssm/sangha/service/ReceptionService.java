@@ -1,5 +1,6 @@
 package com.pssm.sangha.service;
 
+import com.mongodb.client.result.UpdateResult;
 import com.pssm.sangha.common.ApiException;
 import com.pssm.sangha.domain.Hotel;
 import com.pssm.sangha.domain.Person;
@@ -17,6 +18,10 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.data.mongodb.core.query.Criteria;
+import org.springframework.data.mongodb.core.query.Query;
+import org.springframework.data.mongodb.core.query.Update;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -30,13 +35,16 @@ public class ReceptionService {
     private final AuthService authService;
     private final HotelRepository hotelRepository;
     private final StayAllotmentRepository stayAllotmentRepository;
+    private final MongoTemplate mongoTemplate;
 
     public ReceptionService(AuthService authService,
                             HotelRepository hotelRepository,
-                            StayAllotmentRepository stayAllotmentRepository) {
+                            StayAllotmentRepository stayAllotmentRepository,
+                            MongoTemplate mongoTemplate) {
         this.authService = authService;
         this.hotelRepository = hotelRepository;
         this.stayAllotmentRepository = stayAllotmentRepository;
+        this.mongoTemplate = mongoTemplate;
     }
 
     @Transactional(readOnly = true)
@@ -117,12 +125,12 @@ public class ReceptionService {
 
     @Transactional
     public Map<String, Object> checkIn(PersonActionRequest body) {
-        return updateStatus(body, "checked_in", true);
+        return updateStatusAtomic(body, "checked_in", "allotted");
     }
 
     @Transactional
     public Map<String, Object> checkOut(PersonActionRequest body) {
-        return updateStatus(body, "checked_out", false);
+        return updateStatusAtomic(body, "checked_out", "checked_in");
     }
 
     @Transactional
@@ -131,54 +139,100 @@ public class ReceptionService {
             throw new ApiException(HttpStatus.CONFLICT, "TOO_EARLY",
                     "Did not arrive can be marked after 3:00 PM (second chance until then).");
         }
-        return updateStatus(body, "did_not_arrive", false);
+        return updateStatusAtomic(body, "did_not_arrive", "allotted");
     }
 
-    private Map<String, Object> updateStatus(PersonActionRequest body, String nextStatus, boolean fromAllottedOnly) {
+    /**
+     * Atomic CAS on guest personStatus so two desks cannot both transition from the same state.
+     */
+    private Map<String, Object> updateStatusAtomic(PersonActionRequest body,
+                                                   String nextStatus,
+                                                   String expectedStatus) {
         Person actor = requireHotelDesk();
         Hotel hotel = requireBoundHotel(actor);
         GuestRef ref = resolveGuest(body);
+
         StayAllotment allotment = stayAllotmentRepository.findById(ref.allotmentId)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "NOT_FOUND", "Allotment not found."));
         if (!hotel.getId().equals(allotment.getHotelId())) {
             throw new ApiException(HttpStatus.FORBIDDEN, "FORBIDDEN", "Not your hotel.");
         }
         AllotmentGuest guest = findGuest(allotment, ref.guestKey);
-        ensureGuestDefaults(allotment, guest, -1);
-        String current = normalizePersonStatus(guest.getPersonStatus());
-        if ("checked_in".equals(nextStatus)) {
-            if (!"allotted".equals(current)) {
-                throw new ApiException(HttpStatus.CONFLICT, "CONFLICT",
-                        "Only an allotted person can be marked checked-in.");
-            }
-        } else if ("checked_out".equals(nextStatus)) {
-            if (!"checked_in".equals(current)) {
-                throw new ApiException(HttpStatus.CONFLICT, "CONFLICT",
-                        "Only a checked-in person can be marked checked-out.");
-            }
-        } else if ("did_not_arrive".equals(nextStatus)) {
-            if (!"allotted".equals(current)) {
-                throw new ApiException(HttpStatus.CONFLICT, "CONFLICT",
-                        "Only an allotted person can be marked did not arrive.");
-            }
+        if (ensureGuestDefaults(allotment, guest, -1)) {
+            stayAllotmentRepository.save(allotment);
+        }
+
+        if ("did_not_arrive".equals(nextStatus)) {
             String start = guestStayStart(guest, allotment);
             String today = LocalDate.now(ZONE).toString();
             if (!today.equals(start)) {
                 throw new ApiException(HttpStatus.CONFLICT, "CONFLICT",
                         "Did not arrive applies on the person's check-in date.");
             }
-        } else if (fromAllottedOnly) {
-            // no-op
         }
-        guest.setPersonStatus(nextStatus);
-        syncPartyStatus(allotment);
-        stayAllotmentRepository.save(allotment);
+
+        Criteria expectedMatch = expectedStatusCriteria(expectedStatus);
+        Query query = new Query(new Criteria().andOperator(
+                Criteria.where("_id").is(ref.allotmentId),
+                Criteria.where("hotelId").is(hotel.getId()),
+                Criteria.where("guests").elemMatch(new Criteria().andOperator(
+                        Criteria.where("guestKey").is(ref.guestKey),
+                        expectedMatch
+                ))
+        ));
+        Update update = new Update().set("guests.$.personStatus", nextStatus);
+        UpdateResult result = mongoTemplate.updateFirst(query, update, StayAllotment.class);
+        if (result.getMatchedCount() == 0) {
+            StayAllotment latest = stayAllotmentRepository.findById(ref.allotmentId).orElse(null);
+            String current = "missing";
+            if (latest != null) {
+                try {
+                    current = normalizePersonStatus(findGuest(latest, ref.guestKey).getPersonStatus());
+                } catch (ApiException ignored) {
+                    current = "missing";
+                }
+            }
+            throw new ApiException(HttpStatus.CONFLICT, "CONFLICT",
+                    conflictMessage(nextStatus, current));
+        }
+
+        StayAllotment refreshed = stayAllotmentRepository.findById(ref.allotmentId)
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "NOT_FOUND", "Allotment not found."));
+        syncPartyStatus(refreshed);
+        stayAllotmentRepository.save(refreshed);
+
         Map<String, Object> data = new LinkedHashMap<>();
-        data.put("personId", personId(allotment.getId(), guest.getGuestKey()));
-        data.put("allotmentId", allotment.getId());
-        data.put("guestKey", guest.getGuestKey());
+        data.put("personId", personId(ref.allotmentId, ref.guestKey));
+        data.put("allotmentId", ref.allotmentId);
+        data.put("guestKey", ref.guestKey);
         data.put("personStatus", nextStatus);
         return data;
+    }
+
+    private static Criteria expectedStatusCriteria(String expectedStatus) {
+        if ("allotted".equals(expectedStatus)) {
+            // Legacy rows may omit personStatus; treat blank/missing as allotted.
+            return new Criteria().orOperator(
+                    Criteria.where("personStatus").is("allotted"),
+                    Criteria.where("personStatus").exists(false),
+                    Criteria.where("personStatus").is(""),
+                    Criteria.where("personStatus").is(null)
+            );
+        }
+        return Criteria.where("personStatus").is(expectedStatus);
+    }
+
+    private static String conflictMessage(String nextStatus, String current) {
+        if ("checked_in".equals(nextStatus)) {
+            return "Only an allotted person can be marked checked-in (current: " + current + ").";
+        }
+        if ("checked_out".equals(nextStatus)) {
+            return "Only a checked-in person can be marked checked-out (current: " + current + ").";
+        }
+        if ("did_not_arrive".equals(nextStatus)) {
+            return "Only an allotted person can be marked did not arrive (current: " + current + ").";
+        }
+        return "Status was changed by someone else (current: " + current + ").";
     }
 
     private void syncPartyStatus(StayAllotment allotment) {
@@ -205,15 +259,11 @@ public class ReceptionService {
         }
         if (checkedOut == total) {
             allotment.setStatus("checked_out");
-        } else if (checkedIn > 0 && (allotted > 0 || checkedOut > 0 || didNot > 0)) {
-            allotment.setStatus("partly_checked_out".equals(allotment.getStatus())
-                    || checkedOut > 0 ? "partly_checked_out" : "checked_in");
-            if (checkedOut > 0) {
-                allotment.setStatus("partly_checked_out");
-            } else {
-                allotment.setStatus("checked_in");
-            }
+        } else if (checkedIn > 0 && checkedOut > 0) {
+            allotment.setStatus("partly_checked_out");
         } else if (checkedIn == total) {
+            allotment.setStatus("checked_in");
+        } else if (checkedIn > 0) {
             allotment.setStatus("checked_in");
         } else if (didNot == total) {
             allotment.setStatus("did_not_arrive");

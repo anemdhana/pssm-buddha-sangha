@@ -94,8 +94,8 @@ export function bookingToProfileForm(booking) {
   };
 }
 
-export function planLabel(plan) {
-  return plan === 'paid' ? 'Paid' : 'Free';
+export function planLabel(_plan) {
+  return 'Accommodation';
 }
 
 const MEDITATION_LABELS = {
@@ -349,7 +349,9 @@ export function registrationTilePeople(bookings) {
         bookingId: booking.id,
         plan: booking.plan === 'paid' ? 'paid' : 'free',
         name: member.name || guest?.name || `Family member ${index + 1}`,
-        mobile: member.mobile || guest?.mobile || booking.familyMobile || '',
+        // Do not fall back to familyMobile — that makes every member share the
+        // primary's mobile and allotment rejects the batch as duplicate people.
+        mobile: member.mobile || guest?.mobile || '',
         livePhoto: member.livePhoto || '',
         idProofPhoto: member.idProofPhoto || '',
         idType: member.idType || '',

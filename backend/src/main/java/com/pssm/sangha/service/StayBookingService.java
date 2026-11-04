@@ -41,6 +41,7 @@ public class StayBookingService {
     private final StayBookingRepository stayBookingRepository;
     private final StayBookingQueryRepository stayBookingQueryRepository;
     private final StayAllotmentRepository stayAllotmentRepository;
+    private final StayAllotmentService stayAllotmentService;
     private final SanghaEventRepository eventRepository;
     private final PersonRepository personRepository;
     private final ProfileMapper profileMapper;
@@ -50,6 +51,7 @@ public class StayBookingService {
     public StayBookingService(StayBookingRepository stayBookingRepository,
                               StayBookingQueryRepository stayBookingQueryRepository,
                               StayAllotmentRepository stayAllotmentRepository,
+                              StayAllotmentService stayAllotmentService,
                               SanghaEventRepository eventRepository,
                               PersonRepository personRepository,
                               ProfileMapper profileMapper,
@@ -58,6 +60,7 @@ public class StayBookingService {
         this.stayBookingRepository = stayBookingRepository;
         this.stayBookingQueryRepository = stayBookingQueryRepository;
         this.stayAllotmentRepository = stayAllotmentRepository;
+        this.stayAllotmentService = stayAllotmentService;
         this.eventRepository = eventRepository;
         this.personRepository = personRepository;
         this.profileMapper = profileMapper;
@@ -288,6 +291,75 @@ public class StayBookingService {
         return stats;
     }
 
+    /**
+     * Signed-in person's own stay interest for an event (by family mobile), plus room allotment if any.
+     */
+    @Transactional(readOnly = true)
+    public Map<String, Object> mineForEvent(String eventId) {
+        Person actor = authService.currentPerson();
+        String id = eventId == null ? "" : eventId.trim();
+        if (id.isBlank()) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "VALIDATION", "Event id is required.");
+        }
+        String mobile = PasswordSupport.normalizeMobile(actor.getMobile());
+        SanghaEvent event = eventRepository.findById(id).orElse(null);
+
+        Map<String, Object> eventView = new LinkedHashMap<>();
+        eventView.put("id", id);
+        if (event != null) {
+            eventView.put("name", event.getName());
+            eventView.put("startDate", event.getStartDate() == null ? null : event.getStartDate().toString());
+            eventView.put("endDate", event.getEndDate() == null ? null : event.getEndDate().toString());
+            eventView.put("location", event.getLocation());
+            LocalDate start = event.getStartDate();
+            if (start != null) {
+                eventView.put("bookingClosesOn", start.minusDays(2).toString());
+            }
+        } else {
+            eventView.put("name", "");
+            eventView.put("startDate", null);
+            eventView.put("endDate", null);
+            eventView.put("location", "");
+            eventView.put("bookingClosesOn", null);
+        }
+
+        List<StayBooking> matches =
+                stayBookingRepository.findByEventIdAndFamilyMobileOrderByCreatedAtDesc(id, mobile);
+        StayBooking booking = matches.isEmpty() ? null : matches.get(0);
+
+        List<Map<String, Object>> allotmentViews = new ArrayList<>();
+        if (booking != null && booking.getId() != null) {
+            String bookingId = booking.getId();
+            for (StayAllotment allotment : stayAllotmentRepository.findByEventId(id)) {
+                if (allotment == null) {
+                    continue;
+                }
+                String bid = allotment.getBookingId() == null ? "" : allotment.getBookingId().trim();
+                if (!bookingId.equals(bid)) {
+                    continue;
+                }
+                Map<String, Object> row = new LinkedHashMap<>();
+                row.put("id", allotment.getId());
+                row.put("hotelName", allotment.getHotelName());
+                row.put("roomNumber", allotment.getRoomNumber());
+                row.put("roomType", allotment.getRoomType());
+                row.put("roomKind", allotment.getRoomKind());
+                row.put("status", allotment.getStatus());
+                row.put("checkInDate", allotment.getCheckInDate());
+                row.put("checkOutDate", allotment.getCheckOutDate());
+                int guestCount = allotment.getGuests() == null ? 0 : allotment.getGuests().size();
+                row.put("personCount", guestCount);
+                allotmentViews.add(row);
+            }
+        }
+
+        Map<String, Object> data = new LinkedHashMap<>();
+        data.put("event", eventView);
+        data.put("booking", booking == null ? null : toView(booking));
+        data.put("allotments", allotmentViews);
+        return data;
+    }
+
     @Transactional(readOnly = true)
     public Map<String, Object> getById(String bookingId) {
         requireRegistrationViewer(authService.currentPerson());
@@ -302,6 +374,8 @@ public class StayBookingService {
         Person actor = authService.currentPerson();
         requireRegistrationViewer(actor);
         StayBooking booking = findBookingOrThrow(bookingId);
+        // Strip allotments first — blocks if anyone is checked in/out.
+        stayAllotmentService.releaseByBookingId(booking.getEventId(), booking.getId());
         stayBookingRepository.delete(booking);
     }
 
@@ -342,9 +416,36 @@ public class StayBookingService {
         }
 
         stayBookingRepository.save(booking);
+        stayAllotmentService.syncBookingGuests(
+                booking.getEventId(),
+                booking.getId(),
+                toAllotmentGuests(booking.getGuests()));
         Map<String, Object> data = new LinkedHashMap<>();
         data.put("booking", toView(booking));
         return data;
+    }
+
+    private static List<StayAllotment.AllotmentGuest> toAllotmentGuests(List<StayGuest> guests) {
+        List<StayAllotment.AllotmentGuest> rows = new ArrayList<>();
+        if (guests == null) {
+            return rows;
+        }
+        for (StayGuest guest : guests) {
+            if (guest == null) {
+                continue;
+            }
+            StayAllotment.AllotmentGuest row = new StayAllotment.AllotmentGuest();
+            row.setName(guest.getName());
+            row.setRelation(guest.getRelation());
+            row.setMobile(guest.getMobile());
+            row.setGender(guest.getGender());
+            row.setAge(guest.getAge());
+            row.setStayStartDate(guest.getStayStartDate());
+            row.setStayEndDate(guest.getStayEndDate());
+            row.setPrimary(guest.isPrimary());
+            rows.add(row);
+        }
+        return rows;
     }
 
     private Map<String, Object> createResponse(StayBooking booking, String temporaryPassword, boolean newlyRegistered) {

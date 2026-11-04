@@ -2,6 +2,7 @@ package com.pssm.sangha.service;
 
 import com.pssm.sangha.common.ApiException;
 import com.pssm.sangha.domain.Hotel;
+import com.pssm.sangha.domain.Hotel.HotelRoom;
 import com.pssm.sangha.domain.Person;
 import com.pssm.sangha.domain.PlaceInfo;
 import com.pssm.sangha.domain.SanghaRole;
@@ -18,12 +19,14 @@ import com.pssm.sangha.web.dto.StayAllotmentDtos.PlacementDto;
 import com.pssm.sangha.web.dto.StayAllotmentDtos.ReleaseAllotmentsRequest;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -104,15 +107,15 @@ public class StayAllotmentService {
         String eventName = body.eventName == null ? "" : body.eventName.trim();
         List<StayAllotment> toSave = new ArrayList<>();
         Set<String> guestKeys = new HashSet<>();
-        int index = 0;
+        Map<String, Hotel> hotelsById = new HashMap<>();
         for (PlacementDto placement : placements) {
             if (placement == null) {
                 continue;
             }
             String hotelId = placement.hotelId == null ? "" : placement.hotelId.trim();
-            Hotel hotel = hotelRepository.findById(hotelId)
+            Hotel hotel = hotelsById.computeIfAbsent(hotelId, id -> hotelRepository.findById(id)
                     .orElseThrow(() -> new ApiException(HttpStatus.BAD_REQUEST, "VALIDATION",
-                            "Hotel not found for allotment."));
+                            "Hotel not found for allotment.")));
             if (!hotel.isActive() || hotel.isReserved()) {
                 throw new ApiException(HttpStatus.BAD_REQUEST, "VALIDATION",
                         "Hotel not available for allotment (" + hotel.getName() + ").");
@@ -121,9 +124,18 @@ public class StayAllotmentService {
             if (roomNumber.isBlank()) {
                 throw new ApiException(HttpStatus.BAD_REQUEST, "VALIDATION", "Room number is required.");
             }
+            HotelRoom room = findHotelRoom(hotel, roomNumber);
+            if (room == null) {
+                throw new ApiException(HttpStatus.BAD_REQUEST, "VALIDATION",
+                        "Room " + roomNumber + " was not found in " + hotel.getName() + ".");
+            }
+            if ("blocked".equalsIgnoreCase(blankToEmpty(room.getStatus()))) {
+                throw new ApiException(HttpStatus.CONFLICT, "ROOM_BLOCKED",
+                        "Room " + roomNumber + " is blocked.");
+            }
 
             StayAllotment allotment = new StayAllotment();
-            allotment.setId("allot_" + System.currentTimeMillis() + "_" + index++);
+            allotment.setId("allot_" + UUID.randomUUID());
             allotment.setEventId(eventId);
             allotment.setEventName(eventName);
             allotment.setBookingId(placement.bookingId == null ? "" : placement.bookingId.trim());
@@ -171,14 +183,19 @@ public class StayAllotmentService {
                 guest.setPersonStatus("allotted");
                 guests.add(guest);
                 String key = guestIdentityKey(guest, allotment.getBookingId());
-                if (!key.isBlank()) {
-                    guestKeys.add(key);
+                if (key.isBlank()) {
+                    continue;
+                }
+                if (!guestKeys.add(key)) {
+                    throw new ApiException(HttpStatus.CONFLICT, "DUPLICATE_GUEST",
+                            "The same person appears more than once in this allotment batch.");
                 }
             }
             if (guests.isEmpty()) {
                 throw new ApiException(HttpStatus.BAD_REQUEST, "VALIDATION",
                         "Each placement needs at least one person.");
             }
+            assertRoomAllowsGuests(hotel, room, guests);
             if (checkIn.isBlank() || checkOut.isBlank()) {
                 for (AllotmentGuest guest : guests) {
                     String start = guest.getStayStartDate() == null ? "" : guest.getStayStartDate().trim();
@@ -223,6 +240,8 @@ public class StayAllotmentService {
                 targetsByGuestKey.put(key, target);
             }
         }
+
+        assertBatchFitsCapacity(eventId, toSave, guestKeys, hotelsById);
 
         // Drop these people from any prior rooms in the event so old beds are freed.
         List<Map<String, Object>> moves = stripGuestsFromEventAllotments(eventId, guestKeys, targetsByGuestKey);
@@ -292,6 +311,124 @@ public class StayAllotmentService {
         return data;
     }
 
+    /**
+     * Remove all allotments / guests for a booking (used when registration is deleted).
+     * Checked-in / checked-out guests block the delete.
+     */
+    @Transactional
+    public List<Map<String, Object>> releaseByBookingId(String eventId, String bookingId) {
+        String eid = eventId == null ? "" : eventId.trim();
+        String bid = bookingId == null ? "" : bookingId.trim();
+        if (eid.isBlank() || bid.isBlank()) {
+            return List.of();
+        }
+        return stripGuestsFromEventAllotments(eid, Set.of(), Set.of(bid), null);
+    }
+
+    /**
+     * Sync allotted (not checked-in) guest fields after a registration update.
+     * Strips allotted guests removed from the booking; refuses if checked-in guests would be removed.
+     */
+    @Transactional
+    public void syncBookingGuests(String eventId, String bookingId, List<AllotmentGuest> bookingGuests) {
+        String eid = eventId == null ? "" : eventId.trim();
+        String bid = bookingId == null ? "" : bookingId.trim();
+        if (eid.isBlank() || bid.isBlank()) {
+            return;
+        }
+        Set<String> keepKeys = new HashSet<>();
+        Map<String, AllotmentGuest> byKey = new HashMap<>();
+        List<AllotmentGuest> source = bookingGuests == null ? List.of() : bookingGuests;
+        for (AllotmentGuest guest : source) {
+            String key = guestIdentityKey(guest, bid);
+            if (key.isBlank()) {
+                continue;
+            }
+            keepKeys.add(key);
+            byKey.put(key, guest);
+        }
+
+        List<StayAllotment> rows = stayAllotmentRepository.findByEventId(eid);
+        for (StayAllotment row : rows) {
+            if (row == null || row.getGuests() == null || row.getGuests().isEmpty()) {
+                continue;
+            }
+            String rowBooking = row.getBookingId() == null ? "" : row.getBookingId().trim();
+            if (!bid.equals(rowBooking)) {
+                continue;
+            }
+            List<AllotmentGuest> kept = new ArrayList<>();
+            boolean changed = false;
+            for (AllotmentGuest guest : row.getGuests()) {
+                String key = guestIdentityKey(guest, rowBooking);
+                String status = normalizePersonStatus(guest == null ? null : guest.getPersonStatus());
+                if (key.isBlank() || !keepKeys.contains(key)) {
+                    if ("checked_in".equals(status) || "checked_out".equals(status)) {
+                        String name = guest == null || guest.getName() == null ? "Guest" : guest.getName();
+                        throw new ApiException(HttpStatus.CONFLICT, "GUEST_CHECKED_IN",
+                                "Cannot update registration — " + name
+                                        + " is already checked in or out at the hotel.");
+                    }
+                    changed = true;
+                    continue;
+                }
+                AllotmentGuest src = byKey.get(key);
+                if (src != null && syncGuestFields(guest, src)) {
+                    changed = true;
+                }
+                kept.add(guest);
+            }
+            if (!changed) {
+                continue;
+            }
+            if (kept.isEmpty()) {
+                stayAllotmentRepository.delete(row);
+                continue;
+            }
+            AllotmentGuest primary = kept.stream().filter(AllotmentGuest::isPrimary).findFirst()
+                    .orElse(kept.get(0));
+            row.setGuests(kept);
+            row.setFamilyMobile(primary.getMobile());
+            row.setFamilyFullName(primary.getName());
+            stayAllotmentRepository.save(row);
+        }
+    }
+
+    private static boolean syncGuestFields(AllotmentGuest target, AllotmentGuest source) {
+        boolean changed = false;
+        if (source.getName() != null && !source.getName().equals(target.getName())) {
+            target.setName(source.getName());
+            changed = true;
+        }
+        if (source.getMobile() != null && !source.getMobile().equals(target.getMobile())) {
+            target.setMobile(source.getMobile());
+            changed = true;
+        }
+        if (source.getGender() != null && !source.getGender().equals(target.getGender())) {
+            target.setGender(source.getGender());
+            changed = true;
+        }
+        if (source.getAge() != null && !source.getAge().equals(target.getAge())) {
+            target.setAge(source.getAge());
+            changed = true;
+        }
+        if (source.getRelation() != null && !source.getRelation().equals(target.getRelation())) {
+            target.setRelation(source.getRelation());
+            changed = true;
+        }
+        if (source.getStayStartDate() != null
+                && !source.getStayStartDate().equals(blankToEmpty(target.getStayStartDate()))) {
+            target.setStayStartDate(source.getStayStartDate());
+            changed = true;
+        }
+        if (source.getStayEndDate() != null
+                && !source.getStayEndDate().equals(blankToEmpty(target.getStayEndDate()))) {
+            target.setStayEndDate(source.getStayEndDate());
+            changed = true;
+        }
+        return changed;
+    }
+
     private static String guestNameKey(String name, String bookingId) {
         String n = name == null ? "" : name.trim().toLowerCase(Locale.ROOT);
         if (n.isBlank()) {
@@ -310,6 +447,243 @@ public class StayAllotmentService {
             return "m:" + mobile;
         }
         return guestNameKey(guest.getName(), bookingId);
+    }
+
+    private static HotelRoom findHotelRoom(Hotel hotel, String roomNumber) {
+        if (hotel == null || hotel.getRooms() == null) {
+            return null;
+        }
+        String wanted = roomNumber == null ? "" : roomNumber.trim();
+        for (HotelRoom room : hotel.getRooms()) {
+            if (room == null) {
+                continue;
+            }
+            String number = room.getRoomNumber() == null ? "" : room.getRoomNumber().trim();
+            if (wanted.equals(number)) {
+                return room;
+            }
+        }
+        return null;
+    }
+
+    private static void assertRoomAllowsGuests(Hotel hotel, HotelRoom room, List<AllotmentGuest> guests) {
+        String kind = blankToEmpty(room.getKind()).toLowerCase(Locale.ROOT);
+        String gate = normalizeGender(room.getGenderAllowed());
+        if (("dormitory".equals(kind) || "hall".equals(kind)) && !gate.isBlank()) {
+            for (AllotmentGuest guest : guests) {
+                String gender = normalizeGender(guest.getGender());
+                if (!gate.equals(gender)) {
+                    throw new ApiException(HttpStatus.CONFLICT, "GENDER_MISMATCH",
+                            "Room " + room.getRoomNumber() + " in " + hotel.getName()
+                                    + " only allows " + gate + " guests.");
+                }
+            }
+        }
+    }
+
+    /**
+     * Server-side capacity + same-gender lock against existing (non-moving) occupants
+     * and other placements in this batch. Mixed gender is allowed inside one family
+     * placement; exclusive gender lock applies when sharing with other parties
+     * (alone / single-person parties).
+     */
+    private void assertBatchFitsCapacity(String eventId,
+                                         List<StayAllotment> toSave,
+                                         Set<String> movingKeys,
+                                         Map<String, Hotel> hotelsById) {
+        List<StayAllotment> existing = stayAllotmentRepository.findByEventId(eventId);
+        List<OccupancySlice> planned = new ArrayList<>();
+
+        for (StayAllotment allotment : toSave) {
+            Hotel hotel = hotelsById.get(allotment.getHotelId());
+            HotelRoom room = findHotelRoom(hotel, allotment.getRoomNumber());
+            if (room == null) {
+                throw new ApiException(HttpStatus.BAD_REQUEST, "VALIDATION",
+                        "Room " + allotment.getRoomNumber() + " was not found.");
+            }
+            int capacity = Math.max(0, room.getCapacity());
+            String roomKey = roomKey(allotment.getHotelId(), allotment.getRoomNumber());
+
+            int used = 0;
+            String lock = "";
+            for (StayAllotment row : existing) {
+                if (row == null || row.getGuests() == null) {
+                    continue;
+                }
+                if (!roomKey.equals(roomKey(row.getHotelId(), row.getRoomNumber()))) {
+                    continue;
+                }
+                String rowBooking = row.getBookingId() == null ? "" : row.getBookingId().trim();
+                for (AllotmentGuest guest : row.getGuests()) {
+                    String key = guestIdentityKey(guest, rowBooking);
+                    if (!key.isBlank() && movingKeys.contains(key)) {
+                        continue;
+                    }
+                    if (!guestOverlapsAllotment(guest, row, allotment)) {
+                        continue;
+                    }
+                    used += 1;
+                    lock = mergeGenderLock(lock, normalizeGender(guest.getGender()));
+                }
+            }
+            for (OccupancySlice slice : planned) {
+                if (!roomKey.equals(slice.roomKey)) {
+                    continue;
+                }
+                if (!staysOverlap(slice.start, slice.end, allotmentWindowStart(allotment),
+                        allotmentWindowEnd(allotment))) {
+                    continue;
+                }
+                used += 1;
+                lock = mergeGenderLock(lock, slice.gender);
+            }
+
+            List<AllotmentGuest> guests = allotment.getGuests() == null ? List.of() : allotment.getGuests();
+            if (used + guests.size() > capacity) {
+                throw new ApiException(HttpStatus.CONFLICT, "ROOM_FULL",
+                        "Room " + allotment.getRoomNumber() + " in " + allotment.getHotelName()
+                                + " does not have enough free beds (capacity " + capacity + ").");
+            }
+            // Gender lock is only vs other parties already in the room (or earlier in this
+            // batch). A whole family may be mixed — do not segregate within one placement.
+            // Alone (single-person) parties must still match the room's exclusive gender lock.
+            String partyGender = "";
+            for (AllotmentGuest guest : guests) {
+                partyGender = mergeGenderLock(partyGender, normalizeGender(guest.getGender()));
+            }
+            if (!lock.isBlank() && !"mixed".equals(lock) && !partyGender.isBlank() && !partyGender.equals(lock)) {
+                throw new ApiException(HttpStatus.CONFLICT, "GENDER_MISMATCH",
+                        "Room " + allotment.getRoomNumber() + " already has "
+                                + lock + " guests — cannot add "
+                                + ("mixed".equals(partyGender) ? "a mixed family" : (partyGender + " guest"))
+                                + ".");
+            }
+            for (AllotmentGuest guest : guests) {
+                String gender = normalizeGender(guest.getGender());
+                planned.add(new OccupancySlice(
+                        roomKey,
+                        guestStayStart(guest, allotment),
+                        guestStayEnd(guest, allotment),
+                        gender
+                ));
+            }
+        }
+    }
+
+    private static boolean guestOverlapsAllotment(AllotmentGuest guest,
+                                                  StayAllotment existing,
+                                                  StayAllotment incoming) {
+        String startA = guestStayStart(guest, existing);
+        String endA = guestStayEnd(guest, existing);
+        // Overlap if guest stay overlaps any incoming guest stay (or the party window).
+        if (incoming.getGuests() != null) {
+            for (AllotmentGuest other : incoming.getGuests()) {
+                if (staysOverlap(startA, endA, guestStayStart(other, incoming), guestStayEnd(other, incoming))) {
+                    return true;
+                }
+            }
+        }
+        return staysOverlap(startA, endA, allotmentWindowStart(incoming), allotmentWindowEnd(incoming));
+    }
+
+    private static String allotmentWindowStart(StayAllotment allotment) {
+        String start = blankToEmpty(allotment.getCheckInDate());
+        if (allotment.getGuests() != null) {
+            for (AllotmentGuest guest : allotment.getGuests()) {
+                String s = guestStayStart(guest, allotment);
+                if (!s.isBlank() && (start.isBlank() || s.compareTo(start) < 0)) {
+                    start = s;
+                }
+            }
+        }
+        return start;
+    }
+
+    private static String allotmentWindowEnd(StayAllotment allotment) {
+        String end = blankToEmpty(allotment.getCheckOutDate());
+        if (allotment.getGuests() != null) {
+            for (AllotmentGuest guest : allotment.getGuests()) {
+                String e = guestStayEnd(guest, allotment);
+                if (!e.isBlank() && (end.isBlank() || e.compareTo(end) > 0)) {
+                    end = e;
+                }
+            }
+        }
+        return end;
+    }
+
+    private static String guestStayStart(AllotmentGuest guest, StayAllotment allotment) {
+        String start = guest == null || guest.getStayStartDate() == null ? "" : guest.getStayStartDate().trim();
+        if (!start.isBlank()) {
+            return start;
+        }
+        return allotment == null || allotment.getCheckInDate() == null ? "" : allotment.getCheckInDate().trim();
+    }
+
+    private static String guestStayEnd(AllotmentGuest guest, StayAllotment allotment) {
+        String end = guest == null || guest.getStayEndDate() == null ? "" : guest.getStayEndDate().trim();
+        if (!end.isBlank()) {
+            return end;
+        }
+        return allotment == null || allotment.getCheckOutDate() == null ? "" : allotment.getCheckOutDate().trim();
+    }
+
+    /** Half-open [start, end): checkout day frees the bed. */
+    private static boolean staysOverlap(String startA, String endA, String startB, String endB) {
+        String a0 = blankToEmpty(startA);
+        String a1 = blankToEmpty(endA);
+        String b0 = blankToEmpty(startB);
+        String b1 = blankToEmpty(endB);
+        if (a0.isBlank() || a1.isBlank() || b0.isBlank() || b1.isBlank()) {
+            return true;
+        }
+        return a0.compareTo(b1) < 0 && b0.compareTo(a1) < 0;
+    }
+
+    private static String roomKey(String hotelId, String roomNumber) {
+        return blankToEmpty(hotelId) + "|" + blankToEmpty(roomNumber);
+    }
+
+    private static String normalizeGender(String value) {
+        String g = blankToEmpty(value).toLowerCase(Locale.ROOT);
+        if ("male".equals(g) || "m".equals(g) || "gents".equals(g) || "gents_only".equals(g)) {
+            return "male";
+        }
+        if ("female".equals(g) || "f".equals(g) || "ladies".equals(g) || "ladies_only".equals(g)) {
+            return "female";
+        }
+        return "";
+    }
+
+    private static String mergeGenderLock(String current, String next) {
+        if (next == null || next.isBlank()) {
+            return current == null ? "" : current;
+        }
+        if (current == null || current.isBlank()) {
+            return next;
+        }
+        if ("mixed".equals(current) || current.equals(next)) {
+            return current;
+        }
+        return "mixed";
+    }
+
+    private static String normalizePersonStatus(String status) {
+        String value = blankToEmpty(status).toLowerCase(Locale.ROOT);
+        if ("checked_in".equals(value) || "checked-in".equals(value)) {
+            return "checked_in";
+        }
+        if ("checked_out".equals(value) || "checked-out".equals(value)) {
+            return "checked_out";
+        }
+        if ("did_not_arrive".equals(value) || "did-not-arrive".equals(value)) {
+            return "did_not_arrive";
+        }
+        return "allotted";
+    }
+
+    private static String blankToEmpty(String value) {
+        return value == null ? "" : value.trim();
     }
 
     private List<Map<String, Object>> stripGuestsFromEventAllotments(
@@ -354,6 +728,13 @@ public class StayAllotmentService {
                         || (!nameKey.isBlank() && keys.contains(nameKey))
                         || (!mobileOrBare.isBlank() && keys.contains(mobileOrBare));
                 if (matched) {
+                    String status = normalizePersonStatus(guest.getPersonStatus());
+                    if ("checked_in".equals(status) || "checked_out".equals(status)) {
+                        String name = guest.getName() == null ? "Guest" : guest.getName();
+                        throw new ApiException(HttpStatus.CONFLICT, "GUEST_CHECKED_IN",
+                                "Cannot move or release " + name
+                                        + " — already checked in or out at the hotel.");
+                    }
                     changed = true;
                     String reportKey = !key.isBlank() ? key : mobileOrBare;
                     Map<String, String> target = null;
@@ -411,6 +792,9 @@ public class StayAllotmentService {
             stayAllotmentRepository.save(row);
         }
         return moves;
+    }
+
+    private record OccupancySlice(String roomKey, String start, String end, String gender) {
     }
 
     private PlaceInfo placeFromMap(Map<String, Object> place) {

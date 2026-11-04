@@ -107,7 +107,7 @@ export function EventsPage() {
           <header className="x-step-head form-head">
             <h2 className="form-title">{isEditing ? 'Edit event' : 'Create event'}</h2>
             <p className="form-summary">
-              Name, dates, location, and budget — Free and Paid Stay use the event selected in the header.
+              Name, dates, location, and budget — Accommodation uses the event selected in the header.
             </p>
           </header>
           {!isOrganizer && (

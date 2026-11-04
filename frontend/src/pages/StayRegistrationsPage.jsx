@@ -628,7 +628,7 @@ export function StayRegistrationsPage() {
               {total > 0 ? (
                 <Link
                   className="uk-button uk-button-primary uk-button-small x-interest-register-btn"
-                  to="/stay?plan=free&from=interest"
+                  to="/stay?from=interest"
                 >
                   Register another family
                 </Link>
@@ -659,7 +659,7 @@ export function StayRegistrationsPage() {
               ) : (
                 <>
                   <p>No registrations yet for this event.</p>
-                  <Link className="uk-button uk-button-primary" to="/stay?plan=free&from=interest">
+                  <Link className="uk-button uk-button-primary" to="/stay?from=interest">
                     Register a family
                   </Link>
                 </>
